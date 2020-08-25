@@ -66,6 +66,36 @@ module.exports = function createMiddleware({
 			user: req.user || {},
 		};
 
+		const targetCookies = ['kvbskt', 'kvls', 'kvu', 'kv'];
+		let cookieMessage = 'Cookie info:';
+		if (typeof cookies === 'object') {
+			targetCookies.forEach(cookieKey => {
+				if (typeof cookies[cookieKey] !== 'string') {
+					cookieMessage += ` missing ${cookieKey} cookie,`;
+				} else {
+					cookieMessage += ` ${cookieKey} cookie: ${cookies[cookieKey]},`;
+				}
+			});
+			console.info(cookieMessage);
+		} else {
+			console.info('missing cookie object');
+		}
+
+		const targetReqUser = ['id', 'user_id', 'accessToken'];
+		let reqUserMessage = 'req.user info:';
+		if (req && req.user && typeof req.user === 'object') {
+			targetReqUser.forEach(reqUserKey => {
+				if (typeof req.user[reqUserKey] !== 'string') {
+					reqUserMessage += ` missing req.user ${reqUserKey},`;
+				} else {
+					reqUserMessage += ` req.user ${reqUserKey}: ${req.user[reqUserKey].substring(0, 25)},`;
+				}
+			});
+			console.info(reqUserMessage);
+		} else {
+			console.info('missing req.user object');
+		}
+
 		// set html response headers
 		res.setHeader('Content-Type', 'text/html');
 		res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
