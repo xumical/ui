@@ -1,5 +1,5 @@
 <template>
-	<div class="frequently-asked-questions-section-wrapper row">
+	<div class="frequently-asked-questions-section-wrapper row" id="frequently-asked-questions">
 		<div class="small-12 columns">
 			<h2 class="impact-text">
 				Frequently asked questions
@@ -7,12 +7,13 @@
 		</div>
 		<div class="small-12 columns">
 			<div class="row collapse">
-				<expandable-question
+				<kv-expandable-question
 					v-for="(question, index) in faqs"
 					:key="index"
 					:title="question.title"
 					:content="question.content"
 					class="small-12 columns"
+					:id="question.title | changeCase('paramCase')"
 				/>
 			</div>
 		</div>
@@ -20,16 +21,15 @@
 </template>
 
 <script>
-import ExpandableQuestion from './ExpandableQuestion';
+import KvExpandableQuestion from '@/components/Kv/KvExpandableQuestion';
 
 export default {
 	components: {
-		ExpandableQuestion
+		KvExpandableQuestion
 	},
 	data() {
 		/* eslint-disable max-len */
 		return {
-			open: false,
 			faqs: [
 				{
 					title: 'How will Kiva decide which loans my Monthly Good supports?',
@@ -69,6 +69,17 @@ export default {
 		};
 		/* eslint-enable max-len */
 	},
+	mounted() {
+		/** Scroll expandable question into view. */
+		this.$nextTick(() => {
+			if (this.$route.hash) {
+				const el = document.querySelector(this.$route.hash);
+				if (el) {
+					el.scrollIntoView();
+				}
+			}
+		});
+	}
 };
 
 </script>

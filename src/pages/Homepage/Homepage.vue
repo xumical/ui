@@ -30,7 +30,7 @@ const activePageQuery = gql`query homepageFrame {
 		entries(contentType: "uiSetting", contentKey: "ui-homepage-takeover")
 	}
 	general {
-		uiExperimentSetting(key: "home_lendbycategory") {
+		lenderPreferencesExp: uiExperimentSetting(key: "home_lenderpreferences") {
 			key
 			value
 		}
@@ -49,7 +49,7 @@ export default {
 	},
 	data() {
 		return {
-			isLendByCategoryActive: false,
+			isLenderPreferencesActive: false,
 			isIwdActive: false,
 			isWrdActive: false,
 			isMessageActive: false,
@@ -58,14 +58,14 @@ export default {
 	},
 	computed: {
 		activeHomepage() {
-			if (this.isLendByCategoryActive) return LendByCategoryHomepage;
+			if (this.isLenderPreferencesActive) return LendByCategoryHomepage;
 			if (this.isMessageActive) return TopMessageContentful;
 			// if (this.isIwdActive) return IWDHomePage;
 			// if (this.isWrdActive) return WRDHomePage;
 			return DefaultHomePage;
 		},
 		headerTheme() {
-			if (this.isLendByCategoryActive) return lightHeader;
+			if (this.isLenderPreferencesActive) return lightHeader;
 			if (this.isMessageActive) return lightHeader;
 			if (this.isIwdActive) return iwdHeaderTheme;
 			if (this.isWrdActive) return wrdHeaderTheme;
@@ -84,28 +84,29 @@ export default {
 			return client.query({
 				query: activePageQuery
 			}).then(() => {
-				return client.query({
-					query: experimentQuery, variables: { id: 'home_lendbycategory' }
-				});
+				return Promise.all([
+					client.query({ query: experimentQuery, variables: { id: 'home_lenderpreferences' } })
+				]);
 			});
 		},
 		result({ data }) {
-			// lend-by-category as homepage experiment - EXP-GROW-138-Jul2020
-			const lendByCategoryExperiment = this.apollo.readFragment({
-				id: 'Experiment:home_lendbycategory',
+			// Explicit lender preferences experiment - EXP-GROW-166-Aug2020
+			const lenderPreferencesExp = this.apollo.readFragment({
+				id: 'Experiment:home_lenderpreferences',
 				fragment: experimentVersionFragment,
 			}) || {};
-			this.isLendByCategoryActive = lendByCategoryExperiment.version === 'shown';
-			// Fire Event for EXP-GROW-138-Jul2020
-			if (lendByCategoryExperiment.version && lendByCategoryExperiment.version !== 'unassigned') {
+			this.isLenderPreferencesActive = lenderPreferencesExp.version === 'shown';
+			// Fire Event for EXP-GROW-166-Aug2020
+			if (lenderPreferencesExp.version && lenderPreferencesExp.version !== 'unassigned') {
 				this.$kvTrackEvent(
-					'Home',
-					'EXP-GROW-138-Jul2020',
-					lendByCategoryExperiment.version === 'shown' ? 'b' : 'a'
+					'homepage',
+					'EXP-GROW-166-Aug2020',
+					lenderPreferencesExp.version === 'shown' ? 'b' : 'a'
 				);
 			}
-			// GROW-138 (if shown) takes precedence over "take-over settings"
-			if (!this.isLendByCategoryActive) {
+
+			// GROW-166 (if shown) takes precedence over "take-over settings"
+			if (!this.isLenderPreferencesActive) {
 				// determine if take-over setting is active
 				const contentSetting = _get(data, 'contentful.entries.items', []).find(item => item.fields.key === 'ui-homepage-takeover'); // eslint-disable-line max-len
 				if (_get(contentSetting, 'fields')) {

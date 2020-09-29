@@ -18,7 +18,10 @@
 							<div class="medium-10 small-12 columns">
 								<div class="row column" v-if="!fromCovidLanding">
 									<strong>Each month on the</strong>
-									<label class="show-for-sr" :class="{ 'error': $v.$invalid }" :for="dayOfMonth">
+									<label class="show-for-sr"
+										:class="{ 'error': $v.dayOfMonth.$invalid }"
+										:for="dayOfMonth"
+									>
 										Day of the Month
 									</label>
 									<input v-if="isDayInputShown"
@@ -30,7 +33,7 @@
 										required
 										min="1"
 										max="31"
-										v-model="dayOfMonth"
+										v-model.number="dayOfMonth"
 									>
 									<button
 										class="button--ordinal-day"
@@ -38,7 +41,7 @@
 										v-if="!isDayInputShown"
 									>
 										<strong>{{ dayOfMonth | numeral('Oo') }}</strong>
-										<icon-pencil class="icon-pencil" />
+										<kv-icon class="icon-pencil" name="pencil" title="Edit" />
 									</button>
 									<ul class="validation-errors" v-if="$v.dayOfMonth.$invalid">
 										<li v-if="!$v.dayOfMonth.required">
@@ -265,20 +268,17 @@ import gql from 'graphql-tag';
 import { validationMixin } from 'vuelidate';
 import { required, minValue, maxValue } from 'vuelidate/lib/validators';
 
-import PayPalMg from '@/components/MonthlyGood/PayPalMG';
-import MonthlyGoodDropInPaymentWrapper from '@/components/MonthlyGood/MonthlyGoodDropInPaymentWrapper';
-import IconPencil from '@/assets/icons/inline/pencil.svg';
 import KvButton from '@/components/Kv/KvButton';
 import KvCheckbox from '@/components/Kv/KvCheckbox';
 import KvCurrencyInput from '@/components/Kv/KvCurrencyInput';
 import KvDropdownRounded from '@/components/Kv/KvDropdownRounded';
+import KvIcon from '@/components/Kv/KvIcon';
 import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
+import MonthlyGoodDropInPaymentWrapper from '@/components/MonthlyGood/MonthlyGoodDropInPaymentWrapper';
+import PayPalMg from '@/components/MonthlyGood/PayPalMG';
 import WwwPage from '@/components/WwwFrame/WwwPage';
 
 import loanGroupCategoriesMixin from '@/plugins/loan-group-categories';
-
-import experimentQuery from '@/graphql/query/experimentAssignment.graphql';
-import experimentVersionFragment from '@/graphql/fragments/experimentVersion.graphql';
 
 import AlreadySubscribedNotice from './AlreadySubscribedNotice';
 import LegacySubscriberNotice from './LegacySubscriberNotice';
@@ -292,10 +292,6 @@ const pageQuery = gql`query monthlyGoodSetupPageControl {
 		braintreeDropInFeature: uiConfigSetting(key: "feature.braintree_dropin") {
 			value
 			key
-		}
-		braintreeDropInExperimentMG: uiExperimentSetting(key: "braintree_dropin_mg") {
-			key
-			value
 		}
 	}
 	my {
@@ -344,14 +340,14 @@ export default {
 	},
 	components: {
 		AlreadySubscribedNotice,
-		MonthlyGoodDropInPaymentWrapper,
-		IconPencil,
 		KvButton,
 		KvCheckbox,
 		KvCurrencyInput,
 		KvDropdownRounded,
+		KvIcon,
 		KvLoadingSpinner,
 		LegacySubscriberNotice,
+		MonthlyGoodDropInPaymentWrapper,
 		PayPalMg,
 		WwwPage,
 	},
@@ -367,7 +363,7 @@ export default {
 			isDonationOptionsDirty: false,
 			submitting: false,
 			legacySubs: [],
-			showDropInPayments: false,
+			showDropInPayments: true,
 			// user flags
 			isMonthlyGoodSubscriber: false,
 			hasAutoDeposits: false,
@@ -407,15 +403,7 @@ export default {
 	inject: ['apollo'],
 	apollo: {
 		query: pageQuery,
-		preFetch(config, client) {
-			return client.query({
-				query: pageQuery
-			}).then(() => {
-				return client.query({
-					query: experimentQuery, variables: { id: 'braintree_dropin_mg' }
-				});
-			});
-		},
+		preFetch: true,
 		result({ data }) {
 			this.isMGTaglineActive = _get(data, 'general.mgDonationTaglineActive.value') === 'true' || false;
 			this.isMonthlyGoodSubscriber = _get(data, 'my.autoDeposit.isSubscriber', false);
@@ -426,15 +414,9 @@ export default {
 			this.legacySubs = _get(data, 'my.subscriptions.values', []);
 			this.hasLegacySubscription = this.legacySubs.length > 0;
 
-			// Braintree drop-in UI data
-			const braintreeDropInExp = this.apollo.readFragment({
-				id: 'Experiment:braintree_dropin_mg',
-				fragment: experimentVersionFragment,
-			}) || {};
-
 			// if experiment and feature flag are BOTH on, show UI
 			const braintreeDropInFeatureFlag = _get(data, 'general.braintreeDropInFeature.value') === 'true' || false;
-			this.showDropInPayments = braintreeDropInFeatureFlag && braintreeDropInExp.version === 'shown';
+			this.showDropInPayments = braintreeDropInFeatureFlag;
 		},
 	},
 	created() {
@@ -721,6 +703,7 @@ export default {
 
 		.icon-pencil {
 			height: 1rem;
+			width: 1rem;
 		}
 
 		.text-input__day {
@@ -749,15 +732,16 @@ export default {
 			display: inline-block;
 		}
 
-		::v-deep .loading-spinner {
-			vertical-align: middle;
-			width: 1rem;
-			height: 1rem;
-		}
+		// These styles are only needed for non Drop-In payment wrapper
+		// ::v-deep .loading-spinner {
+		// 	vertical-align: middle;
+		// 	width: 1rem;
+		// 	height: 1rem;
+		// }
 
-		::v-deep .loading-spinner .line {
-			background-color: $white;
-		}
+		// ::v-deep .loading-spinner .line {
+		// 	background-color: $white;
+		// }
 
 		::v-deep .dropdown-wrapper.donation-dropdown .dropdown {
 			margin-bottom: 0;

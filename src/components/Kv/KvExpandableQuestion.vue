@@ -1,7 +1,7 @@
 <template>
 	<div class="expandable-faq">
 		<button class="expandable-faq__header"
-			@click="open = !open"
+			@click="toggleFaq"
 		>
 			<h4>{{ title }}</h4>
 			<kv-icon
@@ -27,6 +27,8 @@
 </template>
 
 <script>
+import { paramCase } from 'change-case';
+
 import KvExpandable from '@/components/Kv/KvExpandable';
 import KvIcon from '@/components/Kv/KvIcon';
 
@@ -36,13 +38,26 @@ export default {
 		KvIcon
 	},
 	props: {
+		/**
+		 * Question Title
+		* */
 		title: {
 			type: String,
 			default: ''
 		},
+		/**
+		 * Question Content - can accept raw html
+		* */
 		content: {
 			type: String,
 			default: ''
+		},
+		/**
+		 * Analytics Category
+		* */
+		analyticsCategory: {
+			type: String,
+			default: 'Faq'
 		}
 	},
 	data() {
@@ -50,6 +65,26 @@ export default {
 			open: false,
 		};
 	},
+	computed: {
+		/** Returns title as a url friendly slug */
+		titleSlugified() {
+			return paramCase(this.title);
+		}
+	},
+	mounted() {
+		/** Allows directly linking to the question via a hash equal to slugified title */
+		if (this.$route.hash === `#${this.titleSlugified}`) {
+			this.open = true;
+		}
+	},
+	methods: {
+		toggleFaq() {
+			if (!this.open) {
+				this.$kvTrackEvent(this.analyticsCategory, 'click-faq-expand', this.title);
+			}
+			this.open = !this.open;
+		}
+	}
 };
 
 </script>
@@ -59,6 +94,10 @@ export default {
 
 .expandable-faq {
 	border-top: 1px solid $charcoal;
+
+	&:first-child {
+		border-top: 0;
+	}
 
 	.toggle-arrow {
 		height: 1rem;

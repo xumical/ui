@@ -55,8 +55,12 @@
 							@updating-totals="setUpdatingTotals"
 						/>
 
+						<basket-verification
+							@verification-required="verificationRequired = $event"
+						/>
+
 						<div class="checkout-actions row" :class="{'small-collapse' : showLoginContinueButton}">
-							<div v-if="isLoggedIn" class="small-12">
+							<div v-if="isLoggedIn && !verificationRequired" class="small-12">
 								<form v-if="showKivaCreditButton" action="/checkout" method="GET">
 									<input type="hidden" name="js_loaded" value="false">
 									<kiva-credit-payment
@@ -85,9 +89,8 @@
 								/>
 							</div>
 
-							<div v-else class="small-12">
+							<div v-else-if="!isActivelyLoggedIn && showLoginContinueButton" class="small-12">
 								<kv-button
-									v-if="!isActivelyLoggedIn && showLoginContinueButton"
 									class="checkout-button smallest"
 									id="login-to-continue-button"
 									v-kv-track-event="['basket', 'Login to Continue Button']"
@@ -155,8 +158,6 @@
 <script>
 import _get from 'lodash/get';
 import _filter from 'lodash/filter';
-import _map from 'lodash/map';
-import _pick from 'lodash/pick';
 import numeral from 'numeral';
 import store2 from 'store2';
 import cookieStore from '@/util/cookieStore';
@@ -177,6 +178,7 @@ import KivaCreditPayment from '@/components/Checkout/KivaCreditPayment';
 import KvButton from '@/components/Kv/KvButton';
 import OrderTotals from '@/components/Checkout/OrderTotals';
 import BasketItemsList from '@/components/Checkout/BasketItemsList';
+import BasketVerification from '@/components/Checkout/BasketVerification';
 import KivaCardRedemption from '@/components/Checkout/KivaCardRedemption';
 import LoadingOverlay from '@/pages/Lend/LoadingOverlay';
 import KvLightbox from '@/components/Kv/KvLightbox';
@@ -196,6 +198,7 @@ export default {
 		KvLightbox,
 		OrderTotals,
 		BasketItemsList,
+		BasketVerification,
 		KivaCardRedemption,
 		LoadingOverlay,
 		CheckoutHolidayPromo,
@@ -219,6 +222,7 @@ export default {
 			kivaCards: [],
 			redemption_credits: [],
 			hasFreeCredits: false,
+			verificationRequired: false,
 			totals: {},
 			updatingTotals: false,
 			showReg: true,
@@ -547,11 +551,13 @@ export default {
 			const transactionData = {
 				transactionId: numeral(transactionId).value(),
 				itemTotal: this.totals.itemTotal,
-				loans: _map(this.loans, loan => {
-					return _pick(loan, ['__typename', 'id', 'price']);
+				loans: this.loans.map(loan => {
+					const { __typename, id, price } = loan;
+					return { __typename, id, price };
 				}),
-				donations: _map(this.donations, donation => {
-					return _pick(donation, ['__typename', 'id', 'price']);
+				donations: this.donations.map(donation => {
+					const { __typename, id, price } = donation;
+					return { __typename, id, price };
 				}),
 			};
 			// fire transaction events

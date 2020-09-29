@@ -197,6 +197,16 @@ export default {
 				position: relative;
 				margin-right: rem-calc(8);
 			}
+
+			.loading-spinner {
+				vertical-align: middle;
+				width: 1rem;
+				height: 1rem;
+			}
+
+			.loading-spinner .line {
+				background-color: $white;
+			}
 		}
 	}
 }

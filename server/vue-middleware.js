@@ -64,6 +64,7 @@ module.exports = function createMiddleware({
 			config: config.app,
 			cookies,
 			user: req.user || {},
+			locale: req.locale,
 		};
 
 		const targetCookies = ['kvbskt', 'kvls', 'kvu', 'kv'];

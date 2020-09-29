@@ -26,7 +26,7 @@
 						>
 							{{ totalCombinedDeposit | numeral('$0,0.00') }}
 						</kv-button> will be
-						transferred<kv-button class="text-link"
+						transferred <kv-button class="text-link"
 							@click.native.prevent="showLightbox = true;"
 							v-if="selectedGroupDescriptor"
 						>
@@ -79,7 +79,7 @@
 														@click="toggleSections"
 													>
 														<strong>Update Payment Method</strong>
-														<icon-pencil class="icon-pencil" />
+														<kv-icon class="icon-pencil" name="pencil" title="Edit" />
 													</button>
 												</div>
 											</div>
@@ -166,9 +166,6 @@ import gql from 'graphql-tag';
 
 import loanGroupCategoriesMixin from '@/plugins/loan-group-categories';
 
-import experimentAssignmentQuery from '@/graphql/query/experimentAssignment.graphql';
-import experimentVersionFragment from '@/graphql/fragments/experimentVersion.graphql';
-
 import KvButton from '@/components/Kv/KvButton';
 import KvIcon from '@/components/Kv/KvIcon';
 import KvLightbox from '@/components/Kv/KvLightbox';
@@ -176,8 +173,6 @@ import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
 import KvSettingsCard from '@/components/Kv/KvSettingsCard';
 import MonthlyGoodUpdateForm from '@/components/Forms/MonthlyGoodUpdateForm';
 import MonthlyGoodDropInPaymentWrapper from '@/components/MonthlyGood/MonthlyGoodDropInPaymentWrapper';
-
-import IconPencil from '@/assets/icons/inline/pencil.svg';
 
 const pageQuery = gql`query monthlyGoodSubscription {
 	my {
@@ -200,17 +195,12 @@ const pageQuery = gql`query monthlyGoodSubscription {
 			value
 			key
 		}
-		uiExperimentSetting(key: "braintree_dropin_mg_update") {
-			key
-			value
-		}
 	}
 }`;
 
 export default {
 	inject: ['apollo'],
 	components: {
-		IconPencil,
 		KvButton,
 		KvIcon,
 		KvLightbox,
@@ -231,7 +221,7 @@ export default {
 			settingsOpen: true, // if settingsOpen is false, payment update section is shown
 			isChanged: false,
 			isFormValid: true,
-			showDropInPaymentUpdate: false,
+			showDropInPaymentUpdate: true,
 		};
 	},
 	mixins: [
@@ -239,15 +229,7 @@ export default {
 	],
 	apollo: {
 		query: pageQuery,
-		preFetch(config, client) {
-			return client.query({
-				query: pageQuery
-			}).then(() => {
-				return client.query({
-					query: experimentAssignmentQuery, variables: { id: 'braintree_dropin_mg_update' }
-				});
-			});
-		},
+		preFetch: true,
 		result({ data }) {
 			this.isMonthlyGoodSubscriber = _get(data, 'my.autoDeposit.isSubscriber', false);
 			if (this.isMonthlyGoodSubscriber) {
@@ -259,15 +241,9 @@ export default {
 				this.paymentMethod = _get(data, 'my.autoDeposit.paymentMethod', {});
 			}
 
-			// Braintree drop-in UI data
-			const braintreeDropInExp = this.apollo.readFragment({
-				id: 'Experiment:braintree_dropin_mg_update',
-				fragment: experimentVersionFragment,
-			}) || {};
-
 			// if experiment and feature flag are BOTH on, show UI
 			const braintreeDropInFeatureFlag = _get(data, 'general.braintreeDropInFeature.value') === 'true' || false;
-			this.showDropInPaymentUpdate = braintreeDropInFeatureFlag && braintreeDropInExp.version === 'shown';
+			this.showDropInPaymentUpdate = braintreeDropInFeatureFlag;
 		},
 	},
 	computed: {
@@ -425,6 +401,7 @@ export default {
 
 	.icon-pencil {
 		height: 1rem;
+		width: 1rem;
 	}
 }
 </style>

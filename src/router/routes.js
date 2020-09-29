@@ -1,11 +1,22 @@
 export default [
-	{ path: '/', component: () => import('@/pages/Homepage/Homepage') },
+	{ path: '/', name: 'homepage', component: () => import('@/pages/Homepage/Homepage') },
 	{
 		path: '/algolia-vue',
 		component: () => import('@/pages/AlgoliaPOC'),
 		children: [
 			{ path: '*', component: () => import('@/pages/AlgoliaPOC') },
 		]
+	},
+	{
+		path: '/auto-deposit-new', // ! TODO temporary route
+		component: () => import('@/pages/AutoDeposit/AutoDepositLandingPage'),
+	},
+	{
+		path: '/auto-deposit-new/thanks', // ! TODO temporary route
+		component: () => import('@/pages/AutoDeposit/AutoDepositThanksPage'),
+		meta: {
+			activeLoginRequired: true,
+		}
 	},
 	{
 		path: '/borrow/pre-application',
@@ -21,6 +32,7 @@ export default [
 			},
 		]
 	},
+	{ path: '/15', component: () => import('@/pages/15Years/15Years') },
 	{ path: '/build', component: () => import('@/pages/Build/BuildPage') },
 	{ path: '/build/code-of-conduct', component: () => import('@/pages/Build/CodeOfConductPage') },
 	{ path: '/build/data-snapshots', component: () => import('@/pages/Build/DataPage') },
@@ -46,6 +58,10 @@ export default [
 		path: '/get-started',
 		component: () => import('@/pages/GetStarted/GetStarted'),
 		children: [
+			{
+				path: '',
+				component: () => import('@/pages/GetStarted/GetStartedCauses'),
+			},
 			{
 				path: 'places',
 				component: () => import('@/pages/GetStarted/GetStartedPlaces')
@@ -76,7 +92,16 @@ export default [
 	{ path: '/lend-by-category/:category', component: () => import('@/pages/Lend/LoanChannelCategoryPage') },
 	{ path: '/lend-vue', component: () => import('@/pages/Lend/LendPage') },
 	{ path: '/lend/filter', component: () => import('@/pages/Lend/Filter/LendFilterPage') },
-
+	{
+		path: '/cc/:dynamicRoute',
+		component: () => import('@/pages/LandingPages/CorporateCampaign/CCLandingPage'),
+		props: route => ({
+			dynamicRoute: route.params.dynamicRoute,
+			upc: route.query.upc,
+			promoCode: route.query.promoCode,
+			lendingReward: route.query.lendingReward
+		})
+	},
 	{
 		path: '/monthlygood',
 		component: () => import('@/pages/MonthlyGood/MonthlyGoodLandingPage'),
@@ -107,7 +132,6 @@ export default [
 			activeLoginRequired: true,
 		}
 	},
-
 	{ path: '/page-two', component: () => import('@/pages/PageTwo') },
 	{
 		path: '/portfolio/lending-stats',

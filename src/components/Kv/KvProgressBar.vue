@@ -29,30 +29,38 @@ export default {
 
 	display: block;
 	width: 100%;
-	height: rem-calc(9);
 	background-color: $background-color;
 	-webkit-appearance: none;
 	-moz-appearance: none;
 	appearance: none;
+	height: rem-calc(4);
+
+	@include breakpoint(large) {
+		height: rem-calc(9);
+	}
 
 	/* firefox */
 	&::-moz-progress-bar {
 		background: $foreground-color;
+		background: var(--kv-progress-bar-foreground-color, $foreground-color);
 	}
 
 	/* webkit browsers */
 	&::-webkit-progress-bar {
 		background: $background-color;
+		background: var(--kv-progress-bar-background-color, $background-color);
 		box-shadow: 0;
 	}
 
 	&::-webkit-progress-value {
 		background: $foreground-color;
+		background: var(--kv-progress-bar-foreground-color, $foreground-color);
 	}
 
 	/* IE */
 	&::-ms-fill {
 		background: $foreground-color;
+		background: var(--kv-progress-bar-foreground-color, $foreground-color);
 		box-shadow: 0;
 	}
 }

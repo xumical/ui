@@ -2,30 +2,30 @@
 	<div class="lend-by-category-homepage">
 		<section class="featured-loans section">
 			<div class="row align-center">
-				<div class="small-12 medium-10 large-7 xlarge-6 small-order-2 large-order-1 columns">
-					<featured-loans-carousel />
+				<div class="small-12 medium-10 large-6 xlarge-5 small-order-2 large-order-1 columns">
+					<!-- <featured-loans-carousel /> -->
+					<no-click-loan-card />
 				</div>
 				<!-- eslint-disable-next-line max-len -->
-				<div class="small-10 large-5 xlarge-6 small-order-1 large-order-2 align-self-middle columns featured-loans__cta_wrapper">
+				<div class="small-10 large-6 xlarge-7 small-order-1 large-order-2 align-self-middle columns featured-loans__cta_wrapper">
 					<h1 class="featured-loans__header">
 						Make a loan, <br class="so mo"> change a life.
 					</h1>
 					<p class="featured-loans__body">
-						Kiva empowers underserved people to achieve their
-						dreams by crowdfunding loans and unlocking capital.
-						<br>
-						<router-link
-							class="show-for-large"
-							:to="'/lend-by-category'"
-							v-kv-track-event="[
-								'homepage',
-								'click-hero-cta',
-								'Get started',
-							]"
-						>
-							Get started
-						</router-link>
+						With Kiva you can lend a small amount of money and make big
+						change in someone's life. It's fast and easy to get started.
 					</p>
+					<router-link
+						class="featured-loans__cta"
+						to="/get-started"
+						v-kv-track-event="[
+							'Home',
+							'click-hero-cta',
+							'Find someone to lend to',
+						]"
+					>
+						Find someone to lend to &xrarr;
+					</router-link>
 				</div>
 			</div>
 			<kv-responsive-image
@@ -40,11 +40,52 @@
 			<div class="row">
 				<div class="columns">
 					<h2 class="loan-categories__header text-center">
-						Kiva makes it easy to support causes you care about.
+						Support causes you care about.
 					</h2>
 					<loan-categories-section />
 				</div>
 			</div>
+		</section>
+
+		<!-- GROW-172 associated to the GROW-165 explicit lender preferences epic -->
+		<section class="take-quiz section">
+			<div class="row take-quiz__border">
+				<div class="small-12 large-6 columns">
+					<kv-responsive-image
+						class="take-quiz__img"
+						:images="takeQuizImgs.header"
+						loading="lazy"
+						alt=""
+					/>
+				</div>
+				<div class="small-12 large-6 columns take-quiz__text-container">
+					<h2 class="take-quiz__header">
+						Find your first <br>borrower
+					</h2>
+					<p class="take-quiz__body">
+						Take our 1-minute quiz based on causes you care about and
+						we'll find the ideal person to support!
+					</p>
+					<kv-button
+						:to="`/get-started`"
+						class="smaller take-quiz__button"
+						v-kv-track-event="[
+							'Home',
+							'click-quiz-card-cta',
+							'Take quiz'
+						]"
+					>
+						Take quiz
+					</kv-button>
+				</div>
+			</div>
+
+			<kv-responsive-image
+				class="take-quiz__flourish"
+				:images="flourishImgs.leafRight"
+				loading="lazy"
+				alt=""
+			/>
 		</section>
 
 		<section class="loan-not-donation section text-center">
@@ -233,14 +274,16 @@
 import KvButton from '@/components/Kv/KvButton';
 import KvResponsiveImage from '@/components/Kv/KvResponsiveImage';
 import LoanCategoriesSection from '@/components/Homepage/LendByCategory/LoanCategoriesSection';
-import FeaturedLoansCarousel from '@/components/Homepage/LendByCategory/FeaturedLoansCarousel';
+// import FeaturedLoansCarousel from '@/components/Homepage/LendByCategory/FeaturedLoansCarousel';
+import NoClickLoanCard from '@/components/Homepage/LendByCategory/NoClickLoanCard';
 import HomepageStatistics from './HomepageStatistics';
 
 const imgRequire = require.context('@/assets/images/lend-by-category-homepage/', true);
 
 export default {
 	components: {
-		FeaturedLoansCarousel,
+		// FeaturedLoansCarousel,
+		NoClickLoanCard,
 		HomepageStatistics,
 		KvButton,
 		KvResponsiveImage,
@@ -254,6 +297,12 @@ export default {
 					['small', imgRequire('./loan-not-donation.png')],
 					['small retina', imgRequire('./loan-not-donation_2x.png')],
 				],
+			},
+			takeQuizImgs: {
+				header: [
+					['small', imgRequire('./potters.png')],
+					['small retina', imgRequire('./potters_2x.png')],
+				]
 			},
 			howItWorksImgs: {
 				borrower: [
@@ -317,6 +366,9 @@ export default {
 					['large', imgRequire('./flourish-yellow-left.png')],
 					['large retina', imgRequire('./flourish-yellow-left_2x.png')],
 				],
+				leafRight: [
+					['small', imgRequire('./leaf.svg')],
+				],
 			},
 		};
 	},
@@ -341,14 +393,22 @@ export default {
 }
 
 .featured-loans {
-	padding: 2rem 0 0;
+	padding: 2rem 0 6rem;
 
 	@include breakpoint(large) {
-		padding: 4rem 0 0;
+		padding: 4rem 0 11rem;
 	}
 
 	&__cta_wrapper {
-		padding: 1.5rem 2rem 3rem;
+		padding: 0 0 2rem;
+
+		@include breakpoint(medium) {
+			padding: 0 2rem 2rem;
+		}
+
+		@include breakpoint(large) {
+			padding: 0 2rem;
+		}
 	}
 
 	&__header {
@@ -359,7 +419,8 @@ export default {
 		}
 	}
 
-	&__body {
+	&__body,
+	&__cta {
 		@include medium-text();
 
 		@include breakpoint(xlarge) {
@@ -371,16 +432,13 @@ export default {
 		position: absolute;
 		width: 40%;
 		max-width: rem-calc(436);
-		top: 28%;
 		right: 0;
-		bottom: auto;
+		bottom: 0;
 		pointer-events: none;
 		z-index: -1;
 
 		@include breakpoint(medium) {
 			width: 31%;
-			bottom: -5%;
-			top: auto;
 		}
 	}
 }
@@ -401,6 +459,78 @@ export default {
 
 		@include breakpoint(large) {
 			@include large-text();
+		}
+	}
+}
+
+.take-quiz {
+	&__border {
+		border-radius: 1rem;
+		z-index: 1;
+		box-shadow: 0 0 1.2rem 1rem rgb(153, 153, 153, 0.1);
+		margin: 0 rem-calc(10);
+
+		@include breakpoint(xga) {
+			margin: 0 auto;
+		}
+	}
+
+	&__img {
+		margin: rem-calc(30) auto;
+		width: rem-calc(240);
+
+		@include breakpoint(large) {
+			width: rem-calc(304);
+		}
+
+		@include breakpoint(xlarge) {
+			width: rem-calc(345);
+		}
+	}
+
+	&__text-container {
+		text-align: center;
+		@include breakpoint(large) {
+			text-align: unset;
+			margin: auto;
+		}
+	}
+
+	&__header {
+		font-weight: bold;
+		margin-top: rem-calc(20);
+
+		@include breakpoint(large) {
+			@include large-text();
+		}
+	}
+
+	&__body {
+		@include breakpoint(large) {
+			padding-right: 1rem;
+			@include featured-text();
+		}
+	}
+
+	&__button {
+		border-radius: rem-calc(10);
+		padding-left: rem-calc(50);
+		padding-right: rem-calc(50);
+		margin-bottom: rem-calc(40);
+	}
+
+	&__flourish {
+		position: absolute;
+		width: 10rem;
+		max-width: 17rem;
+		bottom: 2rem;
+		right: -1.5rem;
+		pointer-events: none;
+		z-index: -1;
+
+		@include breakpoint(large) {
+			width: 17rem;
+			bottom: 1rem;
 		}
 	}
 }
