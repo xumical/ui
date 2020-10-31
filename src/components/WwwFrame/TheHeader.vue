@@ -99,12 +99,12 @@
 							Basket
 						</span>
 					</router-link>
+					<!-- :event="showPopupLogin ? '' : 'click'"
+					@click.native="auth0Login" -->
 					<router-link
 						v-show="isVisitor"
-						to="/ui-login"
+						to="/ui-login?force=true"
 						class="header-button"
-						:event="showPopupLogin ? '' : 'click'"
-						@click.native="auth0Login"
 						v-kv-track-event="['TopNav','click-Sign-in']"
 					>
 						<span>Sign in</span>
