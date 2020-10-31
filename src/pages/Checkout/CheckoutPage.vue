@@ -88,12 +88,12 @@
 							</div>
 
 							<div v-else-if="!isActivelyLoggedIn && showLoginContinueButton" class="small-12">
+								<!-- @click.prevent.native="loginToContinue" -->
 								<kv-button
 									class="checkout-button smallest"
 									id="login-to-continue-button"
 									v-kv-track-event="['basket', 'Login to Continue Button']"
 									title="Login to Continue Button"
-									@click.prevent.native="loginToContinue"
 									:href="'/ui-login?force=true&doneUrl=/checkout'"
 								>
 									{{ loginContinueButtonText }}
