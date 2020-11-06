@@ -65,7 +65,7 @@
 		"cookie": "^0.4.1",
 		"cross-env": "^7.0.2",
 		"date-fns": "^2.11.0",
-		"dd-trace": "^0.22.0",
+		"dd-trace": "^0.26.1",
 		"dotenv": "^8.1.0",
 		"embla-carousel": "^4.0.6",
 		"express": "^4.17.1",
