@@ -1,0 +1,20 @@
+/* @license twgl.js 4.15.2 Copyright (c) 2015, Gregg Tavares All Rights Reserved.
+Available via the MIT license.
+see: http://github.com/greggman/twgl.js for details */
+
+/*! Hammer.JS - v2.0.8 - 2016-04-23
+   * http://hammerjs.github.io/
+   *
+   * Copyright (c) 2016 Jorik Tangelder;
+   * Licensed under the MIT license */
+
+/**
+ * k-d Tree JavaScript - V 1.01
+ *
+ * https://github.com/ubilabs/kd-tree-javascript
+ *
+ * @author Mircea Pricop <pricop@ubilabs.net>, 2012
+ * @author Martin Kleppe <kleppe@ubilabs.net>, 2012
+ * @author Ubilabs http://ubilabs.net, 2012
+ * @license MIT License <http://www.opensource.org/licenses/mit-license.php>
+ */
