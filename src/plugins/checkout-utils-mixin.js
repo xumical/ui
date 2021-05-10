@@ -1,10 +1,13 @@
 import _get from 'lodash/get';
 import * as Sentry from '@sentry/browser';
 import shopValidateBasket from '@/graphql/mutation/shopValidatePreCheckout.graphql';
+import shopValidateGuestBasket from '@/graphql/mutation/shopValidateGuestPreCheckout.graphql';
 import shopCheckout from '@/graphql/mutation/shopCheckout.graphql';
 import showVerificationLightbox from '@/graphql/mutation/checkout/showVerificationLightbox.graphql';
-import cookieStore from '@/util/cookieStore';
 import logFormatter from '@/util/logFormatter';
+import checkInjections from '@/util/injectionCheck';
+
+const injections = ['apollo', 'cookieStore'];
 
 export default {
 	methods: {
@@ -15,6 +18,8 @@ export default {
 		 * @returns {Promise}
 		 */
 		validateBasket() {
+			checkInjections(this, injections);
+
 			return new Promise((resolve, reject) => {
 				this.apollo.mutate({
 					mutation: shopValidateBasket
@@ -41,12 +46,52 @@ export default {
 		},
 
 		/**
+		 * Call the shop validateCheckout graphql query, using a guest email
+		 * - This validates the current basket for a guest checkout, returning any errors that need to be addressed
+		 *
+		 * @returns {Promise}
+		 */
+		validateGuestBasket(guestEmail, emailUpdates) {
+			checkInjections(this, injections);
+
+			return new Promise((resolve, reject) => {
+				this.apollo.mutate({
+					mutation: shopValidateGuestBasket,
+					variables: {
+						email: guestEmail,
+						emailOptIn: emailUpdates,
+						visitorId: this.cookieStore.get('uiv') || null
+					}
+				}).then(data => {
+					const validationResult = _get(data, 'data.shop.validatePreCheckout');
+					if (typeof validationResult !== 'undefined' && validationResult.length === 0) {
+						this.$kvTrackEvent(
+							'basket', 'Validate Guest Basket', 'Validation Success'
+						);
+						resolve(true);
+					} else {
+						this.$kvTrackEvent(
+							'basket', 'Validate Guest Basket', 'Validation Failure'
+						);
+						resolve(validationResult);
+					}
+				}).catch(errorResponse => {
+					logFormatter(errorResponse, 'error');
+					Sentry.captureException(errorResponse);
+					reject(errorResponse);
+				});
+			});
+		},
+
+		/**
 		 * Call the shop checkout graphql mutation
 		 * - This checks out the basket using Kiva credit
 		 *
 		 * @returns {Promise}
 		 */
 		checkoutBasket() {
+			checkInjections(this, injections);
+
 			return new Promise((resolve, reject) => {
 				this.apollo.mutate({
 					mutation: shopCheckout
@@ -70,6 +115,8 @@ export default {
 		 * @param {Object} errorResponse contains errors node with array of errors
 		 */
 		showCheckoutError(errorResponse, ignoreAuth = false) {
+			checkInjections(this, injections);
+
 			// const errors = _get(errorResponse, 'errors');
 			let errorMessages = '';
 			// When validation or checkout fails and errors object is returned along with the data
@@ -111,6 +158,7 @@ export default {
 
 			if (errorMessages) {
 				this.$showTipMsg(errorMessages, 'error');
+				this.$kvTrackEvent('basket', 'error-checkout-cta', errorMessages);
 			}
 		},
 
@@ -118,8 +166,10 @@ export default {
 		 * @param transactionId
 		 */
 		redirectToThanks(transactionId) {
+			checkInjections(this, injections);
+
 			if (transactionId) {
-				cookieStore.remove('kvbskt', { path: '/', secure: true });
+				this.cookieStore.remove('kvbskt', { path: '/', secure: true });
 				window.location = `/checkout/post-purchase?kiva_transaction_id=${transactionId}`;
 			}
 		}

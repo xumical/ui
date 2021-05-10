@@ -57,7 +57,7 @@ export default {
 		KvButton,
 		KvLoadingOverlay,
 	},
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	apollo: {
 		preFetch(config, client, { route }) {
 			return client.query({
@@ -226,6 +226,6 @@ export default {
 <style lang="scss">
 /* Hide Basket Bar (this won't work with scoped) */
 .basket-bar {
-	display: none;
+	display: none !important;
 }
 </style>

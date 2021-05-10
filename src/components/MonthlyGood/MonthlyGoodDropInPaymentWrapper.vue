@@ -1,6 +1,6 @@
 <template>
 	<div class="row align-center">
-		<div class="payment-holder small-12 medium-8 columns">
+		<div class="dropin-payment-holder small-12 columns">
 			<braintree-drop-in-interface
 				ref="braintreeDropInInterface"
 				:amount="amount | numeral('0.00')"
@@ -22,7 +22,7 @@
 				</kv-button>
 			</div>
 
-			<p class="attribution-text">
+			<p class="dropin-wrapper-attribution-text">
 				Thanks to PayPal, Kiva receives free payment processing for all loans.
 			</p>
 		</div>
@@ -32,9 +32,13 @@
 <script>
 import numeral from 'numeral';
 import * as Sentry from '@sentry/browser';
+
+import braintreeDropinError from '@/plugins/braintree-dropin-error-mixin';
+
 import braintreeCreateMonthlyGoodSubscription from '@/graphql/mutation/braintreeCreateMonthlyGoodSubscription.graphql';
 import braintreeUpdateSubscriptionPaymentMethod from
 	'@/graphql/mutation/braintreeUpdateSubscriptionPaymentMethod.graphql';
+
 import KvButton from '@/components/Kv/KvButton';
 import KvIcon from '@/components/Kv/KvIcon';
 import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
@@ -42,12 +46,15 @@ import BraintreeDropInInterface from '@/components/Payment/BraintreeDropInInterf
 
 export default {
 	components: {
+		BraintreeDropInInterface,
 		KvButton,
 		KvIcon,
-		BraintreeDropInInterface,
 		KvLoadingSpinner
 	},
 	inject: ['apollo'],
+	mixins: [
+		braintreeDropinError
+	],
 	props: {
 		amount: {
 			type: Number,
@@ -126,23 +133,11 @@ export default {
 							deviceData,
 						}
 					}).then(kivaBraintreeResponse => {
-					// Check for errors in transaction
+						// Check for errors in transaction
 						if (kivaBraintreeResponse.errors) {
-							const errorCode = kivaBraintreeResponse.errors?.[0]?.code;
-							const errorMessage = kivaBraintreeResponse.errors?.[0]?.message;
-							const standardErrorCode = `(Braintree error: ${errorCode})`;
-							const standardError = `There was an error processing your payment.
-						Please try again. ${standardErrorCode}`;
-
+							this.processBraintreeDropInError(this.action, kivaBraintreeResponse);
 							// Payment method failed, unselect attempted payment method
 							this.$refs.braintreeDropInInterface.btDropinInstance.clearSelectedPaymentMethod();
-							// Potential error message: 'Transaction failed. Please select a different payment method.';
-
-							this.$showTipMsg(standardError, 'error');
-
-							// Fire specific exception to Snowplow
-							this.$kvTrackEvent(this.action, 'DropIn Payment Error', `${errorCode}: ${errorMessage}`);
-
 							// exit
 							return kivaBraintreeResponse;
 						}
@@ -182,21 +177,9 @@ export default {
 				}).then(kivaBraintreeResponse => {
 					// Check for errors in transaction
 					if (kivaBraintreeResponse.errors) {
-						const errorCode = kivaBraintreeResponse.errors?.[0]?.code;
-						const errorMessage = kivaBraintreeResponse.errors?.[0]?.message;
-						const standardErrorCode = `(Braintree error: ${errorCode})`;
-						const standardError = `There was an error processing your payment.
-						Please try again. ${standardErrorCode}`;
-
+						this.processBraintreeDropInError(this.action, kivaBraintreeResponse);
 						// Payment method failed, unselect attempted payment method
 						this.$refs.braintreeDropInInterface.btDropinInstance.clearSelectedPaymentMethod();
-						// Potential error message: 'Transaction failed. Please select a different payment method.';
-
-						this.$showTipMsg(standardError, 'error');
-
-						// Fire specific exception to Snowplow
-						this.$kvTrackEvent(this.action, 'DropIn Payment Error', `${errorCode}: ${errorMessage}`);
-
 						// exit
 						return kivaBraintreeResponse;
 					}
@@ -228,48 +211,4 @@ export default {
 
 <style lang="scss" scoped>
 @import "settings";
-
-.payment-holder {
-	text-align: left;
-	padding: 0 0.6rem 1.25rem;
-
-	@include breakpoint(large) {
-		padding: 0 1.5rem 1.5rem;
-	}
-
-	.attribution-text {
-		color: $kiva-text-light;
-		text-align: center;
-		margin-top: rem-calc(24);
-		padding: 0 0.75rem;
-		font-size: $small-text-font-size;
-	}
-
-	::v-deep {
-		#dropin-submit {
-			width: 100%;
-			font-size: 1.25rem;
-			margin-top: 1.25rem;
-
-			.icon-lock {
-				height: rem-calc(20);
-				width: rem-calc(20);
-				fill: white;
-				top: rem-calc(3);
-				position: relative;
-				margin-right: rem-calc(8);
-			}
-
-			.loading-spinner {
-				vertical-align: middle;
-				width: 1rem;
-				height: 1rem;
-			}
-
-			.loading-spinner .line {
-				background-color: $white;
-			}
-		}
-	}
-}
 </style>

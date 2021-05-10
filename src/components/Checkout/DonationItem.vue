@@ -1,17 +1,16 @@
 <template>
 	<div class="basket-donation-item row">
-		<span class="hide-for-small-only medium-3 large-2">
-			<span class="donation-icon">
+		<div class="hide-for-small-only medium-3 large-2 columns">
+			<div class="donation-icon">
 				<kv-icon class="dedicate-heart" name="dedicate-heart" />
-			</span>
-		</span>
-		<span class="small-12 medium-5 large-7 donation-info-wrapper">
-			<span class="donation-info featured-text">
+			</div>
+		</div>
+		<div class="small-12 medium-5 large-7 columns donation-info-wrapper">
+			<div class="donation-info featured-text">
 				{{ donationTitle }}
-			</span>
+			</div>
 			<div v-if="hasLoans">
-				<div class="donation-tagline small-text">
-					{{ donationTagLine }}
+				<div class="donation-tagline small-text" v-html="donationTagLine">
 				</div>
 				<button
 					class="small-text donation-help-text"
@@ -21,9 +20,8 @@
 					{{ donationDetailsLink }}
 				</button>
 			</div>
-		</span>
-		<!-- <span class="small-3 show-for-small-only"></span> -->
-		<span class="small-12 medium-4 large-3 medium-text-font-size">
+		</div>
+		<div class="small-12 medium-4 large-3 columns medium-text-font-size">
 			<div
 				v-show="!editDonation"
 				class="donation-amount-wrapper"
@@ -33,7 +31,8 @@
 					v-kv-track-event="['basket', 'Edit Donation']"
 					@click="enterEditDonation"
 					title="Edit Donation"
-				>{{ formattedAmount }}
+				>
+					{{ formattedAmount }}
 					<kv-icon
 						role="img"
 						aria-label="Edit Donation"
@@ -43,7 +42,7 @@
 					/>
 				</button>
 			</div>
-			<div v-show="editDonation" class="small-12 donation-amount-input-wrapper">
+			<div v-show="editDonation" class="small-12 columns donation-amount-input-wrapper">
 				<input
 					type="input"
 					class="donation-amount-input"
@@ -56,12 +55,14 @@
 				<kv-button
 					class="secondary update-donation-inline-button"
 					@click.native.prevent.stop="updateDonation()"
-				>Update</kv-button>
+				>
+					Update
+				</kv-button>
 				<button
 					class="show-for-medium remove-wrapper"
 					@click="updateLoanAmount('remove')"
 				>
-					<kv-icon class="remove-x" name="small-x" :from-sprite="true" />
+					<kv-icon class="remove-x" name="small-x" :from-sprite="true" title="Remove donation" />
 				</button>
 			</div>
 			<donate-repayments
@@ -69,7 +70,7 @@
 				@updating-totals="$emit('updating-totals', $event)"
 				@refreshtotals="$emit('refreshtotals')"
 			/>
-		</span>
+		</div>
 		<donation-nudge-lightbox
 			v-if="!donationNudgeFellows"
 			ref="nudgeLightbox"
@@ -105,20 +106,29 @@
 			title="How does Kiva use donations?"
 		>
 			<p>
-				100% of every dollar you lend on Kiva goes directly to funding loans.
-				We rely on small optional donations from you and others to keep Kiva running.
-				Every $1 donated to Kiva makes $8 in loans possible around the world.
-				Your donation will enable us to:
+				100% of money lent on Kiva goes to funding loans,
+				so we rely on donations to continue this important work.
+				Each dollar helps us invest in systemic change and spread financial inclusion around the world.
+			</p>
+			<p>
+				We’re investing in lasting solutions for a more inclusive world through your donations.
+				Projects like...
 			</p>
 			<ul style="margin-bottom: 1rem;">
-				<li>Send expert staff to over 60 countries to vet and monitor loans and partners.</li>
-				<li>Build and maintain a website that facilitates over $1 million in loans each week.</li>
-				<li>Provide comprehensive customer support to thousands of lenders worldwide.</li>
-				<li>Train and support hundreds of volunteers -- 4 for every 1 staff member at Kiva.</li>
+				<li>
+					Kiva Protocol, giving unbanked people a digital identity and secure control over their
+					own credit information in places like Sierra Leone.
+				</li>
+				<li>
+					Kiva Capital, scaling our model for institutional investors.
+				</li>
+				<li>
+					Kiva Labs, supporting small and growing social enterprises around the world.
+				</li>
 			</ul>
 			<p>
-				If you live in the United States, your donation is tax-deductible.
-				Thank you for considering a donation to Kiva.
+				Your donations also help over 100 Kiva employees and more than 400 volunteers
+				make your loans happen!
 			</p>
 		</kv-lightbox>
 	</div>
@@ -126,7 +136,10 @@
 
 <script>
 import numeral from 'numeral';
+import gql from 'graphql-tag';
 import _forEach from 'lodash/forEach';
+import { processPageContentFlat } from '@/util/contentfulUtils';
+
 import KvIcon from '@/components/Kv/KvIcon';
 import KvButton from '@/components/Kv/KvButton';
 import KvLightbox from '@/components/Kv/KvLightbox';
@@ -137,6 +150,13 @@ import experimentAssignmentQuery from '@/graphql/query/experimentAssignment.grap
 import experimentVersionFragment from '@/graphql/fragments/experimentVersion.graphql';
 import DonationNudgeLightbox from '@/components/Checkout/DonationNudge/DonationNudgeLightbox';
 import DonationNudgeLightboxImage from '@/components/Checkout/DonationNudge/DonationNudgeLightboxImage';
+import { documentToHtmlString } from '~/@contentful/rich-text-html-renderer';
+
+const donationItemQuery = gql`query donationItemQuery {
+	contentful {
+		entries (contentType: "page", contentKey: "checkout")
+	}
+}`;
 
 export default {
 	components: {
@@ -147,7 +167,7 @@ export default {
 		DonationNudgeLightbox,
 		DonationNudgeLightboxImage,
 	},
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	props: {
 		donation: {
 			type: Object,
@@ -179,6 +199,7 @@ export default {
 			showCharityOverheadFooter: false,
 			donationNudgeFellows: false,
 			donationNudgeFellowsHeader: 'Donations enable Kiva Fellows to reach the people who need it most',
+			dynamicDonationItem: ''
 		};
 	},
 	apollo: {
@@ -195,6 +216,8 @@ export default {
 						client.query({ query: experimentAssignmentQuery, variables: { id: 'donation_nudge_fellows' } }),
 						// Get the assigned experiment version for GROW-74
 						client.query({ query: experimentAssignmentQuery, variables: { id: 'checkout_donation_tag_line' } }), // eslint-disable-line max-len
+						// Get contentful dynamic content
+						client.query({ query: donationItemQuery })
 					]).then(resolve).catch(reject);
 				}).catch(reject);
 			});
@@ -202,6 +225,7 @@ export default {
 	},
 	created() {
 		this.setupExperimentState();
+		this.setupContentfulContent();
 	},
 	watch: {
 		// watching the computed serverAmount property allows us to get set updates based on nested data props
@@ -223,9 +247,16 @@ export default {
 			return numeral(this.amount).format('$0,0.00');
 		},
 		donationTagLine() {
-			const loanCost = numeral(Math.floor(this.loanReservationTotal * 0.15)).format('$0,0');
-			let coverOurCosts = `${this.loanCount > 1 ? 'These loans cost' : 'This loan costs'}`;
+			const loanCost = numeral(Math.floor(this.loanReservationTotal * 0.12)).format('$0,0');
+			// if there is dynamic donation tagline from contentful, use that.
+			if (this.dynamicDonationItem) {
+				// process contentful content as rich text
+				const contentfulHTML = documentToHtmlString(this.dynamicDonationItem);
+				// replace magic variable ###loan_costs###
+				return contentfulHTML.replace(/###loan_costs###/g, loanCost);
+			}
 
+			let coverOurCosts = `${this.loanCount > 1 ? 'These loans cost' : 'This loan costs'}`;
 			if (this.donationTagLineExperiment) {
 				coverOurCosts = 'During the COVID-19 pandemic, Kiva is working with lenders, Field Partners, borrowers and more to ensure a rapid and impactful global response. Your donations help us fight this global crisis.'; // eslint-disable-line max-len
 			} else {
@@ -274,6 +305,17 @@ export default {
 		},
 		lightboxClosed() {
 			this.defaultLbVisible = false;
+		},
+		setupContentfulContent() {
+			if (this.hasLoans) {
+				const contentfulContentRaw = this.apollo.readQuery({
+					query: donationItemQuery,
+				});
+				const pageEntry = contentfulContentRaw?.contentful?.entries?.items?.[0] ?? null;
+				const pageData = pageEntry ? processPageContentFlat(pageEntry) : null;
+				// eslint-disable-next-line max-len
+				this.dynamicDonationItem = pageData?.page?.contentGroups?.checkoutDonationItem?.contents?.[0]?.richText ?? '';
+			}
 		},
 		setupExperimentState() {
 			// get experiment data from apollo cache
@@ -369,7 +411,9 @@ export default {
 		openNudgeLightbox() {
 			this.$kvTrackEvent('basket', 'click-open nudge');
 			this.nudgeLightboxVisible = true;
-			this.$refs.nudgeLightbox.openNudgeLightbox();
+			this.$nextTick(() => {
+				this.$refs.nudgeLightbox.openNudgeLightbox();
+			});
 		},
 		donationNudgeDescription() {
 			/* eslint-disable max-len */
@@ -396,7 +440,7 @@ export default {
 }
 
 .donation-info {
-	line-height: 0.8;
+	line-height: 1.25;
 	font-weight: $global-weight-highlight;
 }
 

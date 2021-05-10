@@ -1,11 +1,68 @@
 <template>
-	<header class="top-nav" :style="cssVars">
+	<header
+		class="top-nav"
+		:class="{
+			'top-nav--corporate': corporate,
+			'top-nav--minimal': minimal
+		}"
+		:style="cssVars"
+	>
 		<nav aria-label="Primary navigation">
 			<template v-if="minimal">
 				<div class="header-row row align-center">
 					<router-link class="header-logo header-button" to="/" v-kv-track-event="['TopNav','click-Logo']">
 						<kiva-logo class="icon" />
 						<span class="show-for-sr">Kiva Home</span>
+					</router-link>
+				</div>
+			</template>
+			<template v-else-if="corporate">
+				<div class="header-row row">
+					<campaign-logo-group
+						class="header-logo-group"
+						:corporate-logo-url="corporateLogoUrl"
+					/>
+					<div class="flexible-center-area"></div>
+					<router-link
+						v-show="showBasket"
+						:to="addHashToRoute('show-basket')"
+						class="header-button show-for-large"
+						v-kv-track-event="['TopNav','click-Basket']"
+					>
+						<span>
+							<span class="amount">{{ basketCount }}</span>
+							Basket
+						</span>
+					</router-link>
+					<router-link
+						v-show="isVisitor"
+						:to="loginUrl"
+						class="header-button"
+						:event="showPopupLogin ? '' : 'click'"
+						@click.native="auth0Login"
+						v-kv-track-event="[
+							['TopNav','click-Sign-in'],
+							['TopNav','EXP-GROW-282-Oct2020',redirectToLoginExperimentVersion]
+						]"
+					>
+						<span>Sign in</span>
+					</router-link>
+					<router-link
+						v-show="!isVisitor"
+						:id="myKivaMenuId"
+						to="/portfolio"
+						target="_blank"
+						class="header-button my-kiva"
+						v-kv-track-event="['TopNav','click-Portfolio']"
+					>
+						<span>
+							<span class="amount">{{ balance | numeral('$0') }}</span>
+							<img
+								:src="profilePic"
+								alt="My portfolio"
+								class="fs-mask"
+							>
+						</span>
 					</router-link>
 				</div>
 			</template>
@@ -69,7 +126,7 @@
 							</button>
 							<search-bar ref="search" v-if="searchOpen" :aria-hidden="searchOpen ? 'false' : 'true'" />
 						</div>
-						<promo-banner-large />
+						<promo-banner-large :basket-state="basketState" />
 					</div>
 					<router-link
 						v-show="isVisitor"
@@ -101,11 +158,14 @@
 					</router-link>
 					<router-link
 						v-show="isVisitor"
-						to="/ui-login"
+						:to="loginUrl"
 						class="header-button"
 						:event="showPopupLogin ? '' : 'click'"
 						@click.native="auth0Login"
-						v-kv-track-event="['TopNav','click-Sign-in']"
+						v-kv-track-event="[
+							['TopNav','click-Sign-in'],
+							['TopNav','EXP-GROW-282-Oct2020',redirectToLoginExperimentVersion]
+						]"
 					>
 						<span>Sign in</span>
 					</router-link>
@@ -118,12 +178,25 @@
 					>
 						<span>
 							<span class="amount">{{ balance | numeral('$0') }}</span>
-							<img :src="profilePic">
+							<img
+								:src="profilePic"
+								alt="My portfolio"
+								class="fs-mask"
+							>
 						</span>
 					</router-link>
 				</div>
-				<promo-banner-small />
+				<promo-banner-small :basket-state="basketState" />
 				<kv-dropdown
+					v-if="mgHighlightInNavVersion === 'shown'"
+					:controller="lendMenuId"
+					@show.once="loadLendInfo"
+					@show="onLendMenuShow"
+				>
+					<monthly-good-exp-menu-wrapper ref="mgExpWrapper" />
+				</kv-dropdown>
+				<kv-dropdown
+					v-if="mgHighlightInNavVersion !== 'shown'"
 					:controller="lendMenuId"
 					@show.once="loadLendInfo"
 					@show="onLendMenuShow"
@@ -319,26 +392,31 @@
 <script>
 import _get from 'lodash/get';
 import headerQuery from '@/graphql/query/wwwHeader.graphql';
+import experimentVersionFragment from '@/graphql/fragments/experimentVersion.graphql';
 import KvDropdown from '@/components/Kv/KvDropdown';
 import KvIcon from '@/components/Kv/KvIcon';
 import { preFetchAll } from '@/util/apolloPreFetch';
-import cookieStore from '@/util/cookieStore';
 import KivaLogo from '@/assets/inline-svgs/logos/kiva-logo.svg';
+import CampaignLogoGroup from '@/components/CorporateCampaign/CampaignLogoGroup';
+import MonthlyGoodExpMenuWrapper from '@/components/WwwFrame/LendMenu/MonthlyGoodExpMenuWrapper';
+
 import SearchBar from './SearchBar';
 import PromoBannerLarge from './PromotionalBanner/PromoBannerLarge';
 import PromoBannerSmall from './PromotionalBanner/PromoBannerSmall';
 
 export default {
 	components: {
+		CampaignLogoGroup,
+		KivaLogo,
 		KvDropdown,
 		KvIcon,
-		KivaLogo,
-		SearchBar,
+		MonthlyGoodExpMenuWrapper,
 		PromoBannerLarge,
 		PromoBannerSmall,
-		TheLendMenu: () => import('./LendMenu/TheLendMenu'),
+		SearchBar,
+		TheLendMenu: () => import('@/components/WwwFrame/LendMenu/TheLendMenu'),
 	},
-	inject: ['apollo', 'kvAuth0'],
+	inject: ['apollo', 'cookieStore', 'kvAuth0'],
 	data() {
 		return {
 			isVisitor: true,
@@ -352,7 +430,10 @@ export default {
 			aboutMenuId: 'about-header-dropdown',
 			lendMenuId: 'lend-header-dropdown',
 			myKivaMenuId: 'my-kiva-header-dropdown',
-			searchOpen: false
+			searchOpen: false,
+			redirectToLoginExperimentVersion: null,
+			basketState: {},
+			mgHighlightInNavVersion: null,
 		};
 	},
 	props: {
@@ -364,10 +445,33 @@ export default {
 			type: Boolean,
 			default: false
 		},
+		corporate: {
+			type: Boolean,
+			default: false
+		},
+		corporateLogoUrl: {
+			type: String,
+			default: ''
+		},
 		theme: {
 			type: Object,
 			default: () => {}
-		}
+		},
+	},
+	created() {
+		// EXP SUBS-680 present main nav options for subscription or individual lending
+		const mgHighlightInNav = this.apollo.readFragment({
+			id: 'Experiment:mg_highlight_in_nav',
+			fragment: experimentVersionFragment,
+		}) || {};
+		this.mgHighlightInNavVersion = mgHighlightInNav.version;
+
+		// Fire Event for EXP SUBS-680
+		this.$kvTrackEvent(
+			'TopNav',
+			'EXP-SUBS-680-Apr2021',
+			this.mgHighlightInNavVersion === 'shown' ? 'b' : 'a'
+		);
 	},
 	computed: {
 		isTrustee() {
@@ -387,7 +491,15 @@ export default {
 			return this.basketCount > 0 && !this.isFreeTrial;
 		},
 		showPopupLogin() {
-			return this.kvAuth0.enabled && this.$route.fullPath !== '/';
+			return this.kvAuth0.enabled
+				&& this.$route.fullPath !== '/'
+				&& this.redirectToLoginExperimentVersion !== 'b';
+		},
+		loginUrl() {
+			if (this.$route.path === '/') {
+				return '/ui-login';
+			}
+			return `/ui-login?doneUrl=${encodeURIComponent(this.$route.fullPath)}`;
 		},
 		cssVars() {
 			if (this.theme) {
@@ -415,9 +527,17 @@ export default {
 			this.basketCount = _get(data, 'shop.nonTrivialItemCount');
 			this.balance = Math.floor(_get(data, 'my.userAccount.balance'));
 			this.profilePic = _get(data, 'my.lender.image.url');
+			this.basketState = data || {};
+
+			// GROW-280 redirect to login instead of popup login experiment
+			const redirectToLoginExperiment = this.apollo.readFragment({
+				id: 'Experiment:redirect_to_login',
+				fragment: experimentVersionFragment,
+			}) || {};
+			this.redirectToLoginExperimentVersion = redirectToLoginExperiment.version;
 		},
 		errorHandlers: {
-			'shop.invalidBasketId': ({ route }) => {
+			'shop.invalidBasketId': ({ cookieStore, route }) => {
 				cookieStore.remove('kvbskt', { path: '/', secure: true });
 				// on server, reject with url to trigger redirect
 				if (typeof window === 'undefined') {
@@ -451,13 +571,25 @@ export default {
 			}
 		},
 		onLendMenuShow() {
-			this.$refs.lendMenu.onOpen();
+			if (this.mgHighlightInNavVersion !== 'shown') {
+				this.$refs.lendMenu.onOpen();
+			}
+			this.$kvTrackEvent('TopNav', 'hover-Lend-menu', 'Lend');
 		},
 		onLendMenuHide() {
 			this.$refs.lendMenu.onClose();
 		},
+		addHashToRoute(hash) {
+			const route = { ...this.$route };
+			route.hash = hash;
+			return route;
+		},
 		loadLendInfo() {
-			this.$refs.lendMenu.onLoad();
+			if (this.mgHighlightInNavVersion === 'shown') {
+				this.$refs.mgExpWrapper.onLoad();
+			} else {
+				this.$refs.lendMenu.onLoad();
+			}
 		},
 		toggleSearch() {
 			this.searchOpen = !this.searchOpen;
@@ -591,7 +723,7 @@ $close-search-button-size: 2.5rem;
 .header-logo {
 	.icon {
 		display: unset;
-		width: rem-calc(57);
+		width: rem-calc(71);
 		height: 100%;
 		margin: rem-calc(-3) auto 0;
 		fill: $header-logo-color; // IE11 fallback
@@ -800,4 +932,37 @@ $close-search-button-size: 2.5rem;
 		}
 	}
 }
+
+.top-nav--corporate {
+	.flexible-center-area {
+		flex: 1;
+		order: 0;
+	}
+
+	.header-logo {
+		height: 100%;
+		display: flex;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		color: $header-link-color; // IE11 fallback
+		color: var(--kv-header-link-color, $header-link-color);
+
+		@include breakpoint(large) {
+			padding: 0 1rem;
+		}
+	}
+}
+
+.header-logo-group {
+	--logo-color: var(--kv-header-logo-color, $header-logo-color);
+
+	padding-left: 1rem;
+	height: rem-calc(20);
+
+	@include breakpoint(large) {
+		height: rem-calc(28);
+	}
+}
+
 </style>

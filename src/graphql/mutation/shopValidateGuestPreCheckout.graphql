@@ -1,0 +1,10 @@
+mutation validateGuestPreCheckout($basketId: String, $email: String, $visitorId: String, $emailOptIn: Boolean) {
+	shop (basketId: $basketId) {
+		id
+		validatePreCheckout (email: $email, visitorId: $visitorId, emailOptIn: $emailOptIn) {
+			error
+			success
+			value
+		}
+	}
+}

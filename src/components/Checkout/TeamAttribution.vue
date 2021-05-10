@@ -3,7 +3,7 @@
 		<div class="team-select">
 			<select
 				v-model="selectedId"
-				class="team-select-dd small-text"
+				class="team-select-dd small-text fs-mask"
 				@change="updateLoanReservation()"
 			>
 				<option value="0">
@@ -54,6 +54,9 @@ export default {
 		sortTeams() {
 			return _orderBy(this.teams, 'name');
 		}
+	},
+	mounted() {
+		this.selectedId = this.teamId || 0;
 	},
 	methods: {
 		updateLoanReservation() {

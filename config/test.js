@@ -20,6 +20,8 @@ module.exports = merge(base, {
 		fbApplicationId: '364044572460',
 		fbPixelId: '108245819986414',
 		fbOgNameSpace: 'test-kiva',
+		enableFullStory: false,
+		quantcastId: '',
 		enableSentry: false,
 		sentryURI: 'https://7ce141b23c4a4e6091c206d08442f0e9@sentry.io/1201287',
 		algoliaConfig: {
@@ -29,6 +31,7 @@ module.exports = merge(base, {
 			apiKey: '28aaa1d56e6a1688f13f6b41da0f27a5',
 			defaultIndex: 'test_fundraising_popularity',
 		},
+		btTokenKey: 'sandbox_q7kbtvzy_vynd473f79sfskz3',
 		auth0: {
 			loginRedirectUrls: {
 				PbZJxDWw2uO1j4K6lzC9Yjd5v6yGfLUE: 'https://admin.test.kiva.org/admin/login?force=1',
@@ -45,9 +48,6 @@ module.exports = merge(base, {
 			browserCallbackUri: 'https://www.test.kiva.org/process-browser-auth',
 			serverCallbackUri: 'https://www.test.kiva.org/process-ssr-auth',
 			domain: 'login.test.kiva.org',
-		},
-		intercom: {
-			enable: false,
 		},
 		paypal : {
 			url: 'www.sandbox.paypal.com',

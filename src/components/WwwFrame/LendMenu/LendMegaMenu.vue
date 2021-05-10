@@ -50,6 +50,7 @@
 					<button
 						@click="openSection(region.name)"
 						:aria-pressed="isOpenSection(region.name) ? 'true' : 'false'"
+						v-kv-track-event="['TopNav','click-Lend-Region', region.name]"
 					>
 						{{ region.name }}
 					</button>
@@ -116,6 +117,7 @@ import CountryList from './CountryList';
 import SearchList from './SearchList';
 
 export default {
+	inject: ['apollo', 'cookieStore'],
 	components: {
 		KvLoadingSpinner,
 		CountryList,

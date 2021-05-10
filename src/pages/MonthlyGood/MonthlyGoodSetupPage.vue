@@ -13,7 +13,7 @@
 					</h3>
 					<form
 						class="monthly-good-form"
-						@submit.prevent="hasBillingAgreement ? submitMonthlyGood : null"
+						@submit.prevent
 						novalidate
 					>
 						<div class="panel zigzag-bottom">
@@ -202,7 +202,7 @@
 							<div class="large-9 medium-10 small-12 columns">
 								<p>
 									<!-- eslint-disable-next-line max-len -->
-									<strong><em>We'll charge your {{ !showDropInPayments ? 'PayPal' : '' }} account{{ isOnetime ? '' : ' each month' }}, and any credit in your Kiva account will be automatically re-lent for you.</em></strong>
+									<strong><em>We'll charge your account{{ isOnetime ? '' : ' each month' }}, and any credit in your Kiva account will be automatically re-lent for you.</em></strong>
 								</p>
 								<p v-if="hasAutoDeposits">
 									<!-- eslint-disable-next-line max-len -->
@@ -212,23 +212,8 @@
 									<!-- eslint-disable-next-line max-len -->
 									<em>* {{ isOnetime ? 'This contribution' : 'Enrolling in Monthly Good' }} will also disable your current auto lending settings.</em>
 								</p>
-								<div v-if="hasBillingAgreement && !showDropInPayments">
-									<kv-button
-										type="submit"
-										data-test="confirm-monthly-good-button"
-										class="smaller"
-										:disabled="$v.$invalid || submitting"
-										@click.native="submitMonthlyGood()"
-									>
-										Confirm <kv-loading-spinner v-if="submitting" />
-									</kv-button>
-									<p>
-										<!-- eslint-disable-next-line max-len -->
-										<em>We'll charge your PayPal account for your {{ isOnetime ? 'Contribution' : 'Monthly Good' }}</em>
-									</p>
-								</div>
 
-								<div class="payment-dropin-wrapper" v-if="showDropInPayments">
+								<div class="payment-dropin-wrapper" v-if="hasActiveLogin">
 									<div class="payment-dropin-invalid-cover" v-if="$v.$invalid"></div>
 									<monthly-good-drop-in-payment-wrapper
 										:amount="totalCombinedDeposit"
@@ -239,14 +224,18 @@
 										@complete-transaction="completeMGBraintree"
 									/>
 								</div>
-
-								<div class="payment-dropin-wrapper" v-if="!hasBillingAgreement && !showDropInPayments">
-									<div class="payment-dropin-invalid-cover" v-if="$v.$invalid"></div>
-									<pay-pal-mg
-										v-if="!showDropInPayments"
-										:amount="totalCombinedDeposit"
-										@complete-transaction="submitMonthlyGood"
-									/>
+								<div class="payment-dropin-wrapper" v-if="!hasActiveLogin">
+									<kv-button
+										title="Continue"
+										:href="`/ui-login?force=true&doneUrl=${loginRedirectUrl}`"
+										v-kv-track-event="[
+											'MonthlyGood',
+											'click-setup-form',
+											'Continue'
+										]"
+									>
+										Continue
+									</kv-button>
 								</div>
 							</div>
 						</div>
@@ -273,21 +262,24 @@
 
 <script>
 import numeral from 'numeral';
-import _get from 'lodash/get';
 import gql from 'graphql-tag';
 import { validationMixin } from 'vuelidate';
 import { required, minValue, maxValue } from 'vuelidate/lib/validators';
 import { subDays } from 'date-fns';
+
+import logReadQueryError from '@/util/logReadQueryError';
+import { checkLastLoginTime } from '@/util/authenticationGuard';
+
+import authenticationQuery from '@/graphql/query/authenticationQuery.graphql';
+import hasEverLoggedInQuery from '@/graphql/query/shared/hasEverLoggedIn.graphql';
 
 import KvButton from '@/components/Kv/KvButton';
 import KvCheckbox from '@/components/Kv/KvCheckbox';
 import KvCurrencyInput from '@/components/Kv/KvCurrencyInput';
 import KvDropdownRounded from '@/components/Kv/KvDropdownRounded';
 import KvIcon from '@/components/Kv/KvIcon';
-import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
 import KvLoadingOverlay from '@/components/Kv/KvLoadingOverlay';
 import MonthlyGoodDropInPaymentWrapper from '@/components/MonthlyGood/MonthlyGoodDropInPaymentWrapper';
-import PayPalMg from '@/components/MonthlyGood/PayPalMG';
 import WwwPage from '@/components/WwwFrame/WwwPage';
 
 import loanGroupCategoriesMixin from '@/plugins/loan-group-categories';
@@ -296,14 +288,10 @@ import AlreadySubscribedNotice from './AlreadySubscribedNotice';
 import LegacySubscriberNotice from './LegacySubscriberNotice';
 
 const pageQuery = gql`query monthlyGoodSetupPageControl {
-    general {
+	general {
 		mgDonationTaglineActive: uiConfigSetting(key: "mg_donationtagline_active") {
 			key
 			value
-		}
-		braintreeDropInFeature: uiConfigSetting(key: "feature.braintree_dropin") {
-			value
-			key
 		}
 	}
 	my {
@@ -325,9 +313,6 @@ const pageQuery = gql`query monthlyGoodSetupPageControl {
 			id
 			isEnabled
 		}
-		payPalBillingAgreement {
-			hasPayPalBillingAgreement
-		}
 	}
 }`;
 
@@ -348,6 +333,14 @@ export default {
 		amount: {
 			type: Number,
 			default: 25
+		},
+		initDonation: {
+			type: Number,
+			default: 25 * 0.15,
+		},
+		day: {
+			type: Number,
+			default: startDay(false),
 		},
 		category: {
 			type: String,
@@ -374,10 +367,8 @@ export default {
 		KvDropdownRounded,
 		KvIcon,
 		KvLoadingOverlay,
-		KvLoadingSpinner,
 		LegacySubscriberNotice,
 		MonthlyGoodDropInPaymentWrapper,
-		PayPalMg,
 		WwwPage,
 	},
 	data() {
@@ -392,15 +383,14 @@ export default {
 			isDonationOptionsDirty: false,
 			submitting: false,
 			legacySubs: [],
-			showDropInPayments: true,
 			showLoadingOverlay: false,
 			// user flags
 			isMonthlyGoodSubscriber: false,
 			hasAutoDeposits: false,
 			hasAutoLending: false,
-			hasBillingAgreement: false,
 			hasLegacySubscription: false,
 			isMGTaglineActive: false,
+			hasActiveLogin: false,
 		};
 	},
 	mixins: [
@@ -430,35 +420,96 @@ export default {
 		},
 
 	},
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	apollo: {
-		query: pageQuery,
-		preFetch: true,
-		result({ data }) {
-			this.isMGTaglineActive = _get(data, 'general.mgDonationTaglineActive.value') === 'true' || false;
-			this.isMonthlyGoodSubscriber = _get(data, 'my.autoDeposit.isSubscriber', false);
-			this.hasAutoDeposits = _get(data, 'my.autoDeposit', false);
-			this.hasAutoLending = _get(data, 'my.autolendProfile.isEnabled', false);
-			this.hasBillingAgreement = _get(data,
-				'my.payPalBillingAgreement.hasPayPalBillingAgreement', false);
-			this.legacySubs = _get(data, 'my.subscriptions.values', []);
-			this.hasLegacySubscription = this.legacySubs.length > 0;
-
-			// if experiment and feature flag are BOTH on, show UI
-			const braintreeDropInFeatureFlag = _get(data, 'general.braintreeDropInFeature.value') === 'true' || false;
-			this.showDropInPayments = braintreeDropInFeatureFlag;
-		},
+		preFetch(config, client, { route }) {
+			/**
+			 * Implementation of SUBS-609 Experiment Results
+			 * For users without a currently active login.
+			 *
+			 * If user has logged in before:
+			 * Setup page should load, showing continue button.
+			 * Login after setup form
+			 *
+			 * If user has not logged in before:
+			 * Setup page should not load, redirect to login, then show setup page.
+			 * Login before setup form.
+			 */
+			return client.query({ query: hasEverLoggedInQuery })
+				.then(response => {
+					const loginAfterSetup = response.data?.hasEverLoggedIn ? 'shown' : 'control';
+					// Control version
+					// Auth status should be checked and redirect to login.
+					if (loginAfterSetup === 'control') {
+						return client.query({
+							query: authenticationQuery,
+							fetchPolicy: 'network-only',
+						}).then(({ data }) => {
+							if (!data.my) {
+								throw new Error('api.authenticationRequired');
+							}
+							// Route requires active login
+							if (!checkLastLoginTime(data, 'activeLoginDuration', 3600)) {
+								throw new Error('activeLoginRequired');
+							}
+							return client.query({ query: pageQuery });
+						}).catch(() => {
+							// Auth error will be caught here, redirect to login.
+							return Promise.reject({
+								path: '/ui-login',
+								query: { force: true, doneUrl: route.fullPath }
+							});
+						});
+					}
+					// Shown version
+					// Auth status should not be checked, continue with pageQuery
+					if (loginAfterSetup === 'shown') {
+						return client.query({ query: pageQuery });
+					}
+				});
+		}
 	},
 	created() {
+		try {
+			const pageQueryResult = this.apollo.readQuery({
+				query: pageQuery,
+			});
+			this.isMGTaglineActive = pageQueryResult?.general?.mgDonationTaglineActive?.value === 'true' || false;
+			this.isMonthlyGoodSubscriber = pageQueryResult?.my?.autoDeposit?.isSubscriber ?? false;
+			this.hasAutoDeposits = pageQueryResult?.my?.autoDeposit ?? false;
+			this.hasAutoLending = pageQueryResult?.my?.autolendProfile?.isEnabled ?? false;
+			this.legacySubs = pageQueryResult?.my?.subscriptions?.values ?? [];
+			this.hasLegacySubscription = this.legacySubs.length > 0;
+			this.hasActiveLogin = !!pageQueryResult?.my;
+		} catch (e) {
+			logReadQueryError(e, 'MonthlyGoodSetupPage pageQuery');
+		}
+
 		// Sanitize and set initial form values.
+		// Initial group from prop
 		if (this.lendingCategories.find(category => category.value === this.category)) {
 			this.selectedGroup = this.category;
 		}
 
-		if (!Number.isNaN(Number(this.amount))) {
+		// Initial amount from prop
+		if (!Number.isNaN(this.amount)) {
 			this.mgAmount = this.amount;
+		}
+
+		// Initial donation from prop
+		if (!Number.isNaN(this.initDonation)) {
+			// If donation in prop on load, set donation to other and fill with value from prop
+			this.donationOptionSelected = 'other';
+			this.donation = this.initDonation;
+		} else {
 			this.donation = this.amount * 0.15;
 		}
+
+		// Initial day from prop
+		if (!Number.isNaN(this.day)) {
+			this.dayOfMonth = this.day;
+		}
+
 		// Fire snowplow events
 		if (this.isMonthlyGoodSubscriber) {
 			this.$kvTrackEvent('Registration', 'unsuccessful-monthly-good-reg', 'has-mg');
@@ -542,6 +593,22 @@ export default {
 		completeMGBraintree(paymentType) {
 			this.showLoadingOverlay = true;
 			this.$kvTrackEvent('Registration', 'successful-monthly-good-reg', 'register-monthly-good');
+
+			try {
+				// Track Facebook Event For MG
+				if (typeof window !== 'undefined' && typeof fbq === 'function') {
+					window.fbq('trackCustom', 'MonthlyGoodSignUp', {
+						amount: this.totalCombinedDeposit,
+						donateAmount: this.donation,
+						dayOfMonth: this.dayOfMonth,
+						category: this.selectedGroup,
+						isOneTime: this.isOnetime
+					});
+				}
+			} catch (e) {
+				console.error(e);
+			}
+
 			// Send to thanks page
 			this.$router.push({
 				path: '/monthlygood/thanks',
@@ -554,61 +621,21 @@ export default {
 				this.showLoadingOverlay = false;
 			});
 		},
-		submitMonthlyGood() {
-			this.submitting = true;
-			this.$kvTrackEvent('Registration', 'click-confirm-monthly-good', 'register-monthly-good');
-
-			this.apollo.mutate({
-				mutation: gql`
-					mutation registerMonthlyGood(
-						$amount: Money!,
-						$donateAmount: Money!,
-						$dayOfMonth: Int!,
-						$category: MonthlyGoodCategoryEnum,
-						$isOnetime: Boolean
-					) {
-						my {
-							createMonthlyGoodSubscription( autoDeposit: {
-								amount: $amount,
-								donateAmount:
-								$donateAmount,
-								dayOfMonth: $dayOfMonth,
-								isOnetime: $isOnetime
-							},
-							category: $category)
-						}
-					}`,
-				variables: {
-					amount: numeral(this.totalCombinedDeposit).format('0.00'),
-					donateAmount: numeral(this.donation).format('0.00'),
-					dayOfMonth: numeral(this.dayOfMonth).value(),
-					category: this.selectedGroup,
-					isOnetime: this.isOnetime
-				}
-			}).then(data => {
-				if (data.errors) {
-					const errorMessage = _get(data, 'errors[0].message');
-					this.$showTipMsg(errorMessage, 'error');
-				} else {
-					this.$kvTrackEvent('Registration', 'successful-monthly-good-reg', 'register-monthly-good');
-					// Send to thanks page
-					this.$router.push({
-						path: '/monthlygood/thanks',
-						query: {
-							onetime: this.isOnetime,
-							source: this.source,
-							paymentType: 'LegacyPaypal',
-						}
-					});
-				}
-			}).catch(error => {
-				this.$showTipMsg(error, 'error');
-			}).finally(() => {
-				this.submitting = false;
-			});
-		},
 	},
 	computed: {
+		// change url parameters if form values are changed for login redirect
+		loginRedirectUrl() {
+			let redirectString = this.$route.path;
+			// eslint-disable-next-line max-len
+			redirectString += `?amount=${this.mgAmount}&category=${this.selectedGroup}&day=${this.dayOfMonth}&initDonation=${this.donation}`;
+			if (this.source) {
+				redirectString += `&source=${this.source}`;
+			}
+			if (this.onetime) {
+				redirectString += `&onetime=${this.onetime}`;
+			}
+			return encodeURIComponent(redirectString);
+		},
 		totalCombinedDeposit() {
 			return this.donation + this.mgAmount;
 		},
@@ -765,17 +792,6 @@ export default {
 		.display-inline-block {
 			display: inline-block;
 		}
-
-		// These styles are only needed for non Drop-In payment wrapper
-		// ::v-deep .loading-spinner {
-		// 	vertical-align: middle;
-		// 	width: 1rem;
-		// 	height: 1rem;
-		// }
-
-		// ::v-deep .loading-spinner .line {
-		// 	background-color: $white;
-		// }
 
 		::v-deep .dropdown-wrapper.donation-dropdown .dropdown {
 			margin-bottom: 0;

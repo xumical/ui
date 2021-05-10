@@ -1,14 +1,7 @@
 <template>
 	<div class="row">
 		<kv-settings-card class="column large-8" title="Who you’ll support" :disabled="!isEnabled">
-			<template v-slot:icon>
-				<kv-icon
-					class="icon"
-					title="Who you’ll support"
-					name="auto-icon-who"
-				/>
-			</template>
-			<template v-slot:content>
+			<template #content>
 				<who-youll-support-text @click="showLightbox = true" />
 				<inline-counter :strong="true" v-show="!kivaChooses" />
 
@@ -110,7 +103,7 @@
 							</div>
 						</transition>
 					</div>
-					<template slot="controls">
+					<template #controls>
 						<div class="row">
 							<div class="columns shrink">
 								<save-button @autolendingSaved="settingsSaved" />
@@ -157,7 +150,7 @@ import SectorRadios from './SectorRadios';
 import WhoYoullSupportText from './WhoYoullSupportText';
 
 export default {
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	components: {
 		AttributeFilter,
 		AttributeRadios,

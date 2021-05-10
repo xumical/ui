@@ -22,7 +22,7 @@
 				There {{ beVerb }} {{ loansLeft }} that {{ matchVerb }} your criteria -
 				we may not be able to lend your funds.
 			</p>
-			<template v-slot:controls>
+			<template #controls>
 				<div class="warning-buttons">
 					<kv-button class="smallest secondary" @click.native="save">
 						Continue anyway
@@ -44,7 +44,7 @@ import KvLightbox from '@/components/Kv/KvLightbox';
 import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
 
 export default {
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	components: {
 		KvButton,
 		KvLightbox,

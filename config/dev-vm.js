@@ -26,6 +26,8 @@ module.exports = merge(base, {
 		fbApplicationId: '263964058630',
 		fbPixelId: '108245819986414',
 		fbOgNameSpace: 'vm-kiva',
+		enableFullStory: false,
+		quantcastId: '',
 		enableSentry: false,
 		sentryURI: '',
 		algoliaConfig: {
@@ -35,6 +37,7 @@ module.exports = merge(base, {
 			apiKey: '28aaa1d56e6a1688f13f6b41da0f27a5',
 			defaultIndex: 'dev_fundraising_popularity',
 		},
+		btTokenKey: 'sandbox_q7kbtvzy_vynd473f79sfskz3',
 		auth0: {
 			loginRedirectUrls: {
 				cNTV7eN5sBKgv9nQOxDpAz1pPfJGlBI5: 'http://admin-vm.kiva.org/login?force=1',
@@ -52,15 +55,14 @@ module.exports = merge(base, {
 			serverCallbackUri: 'https://dev-vm-01.kiva.org/process-ssr-auth',
 			domain: 'login.dev.kiva.org',
 		},
-		federationService: {
-			uri: 'https://marketplace-api.dk1.kiva.org/graphql'
-		},
-		intercom: {
-			enable: false,
-		},
-		paypal : {
+		paypal: {
 			url: 'www.sandbox.paypal.com',
 			environment: 'sandbox'
+		},
+		oneTrust: {
+			enable: true,
+			key: 'db9dcf94-1c32-40fb-9a57-cefafea1088d',
+			domainSuffix: '-test',
 		},
 	},
 	server: {

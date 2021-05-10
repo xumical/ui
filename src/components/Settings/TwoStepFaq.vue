@@ -10,11 +10,11 @@
 		<h3 class="strong">
 			FAQ
 		</h3>
-		<ul class="faq-list">
+		<ul class="faq__list">
 			<li>
 				<kv-button
 					class="text-link"
-					@click="triggerWhatIsLightbox"
+					@click.native.prevent="triggerWhatIsLightbox"
 				>
 					What is 2-step Verification?
 				</kv-button>
@@ -22,7 +22,7 @@
 			<li>
 				<kv-button
 					class="text-link"
-					@click="triggerHowItWorksLightbox"
+					@click.native.prevent="triggerHowItWorksLightbox"
 				>
 					How does it work?
 				</kv-button>
@@ -30,9 +30,9 @@
 			<li>
 				<kv-button
 					class="text-link"
-					@click="triggerHowItProtectsLightbox"
+					@click.native.prevent="triggerHowItProtectsLightbox"
 				>
-					How it protects you?
+					How does it protect you?
 				</kv-button>
 			</li>
 		</ul>
@@ -75,10 +75,12 @@
 
 <script>
 import KvLightbox from '@/components/Kv/KvLightbox';
+import KvButton from '@/components/Kv/KvButton';
 
 export default {
 	components: {
 		KvLightbox,
+		KvButton,
 	},
 	data() {
 		return {
@@ -112,10 +114,10 @@ export default {
 .faq {
 	background: $white;
 	padding: 1.95rem; // same as KvSettingsCard
-}
 
-.faq-list {
-	list-style-type: none;
-	margin: 0;
+	&__list {
+		list-style-type: none;
+		margin: 0;
+	}
 }
 </style>

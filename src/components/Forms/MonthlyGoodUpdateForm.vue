@@ -1,6 +1,6 @@
 <template>
 	<form
-		@submit.prevent="null"
+		@submit.prevent
 		novalidate
 	>
 		<fieldset :disabled="this.disabled">
@@ -90,7 +90,7 @@
 						<label
 							class="show-for-sr"
 							:class="{ 'error': $v.form.donation.$invalid }"
-							for="amount"
+							for="donation"
 						>
 							Donation
 						</label>

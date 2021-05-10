@@ -1,6 +1,7 @@
 #import '../../fragments/shopTotals.graphql'
 
 query initializeCheckout($basketId: String) {
+	hasEverLoggedIn @client
 	my {
 		lastLoginTimestamp @client
 		userAccount {
@@ -24,9 +25,10 @@ query initializeCheckout($basketId: String) {
 			value
 			key
 		}
-		braintreeDropInFeature: uiConfigSetting(key: "feature.braintree_dropin") {
-			value
+		guestCheckoutEnabled: featureSetting(key: "guest_checkout.enabled") {
 			key
+			value
+			description
 		}
 	}
 	shop (basketId: $basketId) {
@@ -60,6 +62,7 @@ query initializeCheckout($basketId: String) {
 							status
 							matchingText
 							loanAmount
+							minNoteSize
 							plannedExpirationDate
 							sector {
 								id

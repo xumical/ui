@@ -1,5 +1,9 @@
 <template>
-	<div class="fifteen-year-homepage">
+	<www-page id="homepage"
+		class="fifteen-year-homepage"
+		:header-theme="headerTheme"
+		:footer-theme="footerTheme"
+	>
 		<fifteen-years-styles>
 			<section class="fifteen-year-section">
 				<fifteen-years-header />
@@ -169,7 +173,7 @@
 						We don't take a penny.
 					</p>
 				</div>
-				<homepage-statistics />
+				<homepage-statistics-legacy />
 				<kv-responsive-image
 					class="statistics__flourish"
 					:images="flourishImgs.pinkRight"
@@ -241,32 +245,38 @@
 				</div>
 			</div>
 		</section>
-	</div>
+	</www-page>
 </template>
 
 <script>
+import { fifteenYearHeaderTheme, fifteenYearFooterTheme } from '@/util/siteThemes';
+
+import WwwPage from '@/components/WwwFrame/WwwPage';
 import KvButton from '@/components/Kv/KvButton';
 import KvResponsiveImage from '@/components/Kv/KvResponsiveImage';
 import LoanCategoriesSection from '@/components/Homepage/LendByCategory/LoanCategoriesSection';
 import FifteenYearsHeader from '@/components/15Years/15YearsHeader';
 import FifteenYearsStyles from '@/components/15Years/15YearsStyles';
 import FifteenYearsSupportingPartners from '@/components/15Years/15YearsSupportingPartners';
-import HomepageStatistics from './HomepageStatistics';
+import HomepageStatisticsLegacy from '@/components/Homepage/HomepageStatisticsLegacy';
 
 const imgRequire = require.context('@/assets/images/lend-by-category-homepage/', true);
 
 export default {
 	components: {
+		WwwPage,
 		FifteenYearsHeader,
 		FifteenYearsStyles,
 		FifteenYearsSupportingPartners,
-		HomepageStatistics,
+		HomepageStatisticsLegacy,
 		KvButton,
 		KvResponsiveImage,
 		LoanCategoriesSection,
 	},
 	data() {
 		return {
+			headerTheme: fifteenYearHeaderTheme,
+			footerTheme: fifteenYearFooterTheme,
 			loanNotDonationImgs: {
 				header: [
 					['small', imgRequire('./loan-not-donation.png')],

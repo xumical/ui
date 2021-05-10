@@ -1,5 +1,5 @@
 <template>
-	<div>
+	<div class="hide-for-print">
 		<global-promo-contentful
 			:has-promo-session="hasPromoSession"
 		/>
@@ -13,7 +13,7 @@ import appealBannerQuery from '@/graphql/query/appealBanner.graphql';
 import GlobalPromoContentful from './PromotionalBanner/GlobalPromotionalBannerContentful';
 
 export default {
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	components: {
 		GlobalPromoContentful,
 	},

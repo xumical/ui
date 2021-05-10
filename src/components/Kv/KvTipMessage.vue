@@ -5,7 +5,8 @@
 				<div class="icon-wrapper">
 					<kv-icon :name="iconName" />
 				</div>
-				<p data-test="tip-message" class="message" v-html="safeMessage"></p>
+				<p data-test="tip-message" class="message" v-html="safeMessage">
+				</p>
 			</span>
 			<button @click="close" class="close-tip-message" aria-label="Close">
 				<kv-icon name="x" :from-sprite="true" />
@@ -15,8 +16,8 @@
 </template>
 
 <script>
-import sanitize from 'sanitize-html';
 import KvIcon from '@/components/Kv/KvIcon';
+import DOMPurify from 'dompurify';
 
 export default {
 	components: {
@@ -32,6 +33,9 @@ export default {
 		};
 	},
 	computed: {
+		safeMessage() {
+			return DOMPurify.sanitize(this.message, { ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a'] });
+		},
 		typeClass() {
 			// Valid options are 'warning' + 'error' otherwise use confirmation as default
 			if (this.messageType === 'warning' || this.messageType === 'error') {
@@ -50,14 +54,6 @@ export default {
 			// default icon-confirmation
 			return 'confirmation';
 		},
-		safeMessage() {
-			return sanitize(this.message, {
-				allowedTags: ['b', 'i', 'em', 'strong', 'a'],
-				allowedAttributes: {
-					a: ['href'],
-				},
-			});
-		}
 	},
 	methods: {
 		show(message, type, persist) {
@@ -165,6 +161,11 @@ export default {
 
 	&.message-text-error {
 		background-color: $kiva-accent-red;
+
+		a {
+			color: #fff;
+			text-decoration: underline;
+		}
 
 		.icon.icon-error {
 			fill: $white;

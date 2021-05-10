@@ -36,14 +36,13 @@
 									aria-expanded="false"
 								>
 									<template
-										slot="defaultOption"
+										#defaultOption
 										class="featured-text"
 									>
 										women and men
 									</template>
 									<template
-										slot="item"
-										slot-scope="{ item }"
+										#item="{ item }"
 										class="featured-text"
 									>
 										{{ item.label }}
@@ -61,14 +60,13 @@
 										aria-expanded="false"
 									>
 										<template
-											slot="defaultOption"
+											#defaultOption
 											class="featured-text"
 										>
 											any region
 										</template>
 										<template
-											slot="item"
-											slot-scope="{ item }"
+											#item="{ item }"
 											class="featured-text"
 										>
 											{{ item.label }}
@@ -114,7 +112,7 @@
 									class="loan-card-group row small-up-1 large-up-2 xxlarge-up-3"
 									:results-per-page="15"
 								>
-									<template slot="default" slot-scope="{ items }">
+									<template #default="{ items }">
 										<algolia-adapter
 											v-for="(item, itemIndex) in items" :key="item.id"
 											:loan="item"
@@ -167,7 +165,6 @@ import {
 	AisStateResults,
 	AisMenuSelect,
 } from 'vue-instantsearch';
-import cookieStore from '@/util/cookieStore';
 import logReadQueryError from '@/util/logReadQueryError';
 import WwwPage from '@/components/WwwFrame/WwwPage';
 import LendHeader from '@/pages/Lend/LendHeader';
@@ -201,6 +198,7 @@ export default {
 	},
 	inject: [
 		'apollo',
+		'cookieStore',
 	],
 	mixins: [
 		algoliaInit
@@ -221,7 +219,7 @@ export default {
 			basketData = this.apollo.readQuery({
 				query: itemsInBasketQuery,
 				variables: {
-					basketId: cookieStore.get('kvbskt'),
+					basketId: this.cookieStore.get('kvbskt'),
 				},
 			});
 		} catch (e) {
@@ -232,7 +230,7 @@ export default {
 		this.apollo.watchQuery({
 			query: itemsInBasketQuery,
 			variables: {
-				basketId: cookieStore.get('kvbskt'),
+				basketId: this.cookieStore.get('kvbskt'),
 			},
 		}).subscribe({
 			next: ({ data }) => {
@@ -245,7 +243,7 @@ export default {
 			userData = this.apollo.readQuery({
 				query: userStatus,
 				variables: {
-					basketId: cookieStore.get('kvbskt'),
+					basketId: this.cookieStore.get('kvbskt'),
 				},
 			});
 		} catch (e) {

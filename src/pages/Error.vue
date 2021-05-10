@@ -22,7 +22,7 @@
 				</template>
 				<p>
 					{{ messages.contact }}
-					<a :href="`mailto:${contactEmail}`">{{ contactEmail }}</a>
+					<a class="fs-exclude" :href="`mailto:${contactEmail}`">{{ contactEmail }}</a>
 				</p>
 			</div>
 		</div>
@@ -30,10 +30,10 @@
 </template>
 
 <script>
-import sanitize from 'sanitize-html';
 import WwwPage from '@/components/WwwFrame/WwwPage';
 
 export default {
+	inject: ['locale'],
 	components: { WwwPage },
 	metaInfo: {
 		title: 'Error'
@@ -41,7 +41,7 @@ export default {
 	data() {
 		return {
 			errorCode: this.$route.query.error,
-			errorDescription: sanitize(this.$route.query.error_description),
+			errorDescription: this.$route.query.error_description,
 			clientId: this.$route.query.client_id,
 			lenderLogin: this.$route.query.lender_login !== '0',
 		};
@@ -63,7 +63,7 @@ export default {
 			return this.$appConfig.auth0.loginRedirectUrls[this.clientId];
 		},
 		messages() {
-			const language = this.$locale.substring(0, 2).toLowerCase();
+			const language = this.locale.substring(0, 2).toLowerCase();
 			/* eslint-disable max-len */
 			switch (language) {
 				case 'es':

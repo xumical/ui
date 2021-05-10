@@ -6,7 +6,9 @@ export default {
 	args: {
 		value: 10,
 		strokeWidth: 8,
-		showNumber: false
+		showNumber: false,
+		arcScale: 1,
+		rotate: 0,
 	},
 	argTypes: {
 		value: {
@@ -30,6 +32,8 @@ export const Default = (args, { argTypes }) => ({
 			:value="value"
 			:stroke-width="strokeWidth"
 			:show-number="showNumber"
+			:arc-scale="arcScale"
+			:rotate="rotate"
 			style="width: 200px;"
 		/>
 	`,
@@ -45,6 +49,8 @@ export const Styled = (args, { argTypes }) => ({
 			:value="value"
 			:stroke-width="strokeWidth"
 			:show-number="showNumber"
+			:arc-scale="arcScale"
+			:rotate="rotate"
 			style="
 				--kv-progress-circle-foreground-color: purple;
 				--kv-progress-circle-background-color: orange;
@@ -53,3 +59,10 @@ export const Styled = (args, { argTypes }) => ({
 		/>
 	`,
 });
+
+
+export const CShape = Default.bind({});
+CShape.args = {
+	arcScale: .8,
+	rotate: 36,
+}

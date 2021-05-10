@@ -1,10 +1,13 @@
+import KvBaseInput from '@/components/Kv/KvBaseInput';
 import KvCheckbox from '@/components/Kv/KvCheckbox';
+import KvCurrencyInput from '@/components/Kv/KvCurrencyInput';
 import KvDropdownRounded from '@/components/Kv/KvDropdownRounded';
+import KvPhoneInput from '@/components/Kv/KvPhoneInput';
 import KvPillToggle from '@/components/Kv/KvPillToggle';
 import KvRadio from '@/components/Kv/KvRadio';
 import KvRangeSlider from '@/components/Kv/KvRangeSlider';
 import KvToggle from '@/components/Kv/KvToggle';
-import KvCurrencyInput from '@/components/Kv/KvCurrencyInput';
+import KvVerificationCodeInput from '@/components/Kv/KvVerificationCodeInput';
 
 export default {
 	title: 'Kv/Form Elements',
@@ -12,20 +15,32 @@ export default {
 
 export const KitchenSink = () => ({
 	components: {
+		KvBaseInput,
 		KvCheckbox,
+		KvCurrencyInput,
 		KvDropdownRounded,
+		KvPhoneInput,
 		KvPillToggle,
 		KvRadio,
 		KvRangeSlider,
 		KvToggle,
-		KvCurrencyInput
+		KvVerificationCodeInput,
 	},
 	data() {
 		return {
+			kvBaseInputError: {
+				validationName: false,
+				$error: true,
+				$params: {
+					validationName: {},
+				},
+			},
 			kvCheckboxModel1: true,
 			kvCheckboxModel2: false,
 			kvCheckboxModel3: false,
+			kvCurrencyAmount: 25,
 			kvDropdownRoundedModel: 'test2',
+			KvPhoneInput: '',
 			kvPillOptions: [
 				{
 					title: 'Option 1',
@@ -67,7 +82,7 @@ export const KitchenSink = () => ({
 			kvToggle1: true,
 			kvToggle2: false,
 			kvToggle3: true,
-			kvCurrencyAmount: 25
+			KvVerificationCodeInput: 123456
 		}
 	},
 	template: `
@@ -157,7 +172,7 @@ export const KitchenSink = () => ({
 							v-model="kvRangeSlider"
 						>
 							Slider Label
-							<template v-slot:value>(value: {{kvRangeSlider}})</template>
+							<template #value>(value: {{kvRangeSlider}})</template>
 						</kv-range-slider>
 						<kv-range-slider
 							id="slider-2"
@@ -165,7 +180,7 @@ export const KitchenSink = () => ({
 							disabled
 						>
 							Slider Label Disabled
-							<template v-slot:value>(value: {{kvRangeSlider}})</template>
+							<template #value>(value: {{kvRangeSlider}})</template>
 						</kv-range-slider>
 					</fieldset>
 
@@ -226,10 +241,24 @@ export const KitchenSink = () => ({
 				</fieldset>
 
 				<fieldset>
-					<label class="input-label"for="amount">
+					<label class="input-label" for="amount">
 						KvCurrencyInput
 					</label>
 					<kv-currency-input id="amount" v-model="kvCurrencyAmount" />
+				</fieldset>
+
+				<fieldset>
+					<label class="input-label" for="phone_number">
+						KvPhoneInput
+					</label>
+					<kv-phone-input id="phone_number" v-model="KvPhoneInput" />
+				</fieldset>
+
+				<fieldset>
+					<label class="input-label" for="verification_code">
+						KvVerificationCodeInput
+					</label>
+					<kv-verification-code-input id="verification_code" v-model="KvVerificationCodeInput" />
 				</fieldset>
 
 				<fieldset>
@@ -248,6 +277,28 @@ export const KitchenSink = () => ({
 							rows="4"
 						></textarea>
 					</label>
+				</fieldset>
+
+				<fieldset>
+					<legend>KvBaseInput</legend>
+					<kv-base-input
+						type="text"
+						name="baseInput"
+						:validation="{}"
+					>
+						Base input
+					</kv-base-input>
+					<kv-base-input
+						type="text"
+						name="baseInputError"
+						:validation="kvBaseInputError"
+					>
+						Base input with error
+
+						<template #validationName>
+							There is a problem
+						</template>
+					</kv-base-input>
 				</fieldset>
 			</form>
 		</section>

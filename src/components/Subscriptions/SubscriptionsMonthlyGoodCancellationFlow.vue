@@ -178,6 +178,10 @@ export default {
 			type: Boolean,
 			default: false
 		},
+		subscriptionId: {
+			type: Number,
+			default: null
+		},
 	},
 	data() {
 		return {
@@ -224,6 +228,8 @@ export default {
 			this.currentStep = step;
 		},
 		closeLightbox() {
+			// Track this event
+			this.$kvTrackEvent('monthlyGood', 'click-close-monthly-good', 'close cancel monthly good');
 			// Reset
 			this.resetCancellationFlow();
 			// Emit event
@@ -246,6 +252,7 @@ export default {
 					'select_action',
 					label,
 					property,
+					this.subscriptionId
 				);
 			}
 		}

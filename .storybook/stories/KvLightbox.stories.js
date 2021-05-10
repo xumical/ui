@@ -1,4 +1,3 @@
-import { boolean } from '@storybook/addon-knobs';
 import KvLightbox from '@/components/Kv/KvLightbox';
 import KvButton from '@/components/Kv/KvButton';
 
@@ -20,10 +19,20 @@ const loremIpsum = `
 export default {
 	title: 'Kv/KvLightbox',
 	component: KvLightbox,
+	args: {
+		visible: true,
+		preventClose: false,
+		title: 'Test Title',
+		inverted: false,
+		noPaddingTop: false,
+		noPaddingBottom: false,
+		noPaddingSides: false,
+	},
 };
 
-export const Default = () => ({
-	components: { KvLightbox, KvButton },
+export const Default = (args, { argTypes }) => ({
+	components: { KvLightbox },
+	props: Object.keys(argTypes),
 	data: () => ({
 		lightboxVisible: false,
 	}),
@@ -37,12 +46,14 @@ export const Default = () => ({
 	},
 	template: `
 		<div>
-			<kv-button @click.native.prevent="showLightbox">
-				Show Lightbox
-			</kv-button>
-
 			<kv-lightbox
-				:visible="lightboxVisible"
+				:visible="visible"
+				:inverted="inverted"
+				:prevent-close="preventClose"
+				:title="title"
+				:no-padding-top="noPaddingTop"
+				:no-padding-bottom="noPaddingBottom"
+				:no-padding-sides="noPaddingSides"
 				@lightbox-closed="hideLightbox"
 			>
 				${loremIpsum}
@@ -51,32 +62,39 @@ export const Default = () => ({
 	`,
 });
 
-export const TitleSlotControlsSlot = () => ({
+export const Inverted = Default.bind({});
+Inverted.args = {
+	inverted: true,
+};
+
+export const PreventClose = Default.bind({});
+PreventClose.args = {
+	preventClose: true,
+};
+
+export const Padding = Default.bind({});
+Padding.args = {
+	noPaddingTop: true,
+	noPaddingBottom: true,
+	noPaddingSides: true,
+};
+
+export const SmallContent = (args, { argTypes }) => ({
 	components: { KvLightbox, KvButton },
-	data: () => ({
-		lightboxVisible: false,
-	}),
-	methods: {
-		showLightbox() {
-			this.lightboxVisible = true;
-		},
-		hideLightbox() {
-			this.lightboxVisible = false;
-		}
-	},
+	props: Object.keys(argTypes),
 	template: `
 		<div>
-			<kv-button @click.native.prevent="showLightbox">
-				Show Lightbox - Use Header and Controls Slot
-			</kv-button>
-
 			<kv-lightbox
-				:visible="lightboxVisible"
-				@lightbox-closed="hideLightbox"
-				title="Title"
+				:visible="visible"
+				:inverted="inverted"
+				:prevent-close="preventClose"
+				:title="title"
+				:no-padding-top="noPaddingTop"
+				:no-padding-bottom="noPaddingBottom"
+				:no-padding-sides="noPaddingSides"
 			>
-				${loremIpsum}
-				<template slot="controls">
+				<p>Small amount of content</p>
+				<template #controls>
 					<kv-button>Button 1</kv-button>
 					<kv-button>Button 2</kv-button>
 				</template>
@@ -85,153 +103,86 @@ export const TitleSlotControlsSlot = () => ({
 	`,
 });
 
-export const Inverted = () => ({
+export const WithControls = (args, { argTypes }) => ({
 	components: { KvLightbox, KvButton },
-	data: () => ({
-		lightboxVisible: false,
-	}),
-	methods: {
-		showLightbox() {
-			this.lightboxVisible = true;
-		},
-		hideLightbox() {
-			this.lightboxVisible = false;
-		}
-	},
+	props: Object.keys(argTypes),
 	template: `
 		<div>
-			<kv-button @click.native.prevent="showLightbox">
-				Show Lightbox Inverted
-			</kv-button>
-
 			<kv-lightbox
-				:visible="lightboxVisible"
-				:inverted="true"
-				@lightbox-closed="hideLightbox"
-				title="Title"
-			>
-				${loremIpsum}
-				<template slot="controls">Controls Here</template>
-			</kv-lightbox>
-
-			<kv-lightbox
-				:visible="false"
-				:inverted="true"
-				@lightbox-closed="hideLightbox"
-				title="Title"
-			>
-				${loremIpsum}
-				<template slot="controls">Controls Here</template>
-			</kv-lightbox>
-		</div>
-	`,
-});
-
-export const CustomTitleColor = () => ({
-	components: { KvLightbox, KvButton },
-	data: () => ({
-		lightboxVisible: false,
-	}),
-	methods: {
-		showLightbox() {
-			this.lightboxVisible = true;
-		},
-		hideLightbox() {
-			this.lightboxVisible = false;
-		}
-	},
-	template: `
-		<div>
-			<kv-button @click.native.prevent="showLightbox">
-				Show Lightbox Custom Title Color
-			</kv-button>
-
-			<kv-lightbox
-				:visible="lightboxVisible"
-				@lightbox-closed="hideLightbox"
-				title="Custom Title Color"
-				style="--kv-lightbox-title-color: blue"
-			>
-				${loremIpsum}
-			</kv-lightbox>
-		</div>
-	`,
-});
-
-export const FullWidth = () => ({
-	components: { KvLightbox, KvButton },
-	props: {
-		fullWidth: {
-			default: boolean('fullWidth', true)
-		},
-	},
-	data: () => ({
-		lightboxVisible: false,
-	}),
-	methods: {
-		showLightbox() {
-			this.lightboxVisible = true;
-		},
-		hideLightbox() {
-			this.lightboxVisible = false;
-		}
-	},
-	template: `
-		<div>
-			<kv-button @click.native.prevent="showLightbox">
-				Show Lightbox Full Width
-			</kv-button>
-
-			<kv-lightbox
-				:visible="lightboxVisible"
-				:full-width="fullWidth"
-				@lightbox-closed="hideLightbox"
-				title="Title"
-			>
-				This is small content, but the lightbox takes all the space it can.
-			</kv-lightbox>
-		</div>
-	`,
-});
-
-
-export const NoPadding = () => ({
-	components: { KvLightbox, KvButton },
-	props: {
-		noPaddingTop: {
-			default: boolean('noPaddingTop', true)
-		},
-		noPaddingSides: {
-			default: boolean('noPaddingSides', true)
-		},
-		noPaddingBottom: {
-			default: boolean('noPaddingBottom', true)
-		}
-	},
-	data: () => ({
-		lightboxVisible: false,
-	}),
-	methods: {
-		showLightbox() {
-			this.lightboxVisible = true;
-		},
-		hideLightbox() {
-			this.lightboxVisible = false;
-		}
-	},
-	template: `
-		<div>
-			<kv-button @click.native.prevent="showLightbox">
-				Show Lightbox no padding
-			</kv-button>
-
-			<kv-lightbox
-				:visible="lightboxVisible"
+				:visible="visible"
+				:inverted="inverted"
+				:prevent-close="preventClose"
+				:title="title"
 				:no-padding-top="noPaddingTop"
 				:no-padding-bottom="noPaddingBottom"
 				:no-padding-sides="noPaddingSides"
-				@lightbox-closed="hideLightbox"
-				title="Title"
+			>
+				${loremIpsum}
+				<template #controls>
+					<kv-button>Button 1</kv-button>
+					<kv-button>Button 2</kv-button>
+				</template>
+			</kv-lightbox>
+		</div>
+	`,
+});
+
+export const WithFoundationGrid = (args, { argTypes }) => ({
+	components: { KvLightbox, KvButton },
+	props: Object.keys(argTypes),
+	template: `
+		<div>
+			<kv-lightbox
+				:visible="visible"
+				:inverted="inverted"
+				:prevent-close="preventClose"
+				:title="title"
+				:no-padding-top="noPaddingTop"
+				:no-padding-bottom="noPaddingBottom"
+				:no-padding-sides="noPaddingSides"
+			>
+				<p>Hi, I'm outside the grid</p>
+				<div class="row">
+					<div class="small-12 large-6 columns">
+						<b>Grid, Full mobile, half large</b>
+					</div>
+					<div class="small-12 large-6 columns">
+						<b>Grid, Full mobile, half large</b>
+
+						<div class="row">
+							<div class="small-12 large-6 columns">
+								<b>Nested Grid, Full mobile, half large</b>
+							</div>
+							<div class="small-12 large-6 columns">
+								<b>Nested Grid, Full mobile, half large</b>
+							</div>
+						</div>
+					</div>
+				</div>
+				${loremIpsum}
+				<template #controls>
+					<kv-button>Button 1</kv-button>
+					<kv-button>Button 2</kv-button>
+				</template>
+			</kv-lightbox>
+		</div>
+	`,
+});
+
+export const CustomTitleColor = (args, { argTypes }) => ({
+	components: { KvLightbox },
+	props: Object.keys(argTypes),
+	template: `
+		<div>
+			<kv-lightbox
+				:visible="visible"
+				:inverted="inverted"
+				:prevent-close="preventClose"
+				:title="title"
+				:no-padding-top="noPaddingTop"
+				:no-padding-bottom="noPaddingBottom"
+				:no-padding-sides="noPaddingSides"
+				style="--kv-lightbox-title-color: blue"
 			>
 				${loremIpsum}
 			</kv-lightbox>

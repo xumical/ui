@@ -9,6 +9,8 @@ import {
 
 import inactiveUiSetting from '../../fixtures/UiSettingTypeInactiveRaw.json';
 import ccPageRaw from '../../fixtures/CorporateCampaignContentfulPageRaw.json';
+import adPageRawNoSettings from '../../fixtures/AutoDepositPageRawNoSettings.json';
+
 import uiSettingRaw from '../../fixtures/UiSettingRaw.json';
 import genericContentBlockRaw from '../../fixtures/GenericContentBlockRaw.json';
 import responsiveImageSetRaw from '../../fixtures/ResponsiveImageSetRaw.json';
@@ -77,6 +79,7 @@ describe('contentfulUtils.js', () => {
 				key: 'promo-campaign-test',
 				path: '/cc/promo-campaign-test',
 				pageType: 'corporate-campaign',
+				pageTitle: 'Test Page Title',
 			}
 		};
 
@@ -91,7 +94,10 @@ describe('contentfulUtils.js', () => {
 				pageType: 'corporate-campaign',
 				pageLayout: {
 					name: 'Promo Campaign Test',
-					contentGroups: [{}]
+					headerTheme: 'lightHeader',
+					contentGroups: [{}],
+					footerTheme: undefined,
+					pageTitle: 'Test Page Layout Title',
 				},
 				settings: [{}]
 			}
@@ -108,6 +114,7 @@ describe('contentfulUtils.js', () => {
 				pageType: 'corporate-campaign',
 				pageLayout: {
 					name: 'Promo Campaign Test',
+					headerTheme: 'lightHeader',
 					contentGroups: [{
 						key: 'promo-campaign-test-cg',
 						name: 'Promo Campaign Test Content Groups',
@@ -129,8 +136,11 @@ describe('contentfulUtils.js', () => {
 							description: 'Lend a hand from afar and join the global COVID-19 response. Take action',
 							images: expect.any(Array)
 						}]
-					}]
-				}
+					}],
+					footerTheme: undefined,
+					pageTitle: 'Test Page Layout Title',
+				},
+				pageTitle: 'Test Page Title',
 			}
 		};
 
@@ -149,6 +159,7 @@ describe('contentfulUtils.js', () => {
 				key: 'promo-campaign-test',
 				path: '/cc/promo-campaign-test',
 				pageType: 'corporate-campaign',
+				pageTitle: 'Test Page Title',
 			}
 		};
 
@@ -162,10 +173,13 @@ describe('contentfulUtils.js', () => {
 				path: '/cc/promo-campaign-test',
 				pageType: 'corporate-campaign',
 				pageLayout: {
-					name: 'Promo Campaign Test'
+					name: 'Promo Campaign Test',
+					headerTheme: 'lightHeader',
+					pageTitle: 'Test Page Layout Title',
 				},
 				settings: expect.any(Array),
-				contentGroups: expect.any(Object)
+				contentGroups: expect.any(Object),
+				pageTitle: 'Test Page Title',
 			}
 		};
 
@@ -180,10 +194,12 @@ describe('contentfulUtils.js', () => {
 				pageType: 'corporate-campaign',
 				pageLayout: {
 					name: 'Promo Campaign Test',
+					headerTheme: 'lightHeader',
+					pageTitle: 'Test Page Layout Title',
 				},
 				settings: expect.any(Array),
 				contentGroups: {
-					promoCampaignTestCg: {
+					mlCampaignHero: {
 						key: 'promo-campaign-test-cg',
 						name: 'Promo Campaign Test Content Groups',
 						contents: [{
@@ -196,8 +212,10 @@ describe('contentfulUtils.js', () => {
 							description: 'Lend a hand from afar and join the global COVID-19 response. Take action',
 							images: expect.any(Array)
 						}],
+						type: 'mlCampaignHero'
 					}
-				}
+				},
+				pageTitle: 'Test Page Title',
 			}
 		};
 
@@ -216,6 +234,7 @@ describe('contentfulUtils.js', () => {
 				key: expect.any(String),
 				path: expect.any(String),
 				pageType: expect.any(String),
+				pageTitle: expect.any(String)
 			}
 		};
 
@@ -229,10 +248,13 @@ describe('contentfulUtils.js', () => {
 				path: expect.any(String),
 				pageType: expect.any(String),
 				pageLayout: expect.objectContaining({
-					name: expect.any(String)
+					name: expect.any(String),
+					headerTheme: expect.any(String),
+					pageTitle: expect.any(String)
 				}),
 				settings: expect.any(Array),
-				contentGroups: expect.any(Object)
+				contentGroups: expect.any(Object),
+				pageTitle: expect.any(String)
 			}
 		};
 
@@ -246,11 +268,13 @@ describe('contentfulUtils.js', () => {
 				path: expect.any(String),
 				pageType: expect.any(String),
 				pageLayout: expect.objectContaining({
-					name: expect.any(String)
+					name: expect.any(String),
+					headerTheme: expect.any(String),
+					pageTitle: expect.any(String)
 				}),
 				settings: expect.any(Array),
 				contentGroups: expect.objectContaining({
-					promoCampaignTestCg: expect.objectContaining({
+					mlCampaignHero: expect.objectContaining({
 						key: expect.any(String),
 						name: expect.any(String),
 						contents: [{
@@ -263,13 +287,134 @@ describe('contentfulUtils.js', () => {
 							description: expect.any(String),
 							images: expect.any(Array)
 						}],
+						type: expect.any(String)
 					})
-				})
+				}),
+				pageTitle: expect.any(String)
 			}
 		};
 
 		test('should return flattened page, layout, and content group data', () => {
 			expect(processPageContentFlat(ccPageRaw)).toMatchObject(pageLevelLayoutAndContentGroups);
+		});
+	});
+
+	/**
+	*	This test group tests adPageRawNoSettings which includes:
+	*	- No page type
+	*	- An empty settings property
+	*	- Rich text fields
+	*/
+
+	describe('processPageContentFlattened with non specific data for adPageRawNoSettings', () => {
+		test('should return an error object if content is not a page', () => {
+			expect(processPageContentFlat(inactiveUiSetting)).toEqual({ error: 'Non-Page Type Contentful Response' });
+		});
+
+		const pageLevelData = {
+			page: {
+				key: expect.any(String),
+				path: expect.any(String),
+				pageType: undefined,
+				pageTitle: undefined
+			}
+		};
+
+		test('should return page level data', () => {
+			expect(processPageContentFlat(adPageRawNoSettings)).toMatchObject(pageLevelData);
+		});
+
+		const pageLevelAndLayoutData = {
+			page: {
+				key: expect.any(String),
+				path: expect.any(String),
+				pageType: undefined,
+				pageLayout: expect.objectContaining({
+					name: expect.any(String),
+					headerTheme: undefined,
+					footerTheme: undefined,
+					pageTitle: undefined
+				}),
+				settings: [],
+				contentGroups: expect.any(Object),
+				pageTitle: undefined
+			}
+		};
+
+		test('should return flattened page level + page layout, content groups and content data', () => {
+			expect(processPageContentFlat(adPageRawNoSettings)).toMatchObject(pageLevelAndLayoutData);
+		});
+
+		const pageLevelLayoutAndContentGroups = {
+			page: {
+				key: expect.any(String),
+				path: expect.any(String),
+				pageType: undefined,
+				pageLayout: expect.objectContaining({
+					name: expect.any(String),
+					headerTheme: undefined,
+					footerTheme: undefined,
+					pageTitle: undefined
+				}),
+				settings: [],
+				contentGroups: expect.objectContaining({
+					autoDepositCta: expect.objectContaining({
+						key: expect.any(String),
+						name: expect.any(String),
+						contents: [
+							{
+								key: expect.any(String),
+								name: expect.any(String),
+								bodyCopy: expect.any(Object),
+								headline: 'Set up an Auto Deposit',
+							}
+						],
+					}),
+					autoDepositFaqs: expect.objectContaining({
+						key: expect.any(String),
+						name: expect.any(String),
+						contents: [{
+							key: expect.any(String),
+							name: expect.any(String),
+							richText: expect.any(Object)
+						}, {
+							key: expect.any(String),
+							name: expect.any(String),
+							richText: expect.any(Object)
+						}, {
+							key: expect.any(String),
+							name: expect.any(String),
+							richText: expect.any(Object)
+						}, {
+							key: expect.any(String),
+							name: expect.any(String),
+							richText: expect.any(Object)
+						}],
+					}),
+					autoDepositWhatToExpect: expect.objectContaining({
+						key: expect.any(String),
+						name: expect.any(String),
+						contents: [{
+							key: expect.any(String),
+							name: expect.any(String),
+							richText: expect.any(Object)
+						}, {
+							key: expect.any(String),
+							name: expect.any(String),
+							richText: expect.any(Object)
+						}, {
+							key: expect.any(String),
+							name: expect.any(String),
+							richText: expect.any(Object)
+						}],
+					})
+				}),
+				pageTitle: undefined
+			}
+		};
+
+		test('should return flattened page, layout, and content group data', () => {
+			expect(processPageContentFlat(adPageRawNoSettings)).toMatchObject(pageLevelLayoutAndContentGroups);
 		});
 	});
 });

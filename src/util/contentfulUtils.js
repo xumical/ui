@@ -22,10 +22,10 @@ function determineResponsiveSizeFromFileName(filename) {
 	if (filename.match(/lg/g)) {
 		size = 'large';
 	}
-	if (filename.match(/xl/g)) {
+	if (filename.match(/xl/g) || filename.match(/xga/g)) {
 		size = 'xga';
 	}
-	if (filename.match(/xxl/g)) {
+	if (filename.match(/xxl/g) || filename.match(/wxga/g)) {
 		size = 'wxga';
 	}
 
@@ -33,6 +33,32 @@ function determineResponsiveSizeFromFileName(filename) {
 }
 
 /**
+ * Takes raw contentful responsive image set object, and returns
+ * an array with image urls mapped to their respective sizes
+ *
+ * @param {object} contentful Responsive Image Set Object
+ * @returns {array}
+ */
+export function createArrayOfResponsiveImageSet(contentfulResponsiveImageSet) {
+	// param must be an object, which contains prop images
+	if (!contentfulResponsiveImageSet || !contentfulResponsiveImageSet.images) return [];
+
+	// copy responsive image set param
+	const contentfulResponsiveImageSetCopy = JSON.parse(JSON.stringify(contentfulResponsiveImageSet));
+	contentfulResponsiveImageSetCopy.images.forEach(imageObj => {
+		// eslint-disable-next-line no-param-reassign
+		imageObj.responsiveSize = determineResponsiveSizeFromFileName(imageObj.file.fileName);
+	});
+	// convert to array and reduce
+	const responsiveImageArray = contentfulResponsiveImageSetCopy.images.reduce((newArray, curVal) => {
+		newArray.push([curVal.responsiveSize, curVal.file.url]);
+		return newArray;
+	}, []);
+	return responsiveImageArray;
+}
+
+/**
+ * TODO remove this once content field is fully deprecated from contentful
  * Takes raw contentful content field, and returns an object with keys mapped to the content type.
  * For the special contentful content field responsiveImageSet returns an array of objects.
  *
@@ -85,6 +111,21 @@ export function formatGenericContentBlock(contentfulContent) {
 }
 
 /**
+ * Format Generic Content Block (contentful type id: richTextContent)
+ * Takes raw contentful content object and returns an object with targeted keys/values
+ *
+ * @param {array} contentfulContent data
+ * @returns {object}
+ */
+export function formatRichTextContent(contentfulContent) {
+	return {
+		key: contentfulContent.fields?.key,
+		name: contentfulContent.fields?.name,
+		richText: contentfulContent.fields?.richText,
+	};
+}
+
+/**
  * Format Ui Setting (contentful type id: uiSetting)
  * Takes raw contentful content object and returns an object with targeted keys/values
  *
@@ -130,7 +171,7 @@ export function formatGlobalPromoBanner(contentfulContent) {
  * @returns {object}
  */
 export function formatMediaAssetArray(mediaArray) {
-	if (!mediaArray.length) return [];
+	if (!mediaArray || !mediaArray.length) return [];
 
 	const mediaAssets = [];
 
@@ -185,6 +226,7 @@ export function formatContentGroupsFlat(contentfulContent) {
 			const contentGroupFields = {
 				key: entry.fields?.key,
 				name: entry.fields?.name,
+				type: entry.fields?.type ?? null,
 				// eslint-disable-next-line no-use-before-define
 				contents: formatContentTypes(entry.fields?.contents)
 			};
@@ -192,7 +234,13 @@ export function formatContentGroupsFlat(contentfulContent) {
 				contentGroupFields.media = formatMediaAssetArray(entry.fields?.media);
 			}
 			cleanedContentGroups.push(contentGroupFields);
-			contentGroupsFlat[camelCase(entry.fields?.key) || `cg${index}`] = contentGroupFields;
+
+			const cgType = entry.fields?.type ? camelCase(entry.fields?.type) : null;
+			contentGroupsFlat[
+				cgType
+				|| camelCase(entry.fields?.key)
+				|| `cg${index}`
+			] = contentGroupFields;
 		}
 	});
 
@@ -217,6 +265,8 @@ export function formatContentType(contentfulContent, contentType) {
 			return formatGlobalPromoBanner(contentfulContent);
 		case 'responsiveImageSet':
 			return formatResponsiveImageSet(contentfulContent);
+		case 'richTextContent':
+			return formatRichTextContent(contentfulContent);
 		default:
 			return { error: 'Unrecognized Content Type' };
 	}
@@ -229,7 +279,7 @@ export function formatContentType(contentfulContent, contentType) {
  * @returns {array}
  */
 export function formatContentTypes(contentfulContent) {
-	const contents = contentfulContent.length ? contentfulContent : [];
+	const contents = contentfulContent?.length ? contentfulContent : [];
 	const formattedContent = [];
 
 	contents.forEach(item => {
@@ -252,20 +302,24 @@ export function processPageContent(entryItem) {
 	const isPage = entryItem.sys?.contentType?.sys?.id === 'page';
 	if (!isPage) return { error: 'Non-Page Type Contentful Response' };
 
-	// extract top level items in the Page, initialtize pageLayout and settings
+	// extract top level items in the Page, initialize pageLayout and settings
 	contentfulContentObject.page = {
 		key: entryItem.fields?.key,
 		path: entryItem.fields?.path,
+		pageTitle: entryItem.fields?.pageTitle,
 		pageType: entryItem.fields?.pageType,
 		pageLayout: {
-			name: entryItem.fields?.pageLayout?.fields?.name
+			name: entryItem.fields?.pageLayout?.fields?.name,
+			pageTitle: entryItem.fields?.pageLayout?.fields?.pageTitle,
+			headerTheme: entryItem.fields?.pageLayout?.fields?.headerTheme,
+			footerTheme: entryItem.fields?.pageLayout?.fields?.footerTheme,
 		},
-		settings: entryItem.fields?.settings.length
+		settings: entryItem.fields?.settings
 			? formatContentTypes(entryItem.fields?.settings) : []
 	};
 
 	// extract content groups for parsing
-	const contentGroups = entryItem.fields?.pageLayout?.fields?.contentGroups;
+	const contentGroups = entryItem.fields?.pageLayout?.fields?.contentGroups ?? [];
 	const cleanedContentGroups = [];
 
 	if (contentGroups.length <= 0) {
@@ -274,11 +328,12 @@ export function processPageContent(entryItem) {
 		};
 	} else {
 		contentGroups.forEach(item => {
-			// console.log('content group item', item);
 			const contentGroupFields = {
 				key: item.fields?.key,
 				name: item.fields?.name,
-				contents: formatContentTypes(item.fields?.contents)
+				type: item.fields?.type ?? null,
+				contents: formatContentTypes(item.fields?.contents),
+				media: formatMediaAssetArray(item.fields?.media),
 			};
 			cleanedContentGroups.push(contentGroupFields);
 		});
@@ -301,20 +356,24 @@ export function processPageContentFlat(entryItem) {
 	const isPage = entryItem.sys?.contentType?.sys?.id === 'page';
 	if (!isPage) return { error: 'Non-Page Type Contentful Response' };
 
-	// extract top level items in the Page, initialtize pageLayout and settings
+	// extract top level items in the Page, initialize pageLayout and settings
 	contentfulContentObject.page = {
 		key: entryItem.fields?.key,
 		path: entryItem.fields?.path,
+		pageTitle: entryItem.fields?.pageTitle,
 		pageType: entryItem.fields?.pageType,
 		pageLayout: {
-			name: entryItem.fields?.pageLayout?.fields?.name
+			name: entryItem.fields?.pageLayout?.fields?.name,
+			pageTitle: entryItem.fields?.pageLayout?.fields?.pageTitle,
+			headerTheme: entryItem.fields?.pageLayout?.fields?.headerTheme,
+			footerTheme: entryItem.fields?.pageLayout?.fields?.footerTheme,
 		},
-		settings: entryItem.fields?.settings.length
+		settings: entryItem.fields?.settings
 			? formatContentTypes(entryItem.fields?.settings) : []
 	};
 
 	// extract content groups for parsing
-	const contentGroups = entryItem.fields?.pageLayout?.fields?.contentGroups;
+	const contentGroups = entryItem.fields?.pageLayout?.fields?.contentGroups ?? [];
 
 	if (contentGroups.length <= 0) {
 		contentfulContentObject.page.pageLayout.contentGroups = {
@@ -325,4 +384,31 @@ export function processPageContentFlat(entryItem) {
 	}
 
 	return contentfulContentObject;
+}
+
+/**
+ *  Takes the following (sourceString, splitKey, [dynamicValues])
+ *
+ * - sourceString = String of text to be .split at the location of the splitKey
+ * - splitKey = is the value to look for in the string to preform the .split
+ * - [dynamicValues] are the values you want to concat to the string at location of the splitKey
+ *
+ */
+export function buildDynamicString(sourceString = '', splitKey = '', dynamicValues = []) {
+	if (typeof sourceString !== 'string') {
+		return '';
+	}
+	let finalString = '';
+	// split the source string where it finds the splitKey
+	const stringSplit = sourceString.split(splitKey);
+	// forEach with index of the sourceString
+	stringSplit.forEach((item, index) => {
+		finalString = finalString.concat(item);
+		// if there's a dyanmic value at the current index, proceed adding it
+		// to the finalString
+		if (dynamicValues[index]) {
+			finalString = finalString.concat(dynamicValues[index]);
+		}
+	});
+	return finalString;
 }

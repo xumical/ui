@@ -1,15 +1,6 @@
 <template>
 	<kv-settings-card title="Password">
-		<template v-slot:icon>
-			<!-- TODO: THIS ICON IS A PLACEHOLDER
-					Get correct icon assest from design, or remove this KvIcon -->
-			<kv-icon
-				class="icon"
-				title="Auto-lending On"
-				name="auto-icon-on"
-			/>
-		</template>
-		<template v-slot:content>
+		<template #content>
 			<p>
 				Clicking this button will send you a verification email.
 				As a final step in this process, you'll need to click the
@@ -22,7 +13,10 @@
 				variant="success"
 				:can-close="true"
 			>
-				<b>{{ successMsg }}</b>
+				<b>
+					Email has been sent to
+					<span class="fs-exclude">{{ userEmail ? userEmail : 'the address on file' }}</span>
+				</b>
 			</kv-alert>
 			<kv-alert
 				v-if="isPasswordRequestFailure"
@@ -47,7 +41,6 @@
 <script>
 import KvAlert from '@/components/Kv/KvAlert';
 import KvButton from '@/components/Kv/KvButton';
-import KvIcon from '@/components/Kv/KvIcon';
 import KvSettingsCard from '@/components/Kv/KvSettingsCard';
 
 import gql from 'graphql-tag';
@@ -71,7 +64,6 @@ export default {
 	components: {
 		KvAlert,
 		KvButton,
-		KvIcon,
 		KvSettingsCard,
 	},
 	inject: ['apollo'],
@@ -85,13 +77,6 @@ export default {
 	},
 	mounted() {
 		this.loadUserEmail(); // load user email async since it's not crucial
-	},
-	computed: {
-		successMsg() { // TODO: What's the text here?
-			return this.userEmail
-				? `Email has been sent to ${this.userEmail}`
-				: 'Email has been sent to the address on file';
-		}
 	},
 	methods: {
 		loadUserEmail() {

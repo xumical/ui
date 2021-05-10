@@ -3,6 +3,7 @@
 		class="loan-card-controller"
 		:amount-left="amountLeft"
 		:card-number="cardNumber"
+		:disable-redirects="disableRedirects"
 		:experiment-data="experimentData"
 		:expiring-soon-message="expiringSoonMessage"
 		:is-favorite="isFavorite"
@@ -13,6 +14,7 @@
 		:key="loan.id"
 		:loan="loan"
 		:percent-raised="percentRaised"
+		:show-view-loan-cta="showViewLoanCta"
 		:title="title"
 		:is="loanCardType"
 
@@ -20,6 +22,9 @@
 		@toggle-favorite="toggleFavorite"
 		@add-to-basket="handleAddToBasket"
 		@processing-add-to-basket="processingAddToBasket"
+		@image-click="handleImageClick"
+		@name-click="handleNameClick"
+		@read-more-link="handleReadMoreLink"
 
 		:expanded="expanded"
 		:category-id="categoryId"
@@ -82,6 +87,10 @@ export default {
 		ListLoanCard,
 	},
 	props: {
+		disableRedirects: {
+			type: Boolean,
+			default: false,
+		},
 		loanCardType: {
 			type: String,
 			required: true,
@@ -160,6 +169,10 @@ export default {
 			default: 0,
 		},
 		preventUpdatingDetailedCard: {
+			type: Boolean,
+			default: false,
+		},
+		showViewLoanCta: {
 			type: Boolean,
 			default: false,
 		},
@@ -292,6 +305,7 @@ export default {
 		},
 		// the final outcome of adding a loan to basket
 		// payload is { loanId: ######, success: true/false }
+		// optionally payload may also contain an eventSource identifier
 		handleAddToBasket(payload) {
 			this.$emit('add-to-basket', payload);
 		},
@@ -306,6 +320,15 @@ export default {
 		},
 		handleSetPreventUpdatingDetailedCard(newState) {
 			this.$emit('set-prevent-updating-detailed-card', newState);
+		},
+		handleImageClick(payload) {
+			this.$emit('image-click', payload);
+		},
+		handleReadMoreLink(payload) {
+			this.$emit('read-more-link', payload);
+		},
+		handleNameClick(payload) {
+			this.$emit('name-click', payload);
 		},
 	},
 };

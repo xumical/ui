@@ -17,6 +17,8 @@ query promoCampaign($basketId: String, $promoFundId: String) {
 					creditType
 					promoFund {
 						id
+						displayName
+						displayDescription
 					}
 				}
 			}
@@ -40,8 +42,12 @@ query promoCampaign($basketId: String, $promoFundId: String) {
 				sendKivaNewsletter
 				id
 				isEmployee
+				formId
+				pageId
 				loanSearchCriteria {
 					filters {
+						cityState
+						country
 						currencyLossPossible
 						dafEligible
 						distributionModel
@@ -57,6 +63,7 @@ query promoCampaign($basketId: String, $promoFundId: String) {
 						sector
 						loanTags
 					}
+					sortBy
 				}
 			}
 		}

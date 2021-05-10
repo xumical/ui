@@ -2,7 +2,6 @@
 	<div class="basket-add-interstitial row small-collapse">
 		<kv-lightbox
 			:visible="showInterstitial"
-			:full-width="true"
 			@lightbox-closed="closeLightbox"
 			title="Thanks for your commitment to make an impact"
 		>
@@ -79,7 +78,7 @@
 				</div>
 			</div>
 
-			<template v-slot:controls>
+			<template #controls>
 				<kv-checkbox
 					id="user-pref-hide-interstitial"
 					:checked="userPrefHideInterstitial"
@@ -97,7 +96,6 @@ import _filter from 'lodash/filter';
 import _find from 'lodash/find';
 import _get from 'lodash/get';
 import store2 from 'store2';
-import cookieStore from '@/util/cookieStore';
 import basketAddInterstitial from '@/graphql/query/basketAddInterstitialClient.graphql';
 import basketAddInterstitialData from '@/graphql/query/basketAddInterstitialData.graphql';
 import updateAddToBasketInterstitial from '@/graphql/mutation/updateAddToBasketInterstitial.graphql';
@@ -117,7 +115,7 @@ export default {
 		LoanReservation,
 		LYML,
 	},
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	data() {
 		return {
 			basketInterstitialState: {},
@@ -180,7 +178,7 @@ export default {
 				this.apollo.query({
 					query: basketAddInterstitialData,
 					variables: {
-						basketId: cookieStore.get('kvbskt'),
+						basketId: this.cookieStore.get('kvbskt'),
 					},
 					fetchPolicy: 'network-only',
 				}).then(({ data }) => {

@@ -19,6 +19,8 @@ module.exports = {
 		fbApplicationId: '123230061223',
 		fbPixelId: '1531213600467139',
 		fbOgNameSpace: 'kivadotorg',
+		enableFullStory: true,
+		quantcastId: 'p-UvyXGCbGgb8xA',
 		enableSentry: true,
 		sentryURI: 'https://3ab8031cd8bf45d48f79e2b77657e16e@sentry.io/1201288',
 		algoliaConfig: {
@@ -28,6 +30,7 @@ module.exports = {
 			apiKey: '82ec72aa3177a6f4fc47b7103e6db786',
 			defaultIndex: 'prod_fundraising_popularity',
 		},
+		btTokenKey: 'production_x6dwd3k4_f5swrg87wym8bx37',
 		auth0: {
 			loginRedirectUrls: {
 				X6gQsD1f3Y4dvCQK8LGxYPc84UZ9Svts: 'https://admin.kiva.org/admin/login?force=1',
@@ -44,13 +47,12 @@ module.exports = {
 			browserCallbackUri: 'https://www.kiva.org/process-browser-auth',
 			serverCallbackUri: 'https://www.kiva.org/process-ssr-auth',
 			domain: 'login.kiva.org',
-			scope: 'https://www.kiva.org/last_login ' +
-				'https://www.kiva.org/kiva_id ' +
-				'openid email profile',
+			scope: 'openid mfa',
 		},
-		intercom: {
+		oneTrust: {
 			enable: true,
-			appId: 't3epx9oz'
+			key: 'db9dcf94-1c32-40fb-9a57-cefafea1088d',
+			domainSuffix: '',
 		},
 		paypal : {
 			url: 'www.paypal.com',
@@ -70,6 +72,7 @@ module.exports = {
 		sessionUri: 'https://www.kiva.org/start-ui-session',
 		memcachedEnabled: true,
 		memcachedServers: 'memcached-01:11211,memcached-02:11211',
+		gzipEnabled: false,
 	},
 	build: {
 		assetsRoot: path.resolve(__dirname, '../dist'),

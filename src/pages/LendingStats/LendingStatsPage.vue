@@ -1,8 +1,10 @@
 <template>
 	<www-page>
-		<the-my-kiva-secondary-menu slot="secondary" />
+		<template #secondary>
+			<the-my-kiva-secondary-menu />
+		</template>
 		<div class="row page-content">
-			<the-portfolio-tertiary-menu slot="tertiary" class="show-for-large" />
+			<the-portfolio-tertiary-menu class="show-for-large" />
 			<div class="small-12 large-9 columns">
 				<h1>Lending stats</h1>
 				<p>
@@ -74,7 +76,7 @@ export default {
 		ThePortfolioTertiaryMenu,
 		StatsSection
 	},
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	metaInfo: {
 		title: 'Lending Stats'
 	},

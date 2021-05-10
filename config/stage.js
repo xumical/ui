@@ -19,6 +19,8 @@ module.exports = merge(base, {
 		fbApplicationId: '2260431077572912',
 		fbPixelId: '',
 		fbOgNameSpace: 'stage-kiva',
+		enableFullStory: false,
+		quantcastId: '',
 		enableSentry: true,
 		sentryURI: 'https://7ce141b23c4a4e6091c206d08442f0e9@sentry.io/1201287',
 		algoliaConfig: {
@@ -28,6 +30,7 @@ module.exports = merge(base, {
 			apiKey: '28aaa1d56e6a1688f13f6b41da0f27a5',
 			defaultIndex: 'stage_fundraising_popularity',
 		},
+		btTokenKey: 'sandbox_q7kbtvzy_vynd473f79sfskz3',
 		auth0: {
 			loginRedirectUrls: {
 				iHNp5rV3XxaozU7B50oXpNye6RCAE5OD: 'https://admin.stage.kiva.org/admin/login?force=1',
@@ -45,12 +48,14 @@ module.exports = merge(base, {
 			serverCallbackUri: 'https://www.stage.kiva.org/process-ssr-auth',
 			domain: 'login.stage.kiva.org',
 		},
-		intercom: {
-			enable: false,
-		},
 		paypal : {
 			url: 'www.sandbox.paypal.com',
 			environment: 'sandbox'
+		},
+		oneTrust: {
+			enable: true,
+			key: 'db9dcf94-1c32-40fb-9a57-cefafea1088d',
+			domainSuffix: '-test',
 		},
 	},
 	server: {

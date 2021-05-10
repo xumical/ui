@@ -1,10 +1,7 @@
 <template>
 	<section class="share hide-for-print">
 		<h2 class="share__headline">
-			<kv-icon
-				class="share-icon"
-				name="share"
-			/>Feeling good? Extend your impact
+			Feeling good? Extend your impact
 		</h2>
 
 		<div class="share__wrapper">
@@ -37,7 +34,7 @@
 					Message
 				</label>
 				<textarea
-					class="message__textbox"
+					class="message__textbox fs-mask"
 					id="message-textbox"
 					:placeholder="placeholderMessage"
 					:maxlength="maxMessageLength"
@@ -195,7 +192,7 @@ export default {
 		},
 		shareLink() {
 			const base = `https://${this.$appConfig.host}`;
-			if (this.selectedLoan.id) {
+			if (this.selectedLoan.id && this.lender.inviterName) {
 				if (this.isTeamInvitation) {
 					return `${base}/invitedto/${this.selectedLenderTeam}/by/${this.lender.inviterName}/for/${this.selectedLoan.id}`; // eslint-disable-line max-len
 				}
@@ -643,11 +640,5 @@ $loan-triangle-size: rem-calc(12);
 	&__select {
 		margin: 0;
 	}
-}
-
-.share-icon {
-	height: 1rem;
-	width: 1rem;
-	margin-right: 1rem;
 }
 </style>

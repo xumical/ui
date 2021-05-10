@@ -3,6 +3,7 @@
 		<ul>
 			<li v-for="loan in loans" :key="loan.id">
 				<basket-item
+					:disable-redirects="disableRedirects"
 					:loan="loan"
 					:teams="teams"
 					@validateprecheckout="$emit('validateprecheckout')"
@@ -37,6 +38,10 @@ import KivaCardItem from '@/components/Checkout/KivaCardItem';
 
 export default {
 	props: {
+		disableRedirects: {
+			type: Boolean,
+			default: false
+		},
 		loans: {
 			type: Array,
 			default: () => []
@@ -77,13 +82,8 @@ export default {
 <style lang="scss" scoped>
 @import 'settings';
 
-.basket-items-list {
-	max-width: 800px;
-	margin: 0 auto;
-}
-
 .basket-items-list ul {
+	margin: 0;
 	list-style-type: none;
-	margin-right: 1.25rem;
 }
 </style>

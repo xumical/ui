@@ -4,20 +4,20 @@
 			<kv-loading-spinner v-if="!categoriesLoaded" />
 			<kv-carousel
 				class="loan-category-section__carousel"
-				:controls-inside="true"
 				:autoplay="false"
 				slides-to-scroll="visible"
 				indicator-style="none"
 				:embla-options="{
 					loop: false,
 				}"
+				@interact-carousel="onInteractCarouselCategories"
 			>
 				<kv-carousel-slide
 					class="loan-category-section__carousel-slide"
 					v-for="category in prefetchedCategoryInfo"
 					:key="category.id + '-link'"
 				>
-					<kv-cause-selector
+					<!-- <kv-cause-selector
 						class="loan-category-section__cause-selector"
 						:cause="cleanCategoryName(category)"
 						:as-radio="true"
@@ -27,7 +27,19 @@
 							'click-carousel-selector',
 							cleanCategoryName(category),
 						]"
-					/>
+					/> -->
+					<kv-button
+						class="text-link category-options__link"
+						:class="{'active': category.id === activeCategory}"
+						@click.native="setActiveCategory(category.id)"
+						v-kv-track-event="[
+							'homepage',
+							'click-carousel-category',
+							cleanCategoryName(category),
+						]"
+					>
+						{{ cleanCategoryName(category) }}
+					</kv-button>
 				</kv-carousel-slide>
 			</kv-carousel>
 		</div>
@@ -54,7 +66,6 @@
 <script>
 import _get from 'lodash/get';
 
-import cookieStore from '@/util/cookieStore';
 import { readJSONSetting } from '@/util/settingsUtils';
 import logReadQueryError from '@/util/logReadQueryError';
 import { isLoanFundraising } from '@/util/loanUtils';
@@ -63,17 +74,19 @@ import lendByCategoryHomepageCategories from '@/graphql/query/lendByCategoryHome
 import loanChannelInfoQuery from '@/graphql/query/loanChannelInfo.graphql';
 import loanChannelData from '@/graphql/query/loanChannelData.graphql';
 
+import KvButton from '@/components/Kv/KvButton';
 import KvCarousel from '@/components/Kv/KvCarousel';
 import KvCarouselSlide from '@/components/Kv/KvCarouselSlide';
-import KvCauseSelector from '@/components/Kv/KvCauseSelector';
+// import KvCauseSelector from '@/components/Kv/KvCauseSelector';
 import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
 import LoanCategory from '@/components/Homepage/LendByCategory/LoanCategory';
 
 export default {
 	components: {
+		KvButton,
 		KvCarousel,
 		KvCarouselSlide,
-		KvCauseSelector,
+		// KvCauseSelector,
 		KvLoadingSpinner,
 		LoanCategory,
 	},
@@ -89,7 +102,7 @@ export default {
 			categoriesLoaded: false,
 		};
 	},
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	apollo: {
 		preFetch(config, client) {
 			// Get the experiment object from settings with category ids
@@ -124,6 +137,7 @@ export default {
 				case 52:
 					return 'women';
 				case 96:
+				case 106:
 					return 'COVID-19';
 				case 93:
 					return 'shelter';
@@ -132,12 +146,16 @@ export default {
 				case 87:
 					return 'agriculture';
 				case 102:
+				case 104:
 					return 'technology';
 				case 4:
+				case 88:
 					return 'education';
 				case 25:
+				case 105:
 					return 'health';
 				case 32:
+				case 107:
 					return 'refugees';
 				default:
 					// remove any text contained within square brackets, including the brackets
@@ -203,7 +221,7 @@ export default {
 			this.apollo.watchQuery({
 				query: lendByCategoryHomepageCategories,
 				variables: {
-					basketId: cookieStore.get('kvbskt'),
+					basketId: this.cookieStore.get('kvbskt'),
 				},
 			}).subscribe({
 				next: ({ data }) => {
@@ -239,6 +257,9 @@ export default {
 		getCategoryRowNumber(categoryId) {
 			const categoryRowIndex = this.categoryIds.indexOf(categoryId);
 			return categoryRowIndex !== -1 ? categoryRowIndex + 1 : null;
+		},
+		onInteractCarouselCategories(interaction) {
+			this.$kvTrackEvent('homepage', 'click-category-horizontal-scroll', interaction);
 		}
 	},
 	created() {
@@ -248,7 +269,7 @@ export default {
 			pageData = this.apollo.readQuery({
 				query: lendByCategoryHomepageCategories,
 				variables: {
-					basketId: cookieStore.get('kvbskt'),
+					basketId: this.cookieStore.get('kvbskt'),
 				},
 			});
 			this.processData(pageData);
@@ -297,6 +318,26 @@ export default {
 		max-width: rem-calc(797px);
 		margin: 0 auto;
 
+		&__link {
+			color: $charcoal;
+			font-weight: $global-weight-normal;
+			font-size: $featured-text-font-size;
+			line-height: 1.5rem;
+			text-transform: capitalize;
+
+			&.active,
+			&:hover,
+			&:focus {
+				text-decoration: none;
+				color: $kiva-green;
+			}
+
+			&.active {
+				font-weight: $global-weight-bold;
+				border-bottom: 3px solid $kiva-green;
+			}
+		}
+
 		.loading-spinner {
 			margin: 0 auto;
 		}
@@ -305,7 +346,8 @@ export default {
 	.loan-category-section {
 		&__carousel-slide {
 			width: auto;
-			padding-top: 0.75rem;
+			padding: 0.5rem 1.5rem 0;
+			margin: 0.5rem 0 1rem;
 		}
 
 		&__cause-selector {

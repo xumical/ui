@@ -20,6 +20,8 @@ module.exports = merge(base, {
 		fbApplicationId: '364044572460',
 		fbPixelId: '108245819986414',
 		fbOgNameSpace: 'dev-kiva',
+		enableFullStory: true,
+		quantcastId: '',
 		enableSentry: true,
 		sentryURI: 'https://7ce141b23c4a4e6091c206d08442f0e9@sentry.io/1201287',
 		algoliaConfig: {
@@ -29,6 +31,7 @@ module.exports = merge(base, {
 			apiKey: '28aaa1d56e6a1688f13f6b41da0f27a5',
 			defaultIndex: 'dev_fundraising_popularity',
 		},
+		btTokenKey: 'sandbox_q7kbtvzy_vynd473f79sfskz3',
 		auth0: {
 			loginRedirectUrls: {
 				cNTV7eN5sBKgv9nQOxDpAz1pPfJGlBI5: 'https://admin.dev.kiva.org/admin/login?force=1',
@@ -46,12 +49,14 @@ module.exports = merge(base, {
 			serverCallbackUri: 'https://www.dev.kiva.org/process-ssr-auth',
 			domain: 'login.dev.kiva.org',
 		},
-		intercom: {
-			enable: true,
-		},
 		paypal : {
 			url: 'www.sandbox.paypal.com',
 			environment: 'sandbox'
+		},
+		oneTrust: {
+			enable: true,
+			key: 'db9dcf94-1c32-40fb-9a57-cefafea1088d',
+			domainSuffix: '-test',
 		},
 	},
 	server: {
@@ -59,5 +64,6 @@ module.exports = merge(base, {
 		sessionUri: 'https://www.dev.kiva.org/start-ui-session',
 		memcachedEnabled: true,
 		memcachedServers: 'dev-memcached-01:11211,dev-memcached-02:11211',
+		disableCluster: true
 	}
 })

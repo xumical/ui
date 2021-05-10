@@ -18,21 +18,21 @@ service:
 
 resources:
   requests:
-    cpu: 80m
-    memory: 120Mi
+    cpu: 500m
+    memory: 750Mi
   limits:
-    cpu: 200m
-    memory: 200Mi
+    cpu: 500m
+    memory: 750Mi
 
-replicaCount: 1
-minReplicas: 1
-maxReplicas: 4
+replicaCount: 8
+minReplicas: 8
+maxReplicas: 16
 
 metrics:
   name: cpu
   target:
     type: Utilization
-    averageUtilization: 85
+    averageUtilization: 60
 
 ingress:
   host: "ui-test.dk1.kiva.org"

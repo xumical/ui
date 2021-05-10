@@ -11,42 +11,45 @@ import createRouter from '@/router';
 import createApolloClient from '@/api/apollo';
 import kivaPlugins from '@/plugins';
 
-Vue.config.productionTip = false;
+// Track if plugins have already been installed (in case this is SSR)
+let pluginsInstalled = false;
 
-Vue.use(Meta);
-Vue.use(kivaPlugins);
-Vue.use(Vue2TouchEvents);
-Vue.use(VueProgressBar, {
-	color: '#26b6e8',
-	failedColor: '#9c021a',
-	thickness: '0.2rem',
-	transition: {
-		speed: '0.2s',
-		opacity: '0s',
-		termination: 300,
-	},
-	autoFinish: false,
-});
+Vue.config.productionTip = false;
 
 // App Instance Factory
 // - Allows us to create new instance of app, store + router on each render
 export default function createApp({
 	apollo = {},
 	appConfig = {},
+	cookieStore,
+	device,
 	kvAuth0,
 	locale,
 } = {}) {
-	const apolloClient = createApolloClient({ ...apollo, kvAuth0, appConfig });
+	if (!pluginsInstalled) {
+		pluginsInstalled = true;
 
-	const federationApolloURI = appConfig.federationService ? appConfig.federationService.uri : apollo.uri;
+		Vue.use(Meta);
+		Vue.use(kivaPlugins);
+		Vue.use(Vue2TouchEvents);
+		Vue.use(VueProgressBar, {
+			color: '#26b6e8',
+			failedColor: '#9c021a',
+			thickness: '0.2rem',
+			transition: {
+				speed: '0.2s',
+				opacity: '0s',
+				termination: 300,
+			},
+			autoFinish: false,
+		});
+	}
 
-	const apolloFederationClient = createApolloClient({
-		csrfToken: apollo.csrfToken,
-		types: apollo.types,
-		uri: federationApolloURI,
-		kvAuth0,
+	const apolloClient = createApolloClient({
+		...apollo,
 		appConfig,
-		existingCache: apolloClient.cache
+		cookieStore,
+		kvAuth0,
 	});
 
 	const router = createRouter();
@@ -62,17 +65,15 @@ export default function createApp({
 	// Provide application config to all components
 	Vue.prototype.$appConfig = appConfig;
 
-	// Provide locale to all components
-	// TODO: use this to set locale in VueI18n
-	Vue.prototype.$locale = locale;
-
 	const app = new Vue({
 		router,
 		render: h => h(App),
 		provide: {
 			apollo: apolloClient,
-			federation: apolloFederationClient,
+			cookieStore,
+			device,
 			kvAuth0,
+			locale,
 		}
 	});
 

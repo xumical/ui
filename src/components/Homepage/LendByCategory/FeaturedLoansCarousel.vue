@@ -18,7 +18,7 @@
 			class="featured-loans-carousel"
 			@interact-carousel="onInteractCarousel"
 		>
-			<template v-slot:default>
+			<template #default>
 				<kv-carousel-slide
 					v-for="(category, index) in prefetchedCategoryInfo"
 					:key="category.id"
@@ -31,10 +31,13 @@
 							:items-in-basket="itemsInBasket"
 							:category-id="category.id"
 							category-set-id="lbc-hp-v1-featured-loans"
+							:disable-redirects="disableRedirects"
 							:row-number="0"
 							:card-number="index + 1"
 							:enable-tracking="true"
 							:is-visitor="!isLoggedIn"
+							:show-view-loan-cta="showViewLoanCta"
+							@add-to-basket="handleAddToBasket"
 						/>
 					</div>
 					<div v-else class="featured-loans-carousel__loading-div">
@@ -49,7 +52,6 @@
 <script>
 import _get from 'lodash/get';
 
-import cookieStore from '@/util/cookieStore';
 import { readJSONSetting } from '@/util/settingsUtils';
 import { isLoanFundraising } from '@/util/loanUtils';
 
@@ -72,6 +74,14 @@ export default {
 		LoanCardController
 	},
 	props: {
+		disableRedirects: {
+			type: Boolean,
+			default: false,
+		},
+		showViewLoanCta: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -84,7 +94,7 @@ export default {
 			ineligibleLoans: []
 		};
 	},
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	apollo: {
 		preFetch(config, client) {
 			// Get the experiment object from settings with category ids
@@ -136,7 +146,7 @@ export default {
 			pageData = this.apollo.readQuery({
 				query: lendByCategoryHomepageCategories,
 				variables: {
-					basketId: cookieStore.get('kvbskt'),
+					basketId: this.cookieStore.get('kvbskt'),
 				},
 			});
 			this.processData(pageData);
@@ -170,7 +180,7 @@ export default {
 						numberOfLoans: 3,
 						imgDefaultSize: 'w480h300',
 						imgRetinaSize: 'w960h600',
-						basketId: cookieStore.get('kvbskt'),
+						basketId: this.cookieStore.get('kvbskt'),
 					},
 				});
 				const channelLoans = _get(loanInfo, 'lend.loanChannelsById')[0];
@@ -294,7 +304,7 @@ export default {
 			this.apollo.watchQuery({
 				query: lendByCategoryHomepageCategories,
 				variables: {
-					basketId: cookieStore.get('kvbskt'),
+					basketId: this.cookieStore.get('kvbskt'),
 				},
 			}).subscribe({
 				next: ({ data }) => {
@@ -329,7 +339,10 @@ export default {
 		getLoanPosition(categoryId) {
 			const categoryRowIndex = this.categoryIds.indexOf(categoryId);
 			return categoryRowIndex !== -1 ? categoryRowIndex + 1 : null;
-		}
+		},
+		handleAddToBasket(payload) {
+			this.$emit('add-to-basket', payload);
+		},
 	}
 };
 </script>

@@ -6,10 +6,12 @@
 			:name="loan.name"
 			:retina-image-url="loan.image.retina"
 			:standard-image-url="loan.image.default"
+			:disable-link="disableRedirects"
 			:is-visitor="isVisitor"
 			:is-favorite="isFavorite"
 			:use-default-styles="false"
 			@favorite-toggled="toggleFavorite"
+			@image-click="$emit('image-click', {loanId: loan.id})"
 			@track-loan-card-interaction="trackInteractionBorrowerInfoName"
 		/>
 		<div class="lend-homepage-loan-card__data-wrapper">
@@ -20,9 +22,11 @@
 					class="lend-homepage-loan-card__flag"
 				/>
 				<borrower-info-name
+					:disable-link="disableRedirects"
 					:name="loan.name"
 					:loan-id="loan.id"
 					class="borrower-name"
+					@name-click="$emit('name-click', {loanId: loan.id})"
 					@track-loan-card-interaction="trackInteractionBorrowerInfoName"
 				/>
 			</div>
@@ -39,12 +43,14 @@
 				class="lend-homepage-loan-card__borrower-info"
 				:amount="loan.loanAmount"
 				:borrower-count="loan.borrowerCount"
+				:disable-link="disableRedirects"
 				:name="loan.name"
 				:status="loan.status"
 				:use="loan.use"
 				:loan-id="loan.id"
 				:max-use-length="59"
 				read-more-link-text="Learn more"
+				@read-more-link="$emit('read-more-link', {loanId: loan.id})"
 				@track-loan-card-interaction="trackInteraction"
 			/>
 			<div class="lend-homepage-loan-card__action-row">
@@ -52,8 +58,23 @@
 					class="lend-homepage-loan-card__action-button-container"
 					:class="{'full-width': isFunded || isExpired}"
 				>
-					<action-button
+					<kv-button
+						v-if="showViewLoanCta"
 						class="action-button"
+						:to="`/lend/${loan.id}`"
+						v-kv-track-event="[
+							'Lending',
+							'click-Read more',
+							'View loan',
+							loan.id
+						]"
+					>
+						View loan
+					</kv-button>
+					<action-button
+						v-else
+						class="action-button"
+						:disable-redirects="disableRedirects"
 						:loan-id="loan.id"
 						:loan="loan"
 						:items-in-basket="itemsInBasket"
@@ -87,6 +108,7 @@
 </template>
 
 <script>
+import KvButton from '@/components/Kv/KvButton';
 import KvFlag from '@/components/Kv/KvFlag';
 import LoanCardImage from '@/components/LoanCards/LoanCardImage';
 import FundraisingStatus from '@/components/LoanCards/FundraisingStatus/FundraisingStatus';
@@ -108,6 +130,7 @@ export default {
 		LoanCardImage,
 		FundraisingStatus,
 		ActionButton,
+		KvButton,
 		MatchingText,
 		BorrowerInfoName,
 	},
@@ -116,9 +139,17 @@ export default {
 			type: Number,
 			default: 0,
 		},
+		disableRedirects: {
+			type: Boolean,
+			default: false,
+		},
 		expiringSoonMessage: {
 			type: String,
 			default: ''
+		},
+		showViewLoanCta: {
+			type: Boolean,
+			default: false,
 		},
 		isFavorite: {
 			type: Boolean,
@@ -189,18 +220,20 @@ export default {
 	background: $white;
 	display: flex;
 	flex-direction: column;
-	justify-content: space-between;
-	flex: 1 0 auto;
+	justify-content: flex-start;
+	height: fit-content;
 	border-radius: 0.65rem;
 
 	&__image-wrapper {
 		border-radius: 0.65rem 0.65rem 0 0;
 		overflow: hidden;
 		flex-shrink: 0;
+		height: 0;
+		padding-bottom: 75%;
 
 		::v-deep a.borrower-image-link {
 			position: relative;
-			display: inline-block;
+			display: block;
 			height: 100%;
 
 			.borrower-image {
@@ -277,6 +310,7 @@ export default {
 		.button.action-button {
 			margin: 0;
 			padding: 0.95rem 1rem;
+			width: 100%;
 		}
 
 		.action-button:not(.loan-funded-text):not(.loan-expired-text):not(.loan-selected-text) {

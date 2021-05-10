@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<kv-hero>
-			<template v-slot:images>
+			<template #images>
 				<kv-responsive-image :images="twelveDaysImages" alt="Be a part of Possibility: 12 Days of Lending" />
 			</template>
 		</kv-hero>
@@ -72,9 +72,9 @@ export default {
 			],
 		};
 	},
-	inject: ['apollo', 'federation'],
+	inject: ['apollo'],
 	created() {
-		this.federation.query({
+		this.apollo.query({
 			query: contentful,
 			variables: {
 				contentType: 'uiSetting',

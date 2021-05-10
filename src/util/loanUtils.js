@@ -30,3 +30,14 @@ export function isLoanFundraising(loan) {
 	// all clear
 	return true;
 }
+
+export function buildPriceArray(amountLeft, minAmount) {
+	// get count of shares based on available remaining amount.
+	const N = amountLeft / minAmount;
+	// convert this to formatted array for our select element
+	const priceArray = []; // ex. priceArray = ['25', '50', '75']
+	for (let i = 1; i <= N; i += 1) {
+		priceArray.push(numeral(minAmount * i).format('0,0'));
+	}
+	return priceArray;
+}

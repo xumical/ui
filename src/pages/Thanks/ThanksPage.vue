@@ -3,54 +3,60 @@
 		<div class="row page-content">
 			<div class="small-12 columns thanks">
 				<div class="thanks__checkout-steps-wrapper hide-for-print">
-					<kv-checkout-steps :steps="checkoutSteps" :current-step-index="3" />
+					<kv-checkout-steps :steps="checkoutSteps" :current-step-index="2" />
 					<hr>
 				</div>
 
-				<template v-if="loans.length > 0">
-					<div class="thanks__header hide-for-print">
-						<h1 class="thanks__header-h1">
-							Thank you!
-						</h1>
-						<p class="thanks__header-subhead">
-							Thanks for supporting {{ borrowerSupport }}.<br>
-							<span class="hide-for-print">
-								We've emailed your order confirmation to {{ lender.email }}
-							</span>
-						</p>
-					</div>
-				</template>
+				<div class="thanks__header hide-for-print">
+					<h1 class="thanks__header-h1">
+						Thank you!
+					</h1>
+					<p v-if="loans.length > 0" class="thanks__header-subhead">
+						Thanks for supporting <span class="fs-mask">{{ borrowerSupport }}</span>.<br>
+					</p>
+					<p v-if="lender.email" class="hide-for-print">
+						We've emailed your order confirmation to
+						<strong class="fs-exclude">{{ lender.email }}</strong>
+					</p>
+					<p v-else class="hide-for-print">
+						We've emailed your order confirmation to you.
+					</p>
+				</div>
 			</div>
 		</div>
 
-		<monthly-good-c-t-a v-if="showMonthlyGoodCTA" />
-
-		<div class="row page-content">
-			<template v-if="loans.length > 0">
+		<thanks-layout-v2
+			:show-mg-cta="!isMonthlyGoodSubscriber && !isGuest"
+			:show-guest-upsell="isGuest"
+			:show-share="loans.length > 0"
+		>
+			<template #receipt>
+				<checkout-receipt
+					v-if="receipt"
+					:lender="lender"
+					:receipt="receipt"
+				/>
+			</template>
+			<template #mg>
+				<monthly-good-c-t-a
+					:headline="ctaHeadline"
+					:body-copy="ctaBodyCopy"
+					:button-text="ctaButtonText"
+				/>
+			</template>
+			<template #share>
 				<social-share
 					class="thanks__social-share"
 					:lender="lender"
 					:loans="loans"
 				/>
 			</template>
-
-			<div class="small-12 columns thanks">
-				<hr v-if="loans.length > 0 || showMonthlyGoodCTA">
-				<checkout-receipt
-					v-if="receipt"
-					class="thanks__receipt"
-					:lender="lender"
-					:receipt="receipt"
+			<template #guest>
+				<guest-upsell
+					:loans="loans"
 				/>
-			</div>
-
-			<contentful-lightbox
-				v-if="promoEnabled"
-				:content-group="contentGroup"
-				:visible="displayLightbox"
-				@lightbox-closed="displayLightbox = false"
-			/>
-		</div>
+			</template>
+		</thanks-layout-v2>
 	</www-page>
 </template>
 
@@ -59,31 +65,29 @@ import confetti from 'canvas-confetti';
 import numeral from 'numeral';
 
 import CheckoutReceipt from '@/components/Checkout/CheckoutReceipt';
-import ContentfulLightbox from '@/components/Lightboxes/ContentfulLightbox';
+import GuestUpsell from '@/components/Checkout/GuestUpsell';
 import KvCheckoutSteps from '@/components/Kv/KvCheckoutSteps';
 import MonthlyGoodCTA from '@/components/Checkout/MonthlyGoodCTA';
 import SocialShare from '@/components/Checkout/SocialShare';
 import WwwPage from '@/components/WwwFrame/WwwPage';
+import ThanksLayoutV2 from '@/components/Thanks/ThanksLayoutV2';
 
 import thanksPageQuery from '@/graphql/query/thanksPage.graphql';
-import contentful from '@/graphql/query/contentful.graphql';
-import experimentAssignmentQuery from '@/graphql/query/experimentAssignment.graphql';
-import experimentVersionFragment from '@/graphql/fragments/experimentVersion.graphql';
 
-import { settingEnabled } from '@/util/settingsUtils';
-import { processContent } from '@/util/contentfulUtils';
+import { processPageContentFlat } from '@/util/contentfulUtils';
 import { joinArray } from '@/util/joinArray';
 
 export default {
 	components: {
 		CheckoutReceipt,
-		ContentfulLightbox,
+		GuestUpsell,
 		KvCheckoutSteps,
 		MonthlyGoodCTA,
 		SocialShare,
+		ThanksLayoutV2,
 		WwwPage,
 	},
-	inject: ['apollo', 'federation'],
+	inject: ['apollo', 'cookieStore'],
 	metaInfo() {
 		return {
 			title: 'Thank you!'
@@ -94,56 +98,35 @@ export default {
 			lender: {},
 			loans: [],
 			receipt: {},
-			displayLightbox: true,
-			promoEnabled: false,
-			contentGroup: {},
 			checkoutSteps: [
 				'Basket',
-				'Account',
 				'Payment',
 				'Thank You!'
 			],
-			showMonthlyGoodCTA: false,
-			isMonthlyGoodSubscriber: false
+			isMonthlyGoodSubscriber: false,
+			isGuest: false,
+			pageData: {},
 		};
-	},
-	computed: {
-		borrowerSupport() {
-			const loanNames = this.loans.map(loan => loan.name);
-			if (loanNames.length > 3) {
-				return `these ${loanNames.length} borrowers`;
-			}
-			return joinArray(loanNames, 'and');
-		}
 	},
 	apollo: {
 		query: thanksPageQuery,
-		preFetch(config, client, { route }) {
-			return client.query({
-				query: thanksPageQuery,
-				variables: {
-					checkoutId: numeral(route.query.kiva_transaction_id).value()
-				}
-			}).then(() => {
-				return client.query({
-					query: experimentAssignmentQuery, variables: { id: 'mg_thanks_cta' }
-				});
-			});
-		},
-		preFetchVariables({ route }) {
+		preFetch: true,
+		preFetchVariables({ cookieStore, route }) {
 			return {
-				checkoutId: numeral(route.query.kiva_transaction_id).value()
+				checkoutId: numeral(route.query.kiva_transaction_id).value(),
+				visitorId: cookieStore.get('uiv') || null,
 			};
 		},
 		variables() {
 			return {
-				checkoutId: numeral(this.$route.query.kiva_transaction_id).value()
+				checkoutId: numeral(this.$route.query.kiva_transaction_id).value(),
+				visitorId: this.cookieStore.get('uiv') || null,
 			};
 		},
 		result({ data }) {
 			this.lender = {
-				...data.my.userAccount,
-				teams: data.my.teams.values.map(value => value.team)
+				...(data?.my?.userAccount ?? {}),
+				teams: data?.my?.teams?.values?.map(value => value.team) ?? [],
 			};
 
 			this.isMonthlyGoodSubscriber = data?.my?.autoDeposit?.isSubscriber ?? false;
@@ -152,18 +135,49 @@ export default {
 			// receipt from rendering in the rare cases this query fails.
 			// But it will not throw a server error.
 			this.receipt = data?.shop?.receipt;
+			this.isGuest = this.receipt && !data?.my?.userAccount;
+
 			const loansResponse = this.receipt?.items?.values ?? [];
 			this.loans = loansResponse
 				.filter(item => item.basketItemType === 'loan_reservation')
 				.map(item => item.loan);
 
-			if (!data?.my?.userAccount) {
+			if (!this.isGuest && !data?.my?.userAccount) {
 				console.error(`Failed to get lender for transaction id: ${this.$route.query.kiva_transaction_id}`);
 			}
 			if (!this.receipt) {
 				console.error(`Failed to get receipt for transaction id: ${this.$route.query.kiva_transaction_id}`);
 			}
-		}
+
+			// Check for contentful content
+			const pageEntry = data.contentful?.entries?.items?.[0] ?? null;
+			this.pageData = pageEntry ? processPageContentFlat(pageEntry) : null;
+		},
+	},
+	computed: {
+		borrowerSupport() {
+			const loanNames = this.loans.map(loan => loan.name);
+			if (loanNames.length > 3) {
+				return `these ${loanNames.length} borrowers`;
+			}
+			return joinArray(loanNames, 'and');
+		},
+		ctaContentGroup() {
+			return this.pageData?.page?.contentGroups?.thanksMgCtaJan_2021;
+		},
+		ctaContentBlock() {
+			// eslint-disable-next-line max-len
+			return this.ctaContentGroup?.contents?.find(contentItem => contentItem.key === 'thanks-mg-cta');
+		},
+		ctaHeadline() {
+			return this.ctaContentBlock?.headline;
+		},
+		ctaBodyCopy() {
+			return this.ctaContentBlock?.subHeadline;
+		},
+		ctaButtonText() {
+			return this.ctaContentBlock?.primaryCtaText;
+		},
 	},
 	mounted() {
 		confetti({
@@ -172,48 +186,8 @@ export default {
 			},
 			particleCount: 150,
 			spread: 200,
-			colors: ['#d74937', '#6859c0', '#fee259', '#118aec', '#DDFFF4', '#4faf4e', '#aee15c'] // misc. kiva colors
-		});
-
-		// MG Upsell On Thanks Page - EXP-SUBS-526-Oct2020
-		const mgCTAExperiment = this.apollo.readFragment({
-			id: 'Experiment:mg_thanks_cta',
-			fragment: experimentVersionFragment,
-		}) || {};
-
-		if (mgCTAExperiment.version === 'shown' && !this.isMonthlyGoodSubscriber) {
-			this.showMonthlyGoodCTA = true;
-			this.$kvTrackEvent(
-				'Thanks',
-				'EXP-SUBS-526-Oct2020',
-				mgCTAExperiment.version === 'shown' ? 'a' : 'b'
-			);
-		}
-
-		// Contentful Lightbox
-		this.federation.query({
-			query: contentful,
-			variables: {
-				contentType: 'uiSetting',
-				contentKey: 'ui-thanks-lightbox',
-			}
-		}).then(({ data }) => {
-			// returns the contentful content of the uiSetting key ui-thanks-lightbox or empty object
-			// it should always be the first and only item in the array, since we pass the variable to the query above
-			const contentfulItems = data?.contentful?.entries?.items || [];
-			const uiPromoSetting =	contentfulItems.find(item => item.fields.key === 'ui-thanks-lightbox'); // eslint-disable-line max-len
-			// exit if missing setting or fields
-			if (!uiPromoSetting || !uiPromoSetting.fields) {
-				return false;
-			}
-			this.promoEnabled = settingEnabled(
-				uiPromoSetting.fields,
-				'active',
-				'startDate',
-				'endDate'
-			);
-
-			this.contentGroup = processContent(uiPromoSetting.fields.content).contentGroup;
+			colors: ['#d74937', '#6859c0', '#fee259', '#118aec', '#DDFFF4', '#4faf4e', '#aee15c'], // misc. kiva colors
+			disableForReducedMotion: true,
 		});
 	},
 };
@@ -226,6 +200,10 @@ export default {
 .page-content {
 	padding: 1.625rem 0 0 0;
 
+	@media print {
+		padding: 0;
+	}
+
 	&:last-child {
 		padding-bottom: 5rem;
 	}
@@ -233,8 +211,12 @@ export default {
 
 .thanks {
 	&__header {
-		text-align: center;
-		margin-bottom: 3rem;
+		text-align: left;
+		margin-bottom: 2.5rem;
+
+		@include breakpoint(medium) {
+			text-align: center;
+		}
 	}
 
 	&__header-h1 {
@@ -253,15 +235,6 @@ export default {
 
 	&__social-share {
 		margin-bottom: 0.5rem;
-	}
-
-	&__receipt {
-		max-width: rem-calc(485);
-		margin: 1.75rem auto 2rem;
-
-		@media print {
-			max-width: none;
-		}
 	}
 }
 </style>

@@ -1,4 +1,5 @@
 import logFormatter from '@/util/logFormatter';
+import SimpleQueue from '@/util/simpleQueue';
 
 // install method for plugin
 export default Vue => {
@@ -7,6 +8,7 @@ export default Vue => {
 	let gaLoaded;
 	let gaAltLoaded;
 	let fbLoaded;
+	const queue = new SimpleQueue();
 
 	const kvActions = {
 		checkLibs: () => {
@@ -15,6 +17,11 @@ export default Vue => {
 			gaAltLoaded = inBrowser && typeof window._gaq === 'object';
 			snowplowLoaded = inBrowser && typeof window.snowplow === 'function';
 			fbLoaded = inBrowser && typeof window.fbq === 'function';
+
+			if (typeof window.ga === 'function' && typeof window.snowplow === 'function') {
+				return true;
+			}
+			return false;
 		},
 		pageview: (to, from) => {
 			if (!inBrowser) return false;
@@ -71,7 +78,7 @@ export default Vue => {
 				window.fbq('track', 'PageView');
 			}
 		},
-		trackEvent: (category, action, label, property, value) => {
+		trackEvent: (category, action, label, property, value, callback = () => {}) => {
 			const eventLabel = (label !== undefined && label !== null) ? String(label) : undefined;
 			const eventValue = (value !== undefined && value !== null) ? parseInt(value, 10) : undefined;
 			const eventProperty = (property !== undefined && property !== null) ? String(property) : undefined;
@@ -91,14 +98,68 @@ export default Vue => {
 
 			// Attempt Snowplow event
 			if (snowplowLoaded) {
-				// Snowplow API
-				// eslint-disable-next-line max-len
-				// https://github.com/snowplow/snowplow/wiki/2-Specific-event-tracking-with-the-Javascript-tracker#trackStructEvent
-				// snowplow_name_here('trackStructEvent', 'category','action','label','property','value');
-				window.snowplow('trackStructEvent', category, action, eventLabel, eventProperty, eventValue);
+				kvActions.trackSnowplowEvent({
+					category,
+					action,
+					eventLabel,
+					eventProperty,
+					eventValue,
+					callback
+				});
+			} else {
+				callback({ error: 'not loaded' });
+				// add missed snowplow event to queue
+				queue.add({
+					eventType: 'trackSnowplowEvent',
+					eventLib: 'snowplow',
+					eventData: {
+						category,
+						action,
+						eventLabel,
+						eventProperty,
+						eventValue,
+						callback
+					}
+				});
 			}
 
 			return true;
+		},
+		trackSnowplowEvent: eventData => {
+			if (!snowplowLoaded) return false;
+
+			// In case there is a problem with the tracking event ensure that the callback gets called after 500ms
+			let callbackCalled = false;
+			const callbackTimeout = setTimeout(() => {
+				if (!callbackCalled) {
+					callbackCalled = true;
+					eventData.callback({ error: 'timeout' });
+				}
+			}, 500);
+
+			// Snowplow API
+			/* eslint-disable max-len */
+			// https://docs.snowplowanalytics.com/docs/collecting-data/collecting-from-own-applications/javascript-tracker/tracking-specific-events/#tracking-custom-structured-events
+			// https://docs.snowplowanalytics.com/docs/collecting-data/collecting-from-own-applications/javascript-tracker/tracking-specific-events/#callback-after-track-2-15-0
+			/* eslint-eable max-len */
+			// snowplow('trackStructEvent', 'category', 'action', 'label', 'property', 'value', context, timestamp, afterTrack);
+			window.snowplow(
+				'trackStructEvent',
+				eventData.category,
+				eventData.action,
+				eventData.eventLabel,
+				eventData.eventProperty,
+				eventData.eventValue,
+				undefined,
+				undefined,
+				payload => {
+					if (!callbackCalled) {
+						callbackCalled = true;
+						clearTimeout(callbackTimeout);
+						eventData.callback({ payload });
+					}
+				}
+			);
 		},
 		trackSelfDescribingEvent: eventData => {
 			// the data passed into this should be a JSON object similar to the following
@@ -113,18 +174,53 @@ export default Vue => {
 			// });
 			if (snowplowLoaded) {
 				window.snowplow('trackSelfDescribingEvent', eventData);
+			} else {
+				// add missed snowplow event to queue
+				queue.add({
+					eventType: 'trackSelfDescribingEvent',
+					eventLib: 'snowplow',
+					eventData,
+				});
 			}
 
 			return true;
 		},
-		parseEventProperties: eventString => {
-			let params;
-			if (typeof eventString === 'object' && eventString.length) {
-				params = eventString;
+		fireQueuedEvents() {
+			kvActions.checkLibs();
+
+			if (!queue.isEmpty()) {
+				// eslint-disable-next-line no-plusplus
+				for (let i = 0; i < queue.items.length; i++) {
+					const item = queue.remove();
+					const method = item.eventType;
+					const { eventData } = item;
+					if (typeof kvActions[method] === 'function') {
+						kvActions[method](eventData, true);
+					}
+				}
 			}
-			kvActions.trackEvent.apply(this, params);
+		},
+		// https://developers.facebook.com/docs/facebook-pixel/implementation/conversion-tracking#tracking-custom-events
+		trackFBCustomEvent: (eventName, eventData = null) => {
+			if (fbLoaded) {
+				window.fbq('trackCustom', eventName, eventData);
+			}
+		},
+		parseEventProperties: eventValue => {
+			// Ensure we have a non-empty array to begin with
+			if (Array.isArray(eventValue) && eventValue.length) {
+				// Handle multiple events being pass as an array
+				if (Array.isArray(eventValue[0])) {
+					eventValue.forEach(params => kvActions.trackEvent.apply(this, params));
+				} else {
+					kvActions.trackEvent.apply(this, eventValue);
+				}
+			} else {
+				throw new TypeError(`Expected non-empty array, but got ${eventValue}`);
+			}
 		},
 		trackTransaction: transactionData => {
+			kvActions.checkLibs();
 			// Nothing to track
 			if (transactionData.transactionId === '') {
 				return false;
@@ -136,11 +232,55 @@ export default Vue => {
 			if (gaLoaded) {
 				kvActions.trackGATransaction(transactionData);
 			}
+			kvActions.trackQuantcast(transactionData);
 		},
 		trackFBTransaction: transactionData => {
 			const itemTotal = transactionData.itemTotal || '';
 			if (typeof window.fbq !== 'undefined' && typeof itemTotal !== 'undefined') {
-				window.fbq('track', 'Purchase', { currency: 'USD', value: itemTotal });
+				window.fbq('track', 'Purchase', {
+					currency: 'USD',
+					value: itemTotal,
+					content_type: transactionData.isFTD ? 'FirstTimeDepositor' : 'ReturningLender'
+				});
+			}
+
+			// send transaction data
+			kvActions.trackFBCustomEvent(
+				'TransactionInfo',
+				{
+					depositTotal: transactionData.depositTotal,
+					donationTotal: transactionData.donationTotal,
+					isFtd: transactionData.isFTD ? 'FirstTimeDepositor' : 'ReturningLender',
+					isTip: transactionData.isTip,
+					isUserEdited: transactionData.isUserEdited,
+					itemTotal: transactionData.itemTotal,
+					loanCount: transactionData.loanCount,
+					loanTotal: transactionData.loanTotal,
+					kivaCardCount: transactionData.kivaCardCount,
+					kivaCardTotal: transactionData.kivaCardTotal,
+					kivaCreditUsed: transactionData.kivaCreditAppliedTotal,
+					paymentType: transactionData.paymentType,
+					transactionId: transactionData.transactionId,
+				}
+			);
+
+			// signify transaction has kiva cards
+			if (transactionData.kivaCards && transactionData.kivaCards.length) {
+				kvActions.trackFBCustomEvent(
+					'transactionContainsKivaCards',
+					{
+						kivaCardTotal: transactionData.kivaCardTotal
+					}
+				);
+			}
+			// signifiy transaction ftd status
+			if (transactionData.isFTD && typeof itemTotal !== 'undefined') {
+				kvActions.trackFBCustomEvent(
+					'firstTimeDepositorTransaction',
+					{
+						itemTotal
+					}
+				);
 			}
 		},
 		trackGATransaction: transactionData => {
@@ -163,8 +303,32 @@ export default Vue => {
 
 			// Save transaction information to GA
 			window.ga('send', 'event', 'Ecommerce', 'Purchase', { nonInteraction: 1 });
-		}
+		},
+		trackQuantcast: transactionData => {
+			// exit if script is not loaded due to blocking or user choice
+			// eslint-disable-next-line no-underscore-dangle
+			if (typeof window._qevents === 'undefined') return false;
 
+			let qacct = null;
+			/* eslint-disable no-underscore-dangle */
+			if (window.__KV_CONFIG__ && window.__KV_CONFIG__.quantcastId) {
+				qacct = window.__KV_CONFIG__.quantcastId;
+			}
+
+			const customerType = transactionData.isFTD ? 'FirstTimeDepositor' : 'ReturningLender';
+			const donationAmountNormalized = transactionData.donationTotal ? transactionData.donationTotal.replace('.', '') : null;
+
+			// format data for quantcast event
+			// eslint-disable-next-line no-underscore-dangle
+			window._qevents.push({
+				qacct,
+				uid: 'null',
+				labels: `_fp.event.Checkout,_fp.customer.${customerType},_fp.donation.${donationAmountNormalized}`,
+				orderid: String(transactionData.transactionId),
+				revenue: String(transactionData.itemTotal),
+				event: 'refresh'
+			});
+		},
 	};
 
 	Vue.directive('kv-track-event', {
@@ -184,20 +348,36 @@ export default Vue => {
 
 	// eslint-disable-next-line no-param-reassign
 	Vue.prototype.$setKvAnalyticsData = (userId = null) => {
-		// establish loaded libs
-		kvActions.checkLibs();
+		return new Promise(resolve => {
+			let readyStateTimeout;
+			const readyStateInterval = window.setInterval(() => {
+				if (kvActions.checkLibs()) {
+					clearInterval(readyStateInterval);
+					clearTimeout(readyStateTimeout);
+					// Setup Global Snowplow
+					if (snowplowLoaded) {
+						window.snowplow('setUserId', userId);
+					}
+					// Setup Global GA Data
+					if (gaLoaded) {
+						window.ga('set', { userId });
+						window.ga('set', 'useBeacon', true);
+						window.ga('require', 'ec');
+						window.ga('set', 'dimension1', userId);
+					}
+					// resovle for next steps
+					resolve();
+				}
+			}, 100);
 
-		// Setup Global Snowplow
-		if (snowplowLoaded) {
-			window.snowplow('setUserId', userId);
-		}
-		// Setup Global GA Data
-		if (gaLoaded) {
-			window.ga('set', { userId });
-			window.ga('set', 'useBeacon', true);
-			window.ga('require', 'ec');
-			window.ga('set', 'dimension1', userId);
-		}
+			readyStateTimeout = window.setTimeout(() => {
+				// clean up interval and timeout
+				clearInterval(readyStateInterval);
+				clearTimeout(readyStateTimeout);
+				// resolve the promise
+				resolve();
+			}, 3000);
+		});
 	};
 
 	// eslint-disable-next-line no-param-reassign
@@ -228,8 +408,13 @@ export default Vue => {
 	};
 
 	// eslint-disable-next-line no-param-reassign
-	Vue.prototype.$kvTrackEvent = (category, action, label, property, value) => {
-		kvActions.trackEvent(category, action, label, property, value);
+	Vue.prototype.$fireQueuedEvents = () => {
+		kvActions.fireQueuedEvents();
+	};
+
+	// eslint-disable-next-line no-param-reassign
+	Vue.prototype.$kvTrackEvent = (category, action, label, property, value, callback) => {
+		kvActions.trackEvent(category, action, label, property, value, callback);
 	};
 
 	// eslint-disable-next-line no-param-reassign
@@ -240,5 +425,10 @@ export default Vue => {
 	// eslint-disable-next-line no-param-reassign
 	Vue.prototype.$kvTrackTransaction = transactionData => {
 		kvActions.trackTransaction(transactionData);
+	};
+
+	// eslint-disable-next-line no-param-reassign
+	Vue.prototype.$kvTrackFBCustomEvent = (eventName, eventData = null) => {
+		kvActions.trackFBCustomEvent(eventName, eventData);
 	};
 };

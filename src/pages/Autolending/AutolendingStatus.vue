@@ -1,27 +1,7 @@
 <template>
 	<div class="row">
 		<kv-settings-card class="column large-8" title="Auto-lending status">
-			<template v-slot:icon>
-				<kv-icon
-					v-show="autolendingStatus == 'on'"
-					class="icon"
-					title="Auto-lending On"
-					name="auto-icon-on"
-				/>
-				<kv-icon
-					v-show="autolendingStatus == 'off'"
-					class="icon"
-					title="Auto-lending Off"
-					name="auto-icon-off"
-				/>
-				<kv-icon
-					v-show="autolendingStatus == 'paused'"
-					class="icon"
-					title="Auto-lending Paused"
-					name="auto-icon-pause"
-				/>
-			</template>
-			<template v-slot:content>
+			<template #content>
 				Your auto-lending setting is currently
 				<kv-button class="text-link"
 					@click.native.prevent="showLightbox = true; triggerWatcher()"
@@ -74,7 +54,7 @@
 							OFF
 						</kv-radio>
 					</div>
-					<template slot="controls">
+					<template #controls>
 						<kv-button
 							data-test="status-save-button"
 							class="smaller button"
@@ -103,16 +83,14 @@ import {
 
 import KvButton from '@/components/Kv/KvButton';
 import KvDropdownRounded from '@/components/Kv/KvDropdownRounded';
-import KvIcon from '@/components/Kv/KvIcon';
 import KvLightbox from '@/components/Kv/KvLightbox';
 import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
 import KvRadio from '@/components/Kv/KvRadio';
 import KvSettingsCard from '@/components/Kv/KvSettingsCard';
 
 export default {
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	components: {
-		KvIcon,
 		KvLightbox,
 		KvButton,
 		KvRadio,

@@ -2,7 +2,6 @@ import { differenceInMilliseconds } from 'date-fns';
 import _get from 'lodash/get';
 import _over from 'lodash/over';
 import * as Sentry from '@sentry/browser';
-import cookieStore from './cookieStore';
 import syncDate from './syncDate';
 import logFormatter from './logFormatter';
 
@@ -31,6 +30,7 @@ export default class KvAuth0 {
 		accessToken = '',
 		audience,
 		clientID,
+		cookieStore,
 		domain,
 		mfaAudience,
 		redirectUri,
@@ -42,6 +42,7 @@ export default class KvAuth0 {
 		this.user = user;
 		this.accessToken = accessToken;
 		this.isServer = isServer;
+		this.cookieStore = cookieStore;
 		if (!this.isServer) {
 			// Setup Auth0 WebAuth client for authentication
 			this.webAuth = new auth0js.WebAuth({
@@ -110,7 +111,7 @@ export default class KvAuth0 {
 			} else {
 				// Successful authentication
 				this[setAuthData](result);
-				cookieStore.set('kvls', this.getKivaId(), { path: '/', secure: true });
+				this.cookieStore.set('kvls', this.getKivaId(), { path: '/', secure: true });
 				resolve(result);
 			}
 		});
@@ -129,6 +130,13 @@ export default class KvAuth0 {
 		return _get(this, `user["${lastLoginKey}"]`)
 			|| _get(this, `user._json["${lastLoginKey}"]`)
 			|| 0;
+	}
+
+	isMfaAuthenticated() {
+		const usedMfaKey = 'https://www.kiva.org/used_mfa';
+		return _get(this, `user["${usedMfaKey}"]`)
+			|| _get(this, `user._json["${usedMfaKey}"]`)
+			|| false;
 	}
 
 	// Silently fetch an access token for the MFA api to manage MFA factors
@@ -183,10 +191,14 @@ export default class KvAuth0 {
 	}
 
 	// Silently check for a logged in session with auth0 using hidden iframes
-	checkSession() {
+	checkSession({ skipIfUserExists = false } = {}) {
 		// only try this if in the browser
 		if (this.isServer) {
 			return Promise.reject(new Error('checkSession called in server mode'));
+		}
+
+		if (skipIfUserExists && this.user) {
+			return Promise.resolve();
 		}
 
 		// Ensure that we only check the session once at a time

@@ -3,8 +3,10 @@
 		<component
 			:is="currentWrapperComponent"
 			:to="promoBannerContent.link"
+			:href="promoBannerContent.link"
+			:target="isExternalLink ? '_blank' : '_self'"
 			:class="{ 'banner-link' : promoBannerContent.link, 'banner-wrapper' : !promoBannerContent.link}"
-			v-kv-track-event="promoBannerContent.kvTrackEvent"
+			v-kv-track-event="handleTracking"
 		>
 			<kv-icon :name="iconKey" :class="`${iconKey}-icon icon`" />
 			<div class="content" v-html="promoBannerContent.richText">
@@ -19,15 +21,6 @@ import KvIcon from '@/components/Kv/KvIcon';
 export default {
 	components: {
 		KvIcon
-	},
-	computed: {
-		// if the promoBannerContent includes a link, render a router-link element, else render a plain div
-		currentWrapperComponent() {
-			if (this.promoBannerContent.link) {
-				return 'router-link';
-			}
-			return 'div';
-		}
 	},
 	props: {
 		iconKey: {
@@ -44,6 +37,34 @@ export default {
 				};
 			}
 		},
+	},
+	computed: {
+		// if the promoBannerContent includes a link, render a router-link element, else render a plain div
+		currentWrapperComponent() {
+			if (this.promoBannerContent.link) {
+				if (!this.isExternalLink) {
+					return 'router-link';
+				}
+				if (this.isExternalLink) {
+					return 'a';
+				}
+			}
+			return 'div';
+		},
+		// Returns true if the link is an external link
+		// Relative links should start with '/' and will resolve at kiva.org
+		// External links should start with 'http' and will resolve outside in a new window
+		isExternalLink() {
+			return (this.promoBannerContent.link && this.promoBannerContent.link.substring(0, 4) === 'http');
+		},
+		// Checking to see if tracking events have been added in contentful
+		// If not, pass through a more generic tracking event
+		handleTracking() {
+			if (typeof this.promoBannerContent.kvTrackEvent === 'undefined') {
+				return ['promo', 'click-Contentful-banner', this.promoBannerContent.richText];
+			}
+			return this.promoBannerContent.kvTrackEvent;
+		}
 	},
 };
 </script>

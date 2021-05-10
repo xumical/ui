@@ -1,6 +1,8 @@
 <template>
 	<www-page :gray-background="true">
-		<the-my-kiva-secondary-menu slot="secondary" />
+		<template #secondary>
+			<the-my-kiva-secondary-menu />
+		</template>
 		<div class="title-area">
 			<div class="row column">
 				<h1>Settings</h1>
@@ -83,6 +85,20 @@
 								<h3>Auto deposit</h3>
 								<p>Increase your impact - make regular deposits or donations into your Kiva account</p>
 							</template>
+						</li>
+					</ul>
+				</a>
+			</section>
+			<section class="section">
+				<a
+					class="section__link"
+					href="/settings/payments"
+				>
+					<h2 class="section__title">Payment settings</h2>
+					<ul class="section__list">
+						<li>
+							<h3>Payment methods</h3>
+							<p>Update your payment method details</p>
 						</li>
 					</ul>
 				</a>
@@ -173,7 +189,7 @@ export default {
 	metaInfo: {
 		title: 'Settings',
 	},
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	data() {
 		return {
 			isMfaActive: false,
@@ -182,7 +198,7 @@ export default {
 	},
 	apollo: {
 		query: pageQuery,
-		prefetch: true,
+		preFetch: true,
 		result({ data }) {
 			this.isSubscriber = data?.my?.autoDeposit?.isSubscriber ?? false;
 			this.isMfaActive = data?.general?.mfaEnabled?.value === 'true';

@@ -1,5 +1,6 @@
 <template>
 	<router-link
+		:is="disableLink ? 'span' : 'router-link'"
 		:to="`/lend/${loanId}`"
 		v-kv-track-event="['basket', 'click-Read more', 'Photo', loanId, loanId]"
 	>
@@ -13,6 +14,10 @@
 <script>
 export default {
 	props: {
+		disableLink: {
+			type: Boolean,
+			default: false,
+		},
 		loanId: {
 			type: Number,
 			default: null
@@ -25,7 +30,7 @@ export default {
 			type: String,
 			default: ''
 		}
-	},
+	}
 };
 </script>
 

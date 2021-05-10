@@ -103,6 +103,8 @@ export function validateQueryParams(query, apollo) {
 	if (lendingReward) {
 		return applyLendingReward(lendingReward, apollo);
 	}
+	// No code passed, Reject with status
+	return Promise.reject('No promotion found.');
 }
 
 /**
@@ -113,11 +115,12 @@ export function validateQueryParams(query, apollo) {
  * @param {Object} apollo Apollo Client instance
  * @returns {Promise}
  */
-export function getPromoFromBasket(promoFundId, apollo) {
+export function getPromoFromBasket(promoFundId = null, apollo) {
 	return apollo.query({
 		query: promoCampaign,
 		variables: {
 			promoFundId: String(promoFundId)
-		}
+		},
+		fetchPolicy: 'network-only',
 	});
 }

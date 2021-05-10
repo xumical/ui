@@ -23,81 +23,102 @@
 							</div>
 							<hr>
 						</div>
-						<basket-items-list
-							:loans="loans"
-							:donations="donations"
-							:kiva-cards="kivaCards"
-							:teams="teams"
-							:loan-reservation-total="parseInt(totals.loanReservationTotal)"
-							@validateprecheckout="validatePreCheckout"
-							@refreshtotals="refreshTotals($event)"
-							@updating-totals="setUpdatingTotals"
-						/>
+						<div class="basket-container">
+							<basket-items-list
+								:loans="loans"
+								:donations="donations"
+								:kiva-cards="kivaCards"
+								:teams="teams"
+								:loan-reservation-total="parseInt(totals.loanReservationTotal)"
+								@validateprecheckout="validatePreCheckout"
+								@refreshtotals="refreshTotals($event)"
+								@updating-totals="setUpdatingTotals"
+							/>
+						</div>
+						<div v-if="showKivaCardForm">
+							<hr>
+							<div class="basket-container">
+								<kiva-card-redemption
+									:credits="redemption_credits"
+									:totals="totals"
+									@refreshtotals="refreshTotals"
+									@updating-totals="setUpdatingTotals"
+								/>
+							</div>
+						</div>
 						<hr>
 
-						<kiva-card-redemption
-							:credits="redemption_credits"
-							:totals="totals"
-							@refreshtotals="refreshTotals"
-							@updating-totals="setUpdatingTotals"
-						/>
+						<div class="basket-container">
+							<div class="row">
+								<div class="small-9 small-offset-3 large-10 large-offset-2 columns">
+									<checkout-holiday-promo
+										v-if="holidayModeEnabled"
+										@updating-totals="setUpdatingTotals"
+									/>
+								</div>
+							</div>
 
-						<hr>
+							<order-totals
+								:totals="totals"
+								@refreshtotals="refreshTotals"
+								@updating-totals="setUpdatingTotals"
+							/>
 
-						<checkout-holiday-promo
-							v-if="holidayModeEnabled"
-							@updating-totals="setUpdatingTotals"
-						/>
+							<basket-verification />
 
-						<order-totals
-							:totals="totals"
-							@refreshtotals="refreshTotals"
-							@updating-totals="setUpdatingTotals"
-						/>
+							<div class="checkout-actions row">
+								<div v-if="isLoggedIn" class="small-12 columns">
+									<form v-if="showKivaCreditButton" action="/checkout" method="GET">
+										<input type="hidden" name="js_loaded" value="false">
+										<kiva-credit-payment
+											@refreshtotals="refreshTotals"
+											@updating-totals="setUpdatingTotals"
+											@complete-transaction="completeTransaction"
+											class=" checkout-button"
+											id="kiva-credit-payment-button"
+										/>
+									</form>
 
-						<basket-verification />
-
-						<div class="checkout-actions row" :class="{'small-collapse' : showLoginContinueButton}">
-							<div v-if="isLoggedIn" class="small-12">
-								<form v-if="showKivaCreditButton" action="/checkout" method="GET">
-									<input type="hidden" name="js_loaded" value="false">
-									<kiva-credit-payment
+									<checkout-drop-in-payment-wrapper
+										v-else
+										:amount="creditNeeded"
+										:is-guest-checkout="checkingOutAsGuest"
 										@refreshtotals="refreshTotals"
 										@updating-totals="setUpdatingTotals"
 										@complete-transaction="completeTransaction"
-										class=" checkout-button"
-										id="kiva-credit-payment-button"
 									/>
-								</form>
+								</div>
 
-								<payment-wrapper
-									v-else-if="!showDropInPayments"
-									:amount="creditNeeded"
-									@refreshtotals="refreshTotals"
-									@updating-totals="setUpdatingTotals"
-									@complete-transaction="completeTransaction"
-								/>
-
-								<checkout-drop-in-payment-wrapper
-									v-else-if="showDropInPayments"
-									:amount="creditNeeded"
-									@refreshtotals="refreshTotals"
-									@updating-totals="setUpdatingTotals"
-									@complete-transaction="completeTransaction"
-								/>
-							</div>
-
-							<div v-else-if="!isActivelyLoggedIn && showLoginContinueButton" class="small-12">
-								<kv-button
-									class="checkout-button smallest"
-									id="login-to-continue-button"
-									v-kv-track-event="['basket', 'Login to Continue Button']"
-									title="Login to Continue Button"
-									@click.prevent.native="loginToContinue"
-									:href="'/ui-login?force=true&doneUrl=/checkout'"
+								<div
+									v-else-if="!isActivelyLoggedIn && showLoginContinueButton"
+									class="small-12 columns"
 								>
-									{{ loginContinueButtonText }}
-								</kv-button>
+									<!-- Guest checkout button shown when the uiexp.guest_checkout and
+										feature.guest_checkout are enabled to users in the test group
+										without a 'kvu' cookie which indicates if a user has logged
+										into Kiva on current browser -->
+									<kv-button
+										v-if="eligibleForGuestCheckout && guestCheckoutExperimentVersion === 'shown'"
+										class="guest-checkout-button checkout-button smallest secondary"
+										id="guest-checkout-button"
+										v-kv-track-event="['basket', 'click-guest-checkout-cta', 'Checkout as guest']"
+										title="Checkout as guest"
+										@click.native="guestCheckout"
+									>
+										Continue as guest
+									</kv-button>
+
+									<kv-button
+										class="checkout-button smallest"
+										id="login-to-continue-button"
+										v-kv-track-event="['basket', 'click-sign-in-cta', 'Continue']"
+										title="Login to Continue Button"
+										@click.native="loginToContinue"
+										:href="'/ui-login?force=true&doneUrl=/checkout'"
+									>
+										Continue
+									</kv-button>
+								</div>
 							</div>
 						</div>
 
@@ -119,7 +140,7 @@
 						automatically redirected.
 					</p>
 					<p>Thank you for minding our dust.</p>
-					<template v-slot:controls>
+					<template #controls>
 						<kv-button
 							class="smaller checkout-button"
 							id="Continue-to-legacy-button"
@@ -162,10 +183,9 @@ import _get from 'lodash/get';
 import _filter from 'lodash/filter';
 import numeral from 'numeral';
 import store2 from 'store2';
-import cookieStore from '@/util/cookieStore';
 import { preFetchAll } from '@/util/apolloPreFetch';
-import logReadQueryError from '@/util/logReadQueryError';
 import syncDate from '@/util/syncDate';
+import { myFTDQuery, formatTransactionData } from '@/util/checkoutUtils';
 import WwwPage from '@/components/WwwFrame/WwwPage';
 import checkoutSettings from '@/graphql/query/checkout/checkoutSettings.graphql';
 import initializeCheckout from '@/graphql/query/checkout/initializeCheckout.graphql';
@@ -184,10 +204,7 @@ import BasketVerification from '@/components/Checkout/BasketVerification';
 import KivaCardRedemption from '@/components/Checkout/KivaCardRedemption';
 import KvLoadingOverlay from '@/components/Kv/KvLoadingOverlay';
 import KvLightbox from '@/components/Kv/KvLightbox';
-import { settingEnabled } from '@/util/settingsUtils';
-import promoQuery from '@/graphql/query/promotionalBanner.graphql';
 import CheckoutHolidayPromo from '@/components/Checkout/CheckoutHolidayPromo';
-import PaymentWrapper from '@/components/Checkout/PaymentWrapper';
 import CheckoutDropInPaymentWrapper from '@/components/Checkout/CheckoutDropInPaymentWrapper';
 import RandomLoanSelector from '@/components/RandomLoanSelector/randomLoanSelector';
 
@@ -204,11 +221,10 @@ export default {
 		KivaCardRedemption,
 		KvLoadingOverlay,
 		CheckoutHolidayPromo,
-		PaymentWrapper,
 		CheckoutDropInPaymentWrapper,
 		RandomLoanSelector,
 	},
-	inject: ['apollo', 'kvAuth0'],
+	inject: ['apollo', 'cookieStore', 'kvAuth0'],
 	mixins: [
 		checkoutUtils
 	],
@@ -239,10 +255,14 @@ export default {
 			holidayModeEnabled: false,
 			currentTime: Date.now(),
 			currentTimeInterval: null,
-			showDropInPayments: true,
 			userPrefContinueBrowsing: false,
 			addToBasketRedirectExperimentShown: false,
 			loginButtonExperimentVersion: null,
+			redirectToLoginExperimentVersion: null,
+			isGuestCheckoutExperimentActive: false,
+			guestCheckoutExperimentVersion: null,
+			checkingOutAsGuest: false,
+			hasEverLoggedIn: false,
 		};
 	},
 	apollo: {
@@ -280,11 +300,14 @@ export default {
 				});
 		},
 		result({ data }) {
+			// Checking if guest checkout feature is enabled in Admin settingsManager
+			this.isGuestCheckoutExperimentActive = data?.general?.guestCheckoutEnabled?.value === 'true';
 			// user data
 			this.myBalance = _get(data, 'my.userAccount.balance');
 			this.myId = _get(data, 'my.userAccount.id');
 			this.teams = _get(data, 'my.lender.teams.values');
 			this.lastActiveLogin = _get(data, 'my.lastLoginTimestamp', 0);
+			this.hasEverLoggedIn = _get(data, 'hasEverLoggedIn', false);
 			// basket data
 			this.totals = _get(data, 'shop.basket.totals') || {};
 			this.loans = _filter(_get(data, 'shop.basket.items.values'), { __typename: 'LoanReservation' });
@@ -295,17 +318,20 @@ export default {
 				{ __typename: 'Credit', creditType: 'redemption_code' }
 			);
 			this.hasFreeCredits = _get(data, 'shop.basket.hasFreeCredits');
+			if (this.redemption_credits.length || this.hasFreeCredits !== false) {
+				this.disableGuestCheckout();
+			}
 
 			// general data
 			this.activeLoginDuration = parseInt(_get(data, 'general.activeLoginDuration.value'), 10) || 3600;
-
-			// Braintree drop-in UI
-			// if feature flag are in ON, show drop-in UI
-			const braintreeDropInFeatureFlag = _get(data, 'general.braintreeDropInFeature.value') === 'true' || false;
-			this.showDropInPayments = braintreeDropInFeatureFlag;
 		}
 	},
 	created() {
+		// show guest account claim confirmation message
+		if (this.myId && this.$route.query?.claimed === '1') {
+			this.$showTipMsg('Account created');
+		}
+
 		// show any validation errors that occured during preFetch
 		const shopMutationData = this.apollo.readFragment({
 			id: 'ShopMutation',
@@ -314,22 +340,8 @@ export default {
 		const validationErrors = _get(shopMutationData, 'validatePreCheckout', []);
 		this.showCheckoutError(validationErrors, true);
 
-		// check if holiday mode is enabled
-		try {
-			this.holidayModeEnabled = settingEnabled(
-				this.apollo.readQuery({
-					query: promoQuery,
-					variables: {
-						basketId: cookieStore.get('kvbskt'),
-					},
-				}),
-				'general.holiday_enabled.value',
-				'general.holiday_start_time.value',
-				'general.holiday_end_time.value'
-			);
-		} catch (e) {
-			logReadQueryError(e, 'CheckoutPage promoQuery');
-		}
+		// TODO: Implement check against contentful setting
+		// to signify if holiday mode is enabled
 
 		// GROW-127 Add to basket redirect experiment
 		const addToBasketRedirectExperiment = this.apollo.readFragment({
@@ -356,6 +368,33 @@ export default {
 				'EXP-GROW-203-Aug2020',
 				this.loginButtonExperimentVersion,
 			);
+		}
+
+		// GROW-280 redirect to login instead of popup login experiment
+		const redirectToLoginExperiment = this.apollo.readFragment({
+			id: 'Experiment:redirect_to_login',
+			fragment: experimentVersionFragment,
+		}) || {};
+		this.redirectToLoginExperimentVersion = redirectToLoginExperiment.version;
+
+		// GROW-458 Guest Checkout Experiment
+		// Trigger guest checkout experiment if user has not logged in before
+		// and guest checkout experiment is active
+		if (this.eligibleForGuestCheckout) {
+			const guestCheckoutExperiment = this.apollo.readFragment({
+				id: 'Experiment:guest_checkout',
+				fragment: experimentVersionFragment,
+			}) || {};
+			this.guestCheckoutExperimentVersion = guestCheckoutExperiment.version;
+
+			// If a guest checkout experiment version set, trigger tracking
+			if (this.guestCheckoutExperimentVersion && this.guestCheckoutExperimentVersion !== 'unassigned') {
+				this.$kvTrackEvent(
+					'Checkout',
+					'EXP-GROW-458-Feb2020',
+					this.guestCheckoutExperimentVersion,
+				);
+			}
 		}
 	},
 	mounted() {
@@ -386,6 +425,9 @@ export default {
 	},
 	computed: {
 		isLoggedIn() {
+			if (this.checkingOutAsGuest) {
+				return true;
+			}
 			if (this.myId !== null && this.myId !== undefined && this.isActivelyLoggedIn) {
 				return true;
 			}
@@ -399,40 +441,39 @@ export default {
 			return false;
 		},
 		checkoutSteps() {
-			if (this.loginButtonExperimentShown) {
-				return [
-					'Basket',
-					'Payment',
-					'Thank You!'
-				];
-			}
-			return [
-				'Basket',
-				'Account',
-				'Payment',
-				'Thank You!'
-			];
+			return ['Basket', 'Payment', 'Thank You!'];
 		},
 		currentStep() {
-			if (this.loginButtonExperimentShown) {
-				return this.isLoggedIn ? 1 : 0;
-			}
-			return this.isLoggedIn ? 2 : 0;
+			return this.isLoggedIn ? 1 : 0;
 		},
 		creditNeeded() {
 			return this.totals.creditAmountNeeded || '0.00';
 		},
 		showKivaCreditButton() {
+			if (this.checkingOutAsGuest) {
+				return false;
+			}
 			return parseFloat(this.creditNeeded) === 0;
+		},
+		showKivaCardForm() {
+			return this.checkingOutAsGuest === false;
+		},
+		eligibleForGuestCheckout() {
+			// Checking if guest checkout experiment is active
+			// and if Kiva has been logged into on user's current browser
+			if (this.isGuestCheckoutExperimentActive
+				&& !this.isActivelyLoggedIn
+				&& !this.hasEverLoggedIn
+			) {
+				return true;
+			}
+			return false;
 		},
 		showLoginContinueButton() {
 			if (!this.myId || !this.isActivelyLoggedIn) {
 				return true;
 			}
 			return false;
-		},
-		loginContinueButtonText() {
-			return this.loginButtonExperimentShown ? 'Continue' : 'Login to Continue';
 		},
 		emptyBasket() {
 			if (this.loans.length === 0 && this.kivaCards.length === 0
@@ -442,29 +483,38 @@ export default {
 			}
 			return false;
 		},
-		loginButtonExperimentShown() {
-			return this.loginButtonExperimentVersion === 'b';
-		}
 	},
 	methods: {
-		loginToContinue() {
+		loginToContinue(event) {
+			if (this.redirectToLoginExperimentVersion) {
+				this.$kvTrackEvent(
+					'Basket',
+					'EXP-GROW-282-Oct2020',
+					this.redirectToLoginExperimentVersion,
+				);
+			}
+
+			if (this.redirectToLoginExperimentVersion !== 'b' && this.kvAuth0.enabled) {
+				event.preventDefault();
+				this.doPopupLogin();
+			}
+
+			// Doing nothing here allows the normal link handling to happen, which will send the user to /ui-login
+		},
+		guestCheckout() {
+			this.checkingOutAsGuest = true;
+		},
+		disableGuestCheckout() {
+			this.checkingOutAsGuest = false;
+			this.isGuestCheckoutExperimentActive = false;
+		},
+		doPopupLogin() {
 			if (this.kvAuth0.enabled) {
 				this.updatingTotals = true;
 				// we need to force show the login popup if not actively logged in
 				const authorizeOptions = {};
 				if (!this.isActivelyLoggedIn) {
 					authorizeOptions.prompt = 'login';
-				}
-
-				if (this.loginButtonExperimentShown) {
-					// Pass custom JSON configuration to Auth0 login page
-					const kvConfig = JSON.stringify({ socialExp: true });
-					// Choose register as initial screen if no user has logged in on this browser before
-					if (!cookieStore.get('kvu')) {
-						authorizeOptions.login_hint = `signUp|${kvConfig}`;
-					} else {
-						authorizeOptions.login_hint = `login|${kvConfig}`;
-					}
 				}
 
 				this.kvAuth0.popupLogin(authorizeOptions).then(result => {
@@ -535,6 +585,7 @@ export default {
 				if (hasFreeCredits) {
 					if (refreshEvent === 'kiva-card-applied') {
 						this.$kvTrackEvent('basket', 'free credits applied', 'exit to legacy');
+						this.disableGuestCheckout();
 					}
 					this.redirectLightboxVisible = true;
 					// automatically redirect to legacy after 7 seconds
@@ -548,28 +599,34 @@ export default {
 			});
 		},
 		completeTransaction(transactionId) {
-			// compile transaction information
-			const transactionData = {
-				transactionId: numeral(transactionId).value(),
-				itemTotal: this.totals.itemTotal,
-				loans: this.loans.map(loan => {
-					const { __typename, id, price } = loan;
-					return { __typename, id, price };
-				}),
-				donations: this.donations.map(donation => {
-					const { __typename, id, price } = donation;
-					return { __typename, id, price };
-				}),
-			};
-			// fire transaction events
-			this.$kvTrackTransaction(transactionData);
-			// redirect to thanks
-			window.setTimeout(
-				() => {
-					this.redirectToThanks(transactionId);
-				},
-				800
+			// compile transaction data
+			const transactionData = formatTransactionData(
+				numeral(transactionId).value(),
+				this.loans,
+				this.kivaCards,
+				this.donations,
+				this.totals
 			);
+
+			// Fetch FTD Status
+			const myFTDQueryUtil = myFTDQuery(this.apollo);
+
+			myFTDQueryUtil.then(({ data }) => {
+				// determine ftd status
+				const isFTD = data?.my?.userAccount?.isFirstTimeDepositor;
+				transactionData.isFTD = isFTD;
+
+				// fire transaction events
+				this.$kvTrackTransaction(transactionData);
+
+				// redirect to thanks
+				window.setTimeout(
+					() => {
+						this.redirectToThanks(transactionId);
+					},
+					800
+				);
+			});
 		},
 		setUpdatingTotals(state) {
 			this.updatingTotals = state;
@@ -634,6 +691,11 @@ export default {
 	}
 }
 
+.basket-container {
+	max-width: rem-calc(800);
+	margin: 0 auto;
+}
+
 .page-content {
 	padding: 1.625rem 0;
 
@@ -651,9 +713,6 @@ export default {
 		}
 
 		.checkout-actions {
-			max-width: rem-calc(800);
-			margin: 0 auto;
-
 			.checkout-button {
 				width: 100%;
 			}
@@ -663,7 +722,12 @@ export default {
 
 				.checkout-button {
 					width: auto;
-					margin-right: rem-calc(10);
+				}
+			}
+
+			.guest-checkout-button {
+				@include breakpoint(medium) {
+					margin-right: 1rem;
 				}
 			}
 		}
@@ -774,7 +838,7 @@ export default {
 
 // Hide Basket Bar (this won't work with scoped)
 .basket-bar {
-	display: none;
+	display: none !important;
 }
 
 </style>

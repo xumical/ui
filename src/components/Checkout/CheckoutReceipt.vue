@@ -1,16 +1,17 @@
 <template>
 	<div class="checkout-receipt">
 		<h2 class="checkout-receipt__headline">
-			<kv-icon
-				class="receipt-icon"
-				name="receipt"
-			/>Order Confirmation
+			Order Confirmation
 		</h2>
 		<div class="checkout-receipt__wrapper">
 			<section data-test="lender-info" class="section section--lender-info">
 				<div>{{ formattedTransactionTime }}</div>
-				<div>{{ lender.firstName }} {{ lender.lastName }}</div>
-				<div>{{ lender.email }}</div>
+				<div class="fs-exclude">
+					{{ lender.firstName }} {{ lender.lastName }}
+				</div>
+				<div class="fs-exclude">
+					{{ lender.email }}
+				</div>
 			</section>
 			<section>
 				<div
@@ -37,8 +38,12 @@
 							data-test="loan"
 							class="loan"
 						>
-							<h3 class="loan__name">
+							<h3 class="loan__name fs-exclude">
+								<template v-if="disableRedirects">
+									{{ loan.loan.name }}
+								</template>
 								<router-link
+									v-else
 									:to="`/lend/${loan.id}`"
 								>
 									{{ loan.loan.name }}
@@ -100,7 +105,7 @@
 								<h3 class="loan__name">
 									Postal delivery Kiva Card
 								</h3>
-								<div class="loan__details">
+								<div class="loan__details fs-exclude">
 									For: {{ card.kivaCardObject.mailingInfo.firstName }}
 									{{ card.kivaCardObject.mailingInfo.lastName }}<br>
 									{{ card.kivaCardObject.mailingInfo.address }}<br>
@@ -117,7 +122,7 @@
 									Kiva Card
 								</h3>
 								<div
-									class="loan__details"
+									class="loan__details fs-exclude"
 									v-if="card.kivaCardObject.recipient.name"
 								>
 									For: {{ card.kivaCardObject.recipient.name }}
@@ -127,7 +132,7 @@
 								<h3 class="loan__name">
 									Email delivery Kiva Card
 								</h3>
-								<div class="loan__details">
+								<div class="loan__details fs-exclude">
 									For:
 									<template v-if="card.kivaCardObject.recipient.name">
 										{{ card.kivaCardObject.recipient.name }} &ndash;
@@ -165,6 +170,7 @@
 								Donation to Kiva
 							</h3>
 							<router-link
+								v-if="receipt.totals.donationTotal > 0"
 								class="smallest"
 								to="/portfolio/donations"
 							>
@@ -289,6 +295,10 @@ export default {
 			type: Object,
 			required: true
 		},
+		disableRedirects: {
+			type: Boolean,
+			default: false
+		},
 	},
 	computed: {
 		formattedTransactionTime() {
@@ -398,6 +408,7 @@ export default {
 
 .total {
 	display: flex;
+	align-items: baseline;
 
 	&__header,
 	&__amount {
@@ -465,11 +476,5 @@ export default {
 			fill: $anchor-color-hover;
 		}
 	}
-}
-
-.receipt-icon {
-	height: 1rem;
-	width: 1rem;
-	margin-right: 1rem;
 }
 </style>

@@ -1,12 +1,10 @@
-import _get from 'lodash/get';
-import cookieStore from '@/util/cookieStore';
 import { parseExpCookie, serializeExpCookie, assignVersion } from '@/util/experimentUtils';
 import { readJSONSetting, hashCode } from '@/util/settingsUtils';
 
 /**
  * Experiment resolvers
  */
-export default () => {
+export default ({ cookieStore }) => {
 	// initialize the assignments from the experiment cookie
 	const assignments = parseExpCookie(cookieStore.get('uiab'));
 
@@ -30,9 +28,9 @@ export default () => {
 
 					// get the hash for our current experiment setting
 					const settingHash = hashCode(JSON.stringify(experimentSubset));
-					const population = _get(experiment, 'population') || 1;
+					const population = experiment?.population ?? 1;
 
-					// Add hash to exisitng cookie exps if it's missing
+					// Add hash to existing cookie exps if it's missing
 					if (typeof currentAssignment.hash === 'undefined') {
 						currentAssignment.hash = settingHash;
 					}
@@ -61,7 +59,7 @@ export default () => {
 						// assign the version using the experiment data (undefined if experiment disabled)
 						currentAssignment = {
 							id,
-							version: assignVersion(experiment),
+							version: assignVersion(experiment, cookieStore),
 							hash: settingHash,
 							population,
 						};

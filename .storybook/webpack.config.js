@@ -1,4 +1,3 @@
-const styleLoaders = require('../build/style-loaders');
 const kvWebpackConfig = require('../build/webpack.base.conf');
 var SvgStorePlugin = require('webpack-svgstore-plugin');
 
@@ -6,6 +5,11 @@ module.exports = async ({ config, mode }) => {
 
 	const newConfig = {
 		...config,
+		devtool: false,
+		optimization: {
+			minimize: false,
+			minimizer: [],
+		},
 		resolve: {
 			...config.resolve,
 			alias: {
@@ -16,10 +20,6 @@ module.exports = async ({ config, mode }) => {
 		module: {
 			...config.module,
 			rules: [
-				{
-					test: /\.scss$/,
-					use: ["thread-loader", "vue-style-loader"].concat(styleLoaders)
-				},
 				{
 					test: /\.stories\.jsx?$/,
 					loaders: [require.resolve('@storybook/source-loader')],
