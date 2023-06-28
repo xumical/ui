@@ -1,4 +1,4 @@
-FROM ubuntu:xenial
+FROM ubuntu:xenial-20210416
 MAINTAINER Mike Leach <mike@kiva.org>
 
 # builds a docker image suitable for Jenkins that includes:
