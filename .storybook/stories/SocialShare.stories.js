@@ -1,5 +1,4 @@
-import SocialShare from '@/components/Checkout/SocialShare';
-import StoryRouter from 'storybook-vue-router';
+import SocialShareV2 from '@/components/Checkout/SocialShareV2';
 import mockedReceiptData from '../mock-data/receipt-data-mock';
 import apolloStoryMixin from '../mixins/apollo-story-mixin';
 
@@ -35,17 +34,16 @@ const mockedAPIResponse = {
 
 export default {
 	title: 'Components/SocialShare',
-	decorators: [StoryRouter()],
-	component: SocialShare,
+	component: SocialShareV2,
 };
 
 export const Default = () => ({
 	mixins: [apolloStoryMixin()],
 	components: {
-		SocialShare,
+		SocialShareV2,
 	},
 	template: `
-		<social-share
+		<social-share-v2
 			:lender="lender"
 			:loans="loans"
 		/>

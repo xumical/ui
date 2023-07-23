@@ -4,7 +4,6 @@ import Vue from 'vue'
 import kivaPlugins from '@/plugins';
 Vue.use(kivaPlugins)
 
-import StoryRouter from 'storybook-vue-router';
 import apolloStoryMixin from '../mixins/apollo-story-mixin';
 import cookieStoreStoryMixin from '../mixins/cookie-store-story-mixin';
 import kvAuth0StoryMixin from '../mixins/kv-auth0-story-mixin';
@@ -13,9 +12,8 @@ import SecuritySettingsPage from '@/pages/Settings/SecuritySettings';
 import TwoStepVerificationPage from '@/pages/Settings/TwoStepVerificationPage';
 
 export default {
-	title: 'Pages/Security Settings',
+	title: 'Page/Security Settings',
 	component: SecuritySettingsPage,
-	decorators: [StoryRouter()],
 };
 
 export const SecurityAndLogin = () => ({

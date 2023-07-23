@@ -1,5 +1,9 @@
 query myLendingStats {
 	my {
+		id
+		userAccount {
+			id
+		}
 		lendingStats {
 			id
 			countriesLentTo {

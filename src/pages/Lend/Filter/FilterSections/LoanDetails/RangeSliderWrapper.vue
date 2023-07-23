@@ -2,9 +2,7 @@
 	<ais-range-input
 		:attribute="queryAttribute"
 		:precision="precision"
-		:class-names="{
-			'ais-RangeInput': 'range-input',
-		}"
+		class="tw-mb-2"
 	>
 		<div slot-scope="{ currentRefinement, range, refine }">
 			<filter-range-slider
@@ -29,6 +27,7 @@ import { AisRangeInput } from 'vue-instantsearch';
 import FilterRangeSlider from '@/pages/Lend/Filter/FilterComponents/FilterRangeSlider';
 
 export default {
+	name: 'RangeSliderWrapper',
 	components: {
 		AisRangeInput,
 		FilterRangeSlider
@@ -89,10 +88,3 @@ export default {
 	},
 };
 </script>
-<style lang="scss" scoped>
-@import 'settings';
-
-.ais-RangeInput {
-	margin-bottom: rem-calc(15);
-}
-</style>

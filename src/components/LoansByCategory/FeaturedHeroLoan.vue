@@ -1,7 +1,7 @@
 <template>
 	<div class="featured-row-wrapper">
 		<div class="featured-cards-display-window">
-			<div class="grid-loan-card">
+			<div class="grid-loan-card tw-bg-primary tw-border tw-border-tertiary">
 				<div class="row featured-hero-loan">
 					<div class="column small-12 large-6">
 						<loan-card-image
@@ -17,9 +17,8 @@
 					</div>
 					<div class="column small-12 large-6">
 						<div class="borrower-info-wrapper">
-							<borrower-info-name :name="loan.name" :loan-id="loan.id" class="name" />
-
-							<div class="country">
+							<borrower-info-name :name="loan.name" :loan-id="loan.id" class="name tw-text-h3" />
+							<div class="country tw-text-secondary tw-font-medium">
 								<!-- eslint-disable-next-line max-len -->
 								{{ loan.geocode.country.name }} <span v-if="loan.activity.name">/ {{ loan.activity.name }}</span>
 							</div>
@@ -62,7 +61,10 @@
 									:is-lent-to="loan.userProperties.lentTo"
 									:is-funded="isFunded"
 									:is-selected-by-another="isSelectedByAnother"
-
+									:is-amount-lend-button="lessThan25 && !enableFiveDollarsNotes"
+									:amount-left="amountLeft"
+									:show-now="!enableFiveDollarsNotes"
+									:enable-five-dollars-notes="enableFiveDollarsNotes"
 									@click.native="trackInteraction({
 										interactionType: 'addToBasket',
 										interactionElement: 'Lend25'
@@ -70,7 +72,9 @@
 								/>
 
 								<matching-text
+									v-if="!isMatchAtRisk"
 									:matching-text="loan.matchingText"
+									:match-ratio="loan.matchRatio"
 									:is-funded="isFunded"
 									:is-selected-by-another="isSelectedByAnother"
 								/>
@@ -91,6 +95,7 @@ import MatchingText from '@/components/LoanCards/MatchingText';
 import BorrowerInfoName from '@/components/LoanCards/BorrowerInfo/BorrowerInfoName';
 
 export default {
+	name: 'FeaturedHeroLoan',
 	components: {
 		ActionButton,
 		FundraisingStatus,
@@ -113,6 +118,10 @@ export default {
 			default: ''
 		},
 		isFunded: {
+			type: Boolean,
+			default: false
+		},
+		isMatchAtRisk: {
 			type: Boolean,
 			default: false
 		},
@@ -145,6 +154,10 @@ export default {
 			type: Number,
 			default: 0,
 		},
+		enableFiveDollarsNotes: {
+			type: Boolean,
+			default: false
+		}
 	},
 	data() {
 		return {
@@ -154,16 +167,15 @@ export default {
 	},
 	computed: {
 		loanUse() {
-			return this.$options.filters.loanUse(this.loan.use,
-				this.loan.name,
-				this.loan.status,
-				this.loan.loanAmount,
-				this.loan.borrowerCount,
-				this.loanUseMaxLength);
+			const use = this.loan?.fullLoanUse ?? '';
+			return use.length > this.loanUseMaxLength ? `${use.slice(0, this.loanUseMaxLength)}...` : use;
 		},
 		showReadMore() {
 			return !!(this.loanUse.length > this.loanUseMaxLength);
 		},
+		lessThan25() {
+			return this.amountLeft < 25 && this.amountLeft !== 0;
+		}
 	},
 	methods: {
 		toggleFavorite() {
@@ -199,9 +211,6 @@ $row-max-width: 58.75rem;
 		z-index: 10;
 
 		.grid-loan-card {
-			background-color: $white;
-			border: 1px solid $kiva-stroke-gray;
-
 			.featured-hero-loan {
 				height: 100%;
 				margin: rem-calc(20);
@@ -217,7 +226,6 @@ $row-max-width: 58.75rem;
 
 				.borrower-info-wrapper {
 					flex-grow: 1;
-					line-height: rem-calc(22);
 					padding: 0 rem-calc(20);
 					text-align: left;
 					margin-top: 0;
@@ -231,10 +239,6 @@ $row-max-width: 58.75rem;
 					}
 
 					.name {
-						font-size: rem-calc(22);
-						font-weight: $global-weight-highlight;
-						line-height: rem-calc(27);
-
 						@include breakpoint(medium down) {
 							margin-top: rem-calc(10);
 							text-align: center;
@@ -242,9 +246,6 @@ $row-max-width: 58.75rem;
 					}
 
 					.country {
-						color: $kiva-text-light;
-						font-weight: $global-weight-highlight;
-
 						@include breakpoint(medium down) {
 							text-align: center;
 						}
@@ -258,10 +259,6 @@ $row-max-width: 58.75rem;
 						.fundraising-thermometer {
 							text-align: center;
 						}
-					}
-
-					.fundraising-thermometer-wrapper .bold {
-						font-weight: $global-weight-bold;
 					}
 
 					.action {

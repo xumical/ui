@@ -2,7 +2,7 @@
 	<div class="works section campaign-how-it-works section">
 		<div class="row">
 			<div class="columns">
-				<p class="works__subhead campaign-how-it-works__subhead">
+				<p class="works__subhead tw-text-h2">
 					By lending as little as $25 on Kiva, you can support the causes you care
 					about and make a real personal impact.
 				</p>
@@ -21,6 +21,7 @@ const step3Video = require('@/assets/media/15-years/step3.mp4');
 const step4Video = require('@/assets/media/15-years/step4.mp4');
 
 export default {
+	name: 'CampaignHowKivaWorks',
 	components: {
 		FifteenYearsHowKivaWorksCarousel,
 	},

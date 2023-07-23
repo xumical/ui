@@ -1,45 +1,24 @@
-import StoryRouter from 'storybook-vue-router';
 import apolloStoryMixin from '../mixins/apollo-story-mixin';
+import cookieStoreStoryMixin from '../mixins/cookie-store-story-mixin';
 import kvAuth0StoryMixin from '../mixins/kv-auth0-story-mixin';
 
 import {
-	lightHeader,
 	lightFooter,
-	iwdHeaderTheme,
 	iwdFooterTheme,
-	wrdHeaderTheme,
 	wrdFooterTheme,
-	fifteenYearHeaderTheme,
 	fifteenYearFooterTheme,
-	blueHeader,
 	blueFooter
 } from '@/util/siteThemes';
-
 import WwwPageCorporate from '@/components/WwwFrame/WwwPageCorporate';
 
 export default {
 	title: 'WwwFrame/WwwPageCorporate',
 	component: WwwPageCorporate,
-	decorators: [StoryRouter()],
 	args: {
-		headerTheme: null,
 		footerTheme: null,
 		corporateLogoUrl: require('@/assets/images/logos/visa.svg')
 	},
 	argTypes: {
-		headerTheme: {
-			control: {
-				type: 'select',
-				options: {
-					'none': null,
-					'lightHeader':lightHeader,
-					'iwdHeaderTheme': iwdHeaderTheme,
-					'wrdHeaderTheme': wrdHeaderTheme,
-					'fifteenYearHeaderTheme': fifteenYearHeaderTheme,
-					'blueHeader': blueHeader,
-				},
-			}
-		},
 		footerTheme: {
 			control: {
 				type: 'select',
@@ -61,10 +40,9 @@ export const Default = (args, { argTypes }) => ({
 	components: {
 		WwwPageCorporate
 	},
-	mixins: [apolloStoryMixin(), kvAuth0StoryMixin],
+	mixins: [apolloStoryMixin(), cookieStoreStoryMixin(), kvAuth0StoryMixin],
 	template: `
 		<www-page-corporate
-			:header-theme="headerTheme"
 			:footer-theme="footerTheme"
 			:corporate-logo-url="corporateLogoUrl"
 		>
@@ -77,6 +55,5 @@ export const Default = (args, { argTypes }) => ({
 
 export const Themed = Default.bind({});
 Themed.args = {
-	headerTheme: lightHeader,
 	footerTheme: lightFooter
 };

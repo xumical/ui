@@ -2,6 +2,7 @@
 
 query shopBasketUpdate($basketId: String) {
 	my {
+		id
 		lastLoginTimestamp @client
 		userAccount {
 			id
@@ -29,6 +30,18 @@ query shopBasketUpdate($basketId: String) {
 			items {
 				totalCount
 				values {
+					creditsUsed {
+						amount
+						applied
+						available
+						creditType
+						id
+						promoFund {
+							id
+							displayName
+							displayDescription
+						}
+					}
 					id
 					price
 					... on LoanReservation {

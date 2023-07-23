@@ -1,128 +1,201 @@
 <template>
-	<div :class=" {'lend-list-menu--mg-exp' : mgHighlightInNavVersion === 'shown' }">
-		<template v-if="mgHighlightInNavVersion === 'shown'">
-			<router-link
-				to="/monthlygood"
-				class="lend-list-menu--mg-exp__link"
-				v-kv-track-event="['TopNav','click-mg-exp-mobile-cause', 'Find a cause']"
-			>
-				Find a cause
-			</router-link>
-			<router-link
-				to="/lend-by-category"
-				class="lend-list-menu--mg-exp__link"
-				v-kv-track-event="['TopNav','click-mg-exp-mobile-borrower', 'Find a borrower']"
-			>
-				Find a borrower
-			</router-link>
-		</template>
-		<ul class="lend-list-menu">
-			<router-link to="/lend-by-category" v-if="mgHighlightInNavVersion !== 'shown'">
-				Explore Categories
-			</router-link>
-			<expandable-list-item id="lend-menu-category-panel" ref="categories">
-				<template #title>
-					<span>Categories</span>
-					<kv-icon class="chevron-icon" name="small-chevron-mobile" :from-sprite="true" />
-				</template>
-				<ul>
-					<li v-if="isChannelsLoading">
-						<kv-loading-spinner />
-					</li>
-					<li v-for="(category, index) in categories" :key="index">
-						<a
-							:href="category.url"
-							v-kv-track-event="['TopNav', 'click-Lend-Category', category.name, index + 1]"
-						>
-							{{ category.name }}
-						</a>
-					</li>
-				</ul>
-			</expandable-list-item>
-			<expandable-list-item id="lend-menu-region-panel" ref="regions">
-				<template #title>
-					<span>Regions</span>
-					<kv-icon class="chevron-icon" name="small-chevron-mobile" :from-sprite="true" />
-				</template>
-				<ul>
-					<li v-if="isRegionsLoading">
-						<kv-loading-spinner />
-					</li>
-					<expandable-list-item
-						v-for="region in regions"
-						:key="region.name"
-						:id="`lend-menu-${region.name}-panel` | changeCase('paramCase')"
-						ref="regionCountries"
+	<div class="tw-pb-2">
+		<router-link
+			v-if="showMGUpsellLink"
+			to="/monthlygood"
+			@click.native="trackMgLinkClick"
+		>
+			<!-- eslint-disable-next-line max-len -->
+			<span class="tw-inline-flex tw-items-center tw-py-2 tw-mb-2 tw-gap-0.5 tw-border-b tw-border-tertiary tw-font-medium">
+				Lend monthly
+				<kv-material-icon :icon="mdiArrowRight" class="tw-w-3 tw-h-3" />
+			</span>
+		</router-link>
+		<div v-else class="tw-block tw-py-2 tw-mb-2 tw-w-16">
+			<kv-loading-placeholder
+				style="height: 1.5rem;"
+			/>
+		</div>
+		<kv-tabs ref="navLendCategories">
+			<template #tabNav>
+				<kv-tab for-panel="nav-lend-categories">
+					Categories
+				</kv-tab>
+				<kv-tab for-panel="nav-lend-regions">
+					Regions
+				</kv-tab>
+				<kv-tab for-panel="nav-my-kiva" v-if="userId">
+					My Kiva
+				</kv-tab>
+			</template>
+			<template #tabPanels>
+				<kv-tab-panel id="nav-lend-categories">
+					<ul
+						class="tw-font-medium"
 					>
-						<template #title>
-							<span v-kv-track-event="['TopNav','click-Lend-Region', region.name]">
-								{{ region.name }}
-							</span>
-							<kv-icon class="chevron-icon" name="small-chevron-mobile" :from-sprite="true" />
+						<template v-if="isChannelsLoading">
+							<li
+								v-for="i in 14"
+								:key="i"
+								class="tw-w-[11rem] tw-py-1 tw-flex"
+							>
+								<kv-loading-placeholder
+									class="tw-inline-block tw-align-middle"
+									style="height: 1rem; display: inline-block;"
+								/>
+								<span class="tw-inline-block">&nbsp;</span>
+							</li>
 						</template>
-						<country-list :countries="region.countries" />
-					</expandable-list-item>
-				</ul>
-			</expandable-list-item>
-			<router-link to="/lend" class="lend-link">
-				All loans
-			</router-link>
-			<expandable-list-item id="lend-menu-my-kiva-panel" ref="myKiva" v-if="userId">
-				<template #title>
-					<span>My Kiva</span>
-					<kv-icon class="chevron-icon" name="small-chevron-mobile" :from-sprite="true" />
-				</template>
-				<ul>
-					<li>
-						<router-link
-							v-if="favorites > 0"
-							:to="{ path: '/lend', query: { lenderFavorite: userId } }"
-							v-kv-track-event="['TopNav','click-Lend-Favorites']"
-						>
-							Starred loans
-						</router-link>
-						<span v-else>Starred loans</span>
-					</li>
-					<expandable-list-item id="lend-menu-saved-searches-panel" ref="searches" v-if="hasSearches">
-						<template #title>
-							<span>Saved searches</span>
-							<kv-icon class="chevron-icon" name="small-chevron-mobile" :from-sprite="true" />
+						<template v-else>
+							<li v-for="(category, index) in categories" :key="index">
+								<a
+									:href="category.url"
+									v-kv-track-event="['TopNav', 'click-Lend-Category', category.name, index + 1]"
+									class="lend-link"
+								>
+									{{ category.name }}
+								</a>
+							</li>
 						</template>
-						<search-list :searches="searches" />
-					</expandable-list-item>
-					<li v-else>
-						<span>Saved searches</span>
-					</li>
-					<li>
-						<router-link
-							to="/lend/countries-not-lent"
-							v-kv-track-event="['TopNav','click-Lend-Countries_Not_Lent']"
+						<li class="tw-border-t tw-border-tertiary">
+							<router-link
+								to="/lend-by-category/recommended-by-lenders"
+								class="lend-link tw-text-brand"
+								v-kv-track-event="['TopNav','click-Lend-Recommended-by-lenders']"
+							>
+								Recommended by lenders
+							</router-link>
+						</li>
+						<li>
+							<router-link
+								to="/lend"
+								class="lend-link"
+								v-kv-track-event="['TopNav','click-Lend-All_Loans']"
+							>
+								All loans
+							</router-link>
+						</li>
+						<li>
+							<router-link
+								to="/categories"
+								class="lend-link"
+								v-kv-track-event="['TopNav','click-Lend-All_Categories']"
+							>
+								All categories
+							</router-link>
+						</li>
+					</ul>
+				</kv-tab-panel>
+				<kv-tab-panel id="nav-lend-regions">
+					<template v-if="isRegionsLoading">
+						<kv-accordion-item
+							v-for="i in 8"
+							:key="i"
+							:id="`placeholder-${i}-panel` | changeCase('paramCase')"
+							:disabled="true"
 						>
-							Countries I haven't lent to
-						</router-link>
-					</li>
-				</ul>
-			</expandable-list-item>
-		</ul>
+							<template #header>
+								<div class="tw-flex">
+									<kv-loading-placeholder
+										class="tw-inline-block tw-align-middle"
+										style="height: 1rem; display: inline-block;"
+									/>
+									<span class="tw-inline-block tw-text-h4">&nbsp;</span>
+								</div>
+							</template>
+						</kv-accordion-item>
+					</template>
+					<template v-else>
+						<kv-accordion-item
+							v-for="region in regions"
+							:key="region.name"
+							:id="`lend-menu-${region.name}-panel` | changeCase('paramCase')"
+							ref="regionAccordions"
+						>
+							<template #header>
+								<h3 class="tw-text-h4">
+									<span v-kv-track-event="['TopNav','click-Lend-Region', region.name]">
+										{{ region.name }}
+									</span>
+								</h3>
+							</template>
+							<country-list :countries="region.countries" />
+						</kv-accordion-item>
+					</template>
+				</kv-tab-panel>
+				<kv-tab-panel id="nav-my-kiva" v-if="userId">
+					<ul class="tw-font-medium">
+						<li>
+							<router-link
+								v-if="favorites > 0"
+								:to="{ path: '/lend', query: { lenderFavorite: userId } }"
+								class="lend-link"
+								v-kv-track-event="['TopNav','click-Lend-Favorites']"
+							>
+								Saved loans
+							</router-link>
+							<span
+								v-else
+								class="tw-block tw-py-1 tw-text-tertiary"
+							>Saved loans</span>
+						</li>
+						<li
+							v-if="hasSearches"
+						>
+							<kv-accordion-item
+								id="lend-menu-saved-searches-panel"
+								ref="searches"
+							>
+								<template #header>
+									<p class="tw-font-medium">
+										Saved searches
+									</p>
+								</template>
+								<search-list :searches="searches" />
+							</kv-accordion-item>
+						</li>
+						<li v-else>
+							<span class="tw-block tw-py-1 tw-text-tertiary">Saved searches</span>
+						</li>
+						<li>
+							<a
+								href="/lend/countries-not-lent"
+								class="lend-link"
+								v-kv-track-event="['TopNav','click-Lend-Countries_Not_Lent']"
+							>
+								Countries I haven't lent to
+							</a>
+						</li>
+					</ul>
+				</kv-tab-panel>
+			</template>
+		</kv-tabs>
 	</div>
 </template>
 
 <script>
-import experimentVersionFragment from '@/graphql/fragments/experimentVersion.graphql';
-import KvIcon from '@/components/Kv/KvIcon';
-import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
-import CountryList from './CountryList';
-import ExpandableListItem from './ExpandableListItem';
+import KvAccordionItem from '@/components/Kv/KvAccordionItem';
+import { mdiArrowRight } from '@mdi/js';
+import KvLoadingPlaceholder from '~/@kiva/kv-components/vue/KvLoadingPlaceholder';
 import SearchList from './SearchList';
+import CountryList from './CountryList';
+import KvMaterialIcon from '~/@kiva/kv-components/vue/KvMaterialIcon';
+import KvTab from '~/@kiva/kv-components/vue/KvTab';
+import KvTabPanel from '~/@kiva/kv-components/vue/KvTabPanel';
+import KvTabs from '~/@kiva/kv-components/vue/KvTabs';
 
 export default {
+	name: 'LendListMenu',
 	inject: ['apollo', 'cookieStore'],
 	components: {
 		CountryList,
-		ExpandableListItem,
-		KvIcon,
+		KvAccordionItem,
+		KvMaterialIcon,
+		KvTab,
+		KvTabPanel,
+		KvTabs,
+		KvLoadingPlaceholder,
 		SearchList,
-		KvLoadingSpinner
 	},
 	props: {
 		categories: {
@@ -153,10 +226,15 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		showMGUpsellLink: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
 			mgHighlightInNavVersion: null,
+			mdiArrowRight,
 		};
 	},
 	computed: {
@@ -166,126 +244,32 @@ export default {
 	},
 	methods: {
 		onClose() {
-			if (this.categories.length) {
-				this.$refs.categories.collapse();
+			// reset the tabs
+			if (this.$refs?.navLendCategories?.tabContext?.setTab) {
+				this.$refs.navLendCategories.tabContext?.setTab(0);
 			}
-			if (this.regions.length) {
-				this.$refs.regions.collapse();
-				this.$refs.regionCountries.forEach(region => region.collapse());
+
+			// close all region accordions
+			if (this.$refs?.regionAccordions) {
+				this.$refs.regionAccordions.forEach(accordionRef => {
+					accordionRef.collapse();
+				});
 			}
-			if (this.userId) {
-				this.$refs.myKiva.collapse();
-			}
-			if (this.hasSearches) {
+
+			// close saved search accordions
+			if (this.hasSearches && this.$refs?.searches) {
 				this.$refs.searches.collapse();
 			}
+		},
+		trackMgLinkClick() {
+			this.$kvTrackEvent('TopNav', 'click-Lend-Menu-Monthly-Good', 'Lend-monthly');
 		}
-	},
-	created() {
-		// EXP SUBS-680 present main nav options for subscription or individual lending
-		const mgHighlightInNav = this.apollo.readFragment({
-			id: 'Experiment:mg_highlight_in_nav',
-			fragment: experimentVersionFragment,
-		}) || {};
-		this.mgHighlightInNavVersion = mgHighlightInNav.version;
 	},
 };
 </script>
 
-<style lang="scss">
-@import 'settings';
-
-.lend-list-menu {
-	margin: 0;
-
-	button {
-		text-align: left;
-		line-height: inherit;
-		color: $kiva-text-dark;
-
-		.chevron-icon {
-			float: right;
-			height: 1.5rem;
-			width: rem-calc(25);
-			transition: transform 300ms ease;
-		}
-	}
-
-	a {
-		color: $kiva-text-dark;
-		text-decoration: none;
-	}
-
-	li > span {
-		color: $kiva-text-light;
-	}
-
-	ul {
-		background-color: $kiva-bg-lightgray;
-
-		button,
-		a,
-		li > span {
-			padding-left: 2rem;
-		}
-	}
-
-	ul ul {
-		background-color: $kiva-bg-darkgray;
-
-		button,
-		a,
-		li > span {
-			padding-left: 3rem;
-			border-bottom: none;
-		}
-	}
-
-	button:focus {
-		outline: none;
-	}
-
-	button[aria-expanded="true"] {
-		span {
-			color: $kiva-text-light;
-		}
-
-		.chevron-icon {
-			transform: rotate(-180deg);
-		}
-	}
-}
-
-// TODO make this css more elegant
-/* stylelint-disable no-descending-specificity */
-.lend-list-menu--mg-exp {
-	&__link {
-		color: $kiva-accent-blue;
-	}
-
-	// Second level drop down items
-	.lend-list-menu > .expandable-list-item > button > span,
-	.lend-list-menu > .expandable-list-item > li > span {
-		padding-left: 1rem;
-	}
-
-	// Second level link
-	.lend-list-menu > a.lend-link {
-		padding-left: 2rem;
-	}
-
-	// Third level items
-	.kv-expandable-pane > ul > li {
-		& a,
-		& span {
-			padding-left: 3rem;
-		}
-
-		// Fourth level items
-		& .kv-expandable-pane > ul > li a,
-		& .kv-expandable-pane > ul > li span {
-			padding-left: 5rem;
-		}
-	}
+<style lang="postcss" scoped>
+.lend-link {
+	@apply tw-text-primary hover:tw-text-action-highlight tw-block tw-w-full tw-py-1;
 }
 </style>

@@ -1,25 +1,30 @@
 <template>
-	<div class="basket-items-list">
+	<div class="basket-items-list" data-testid="basket-items-list">
 		<ul>
-			<li v-for="loan in loans" :key="loan.id">
+			<li v-for="(loan, index) in loans" :key="loan.id">
 				<basket-item
+					:data-testid="`basket-loan-${index}`"
 					:disable-redirects="disableRedirects"
 					:loan="loan"
 					:teams="teams"
+					:enable-five-dollars-notes="enableFiveDollarsNotes"
 					@validateprecheckout="$emit('validateprecheckout')"
 					@refreshtotals="$emit('refreshtotals', $event)"
 					@updating-totals="$emit('updating-totals', $event)"
+					@jump-to-loans="$emit('jump-to-loans')"
 				/>
 			</li>
-			<li v-for="kivaCard in kivaCards" :key="kivaCard.id">
+			<li v-for="(kivaCard, index) in kivaCards" :key="kivaCard.id">
 				<kiva-card-item
+					:data-testid="`basket-kiva-card-${index}`"
 					:kiva-card="kivaCard"
 					@refreshtotals="$emit('refreshtotals', $event)"
 					@updating-totals="$emit('updating-totals', $event)"
 				/>
 			</li>
-			<li v-for="donation in donations" :key="donation.id">
+			<li v-for="(donation, index) in donations" :key="donation.id">
 				<donation-item
+					:data-testid="`basket-donation-${index}`"
 					:donation="donation"
 					:loan-count="loans.length"
 					:loan-reservation-total="loanReservationTotal"
@@ -35,8 +40,10 @@
 import BasketItem from '@/components/Checkout/BasketItem';
 import DonationItem from '@/components/Checkout/DonationItem';
 import KivaCardItem from '@/components/Checkout/KivaCardItem';
+import { userUsLoanCheckout } from '@/util/optimizelyUserMetrics';
 
 export default {
+	name: 'BasketItemsList',
 	props: {
 		disableRedirects: {
 			type: Boolean,
@@ -70,20 +77,22 @@ export default {
 			type: Number,
 			default: 0,
 		},
+		enableFiveDollarsNotes: {
+			type: Boolean,
+			default: false
+		}
 	},
 	components: {
 		BasketItem,
 		DonationItem,
 		KivaCardItem
-	}
+	},
+	watch: {
+		loans(loansInBasket) {
+			// eslint-disable-next-line no-underscore-dangle
+			const hasUsLoan = loansInBasket.some(reservation => reservation?.loan?.__typename === 'LoanDirect');
+			userUsLoanCheckout(hasUsLoan);
+		}
+	},
 };
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.basket-items-list ul {
-	margin: 0;
-	list-style-type: none;
-}
-</style>

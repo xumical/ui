@@ -1,5 +1,5 @@
 <template>
-	<div class="hover-loan-card-large" :class="{collapsed: !expanded}">
+	<div class="hover-loan-card-large tw-bg-primary" :class="{collapsed: !expanded}">
 		<loan-card-image
 			class="hover-loan-card-image"
 			:loan-id="loan.id"
@@ -24,7 +24,7 @@
 					<borrower-info-name
 						:name="loan.name"
 						:loan-id="loan.id"
-						class="name"
+						class="name tw-text-h3"
 						@track-loan-card-interaction="trackInteractionBorrowerInfoName"
 					/>
 				</div>
@@ -38,45 +38,40 @@
 				/>
 			</div>
 			<borrower-info-body
-				class="hover-borrower-info-body"
-				:amount="loan.loanAmount"
-				:borrower-count="loan.borrowerCount"
-				:name="loan.name"
-				:status="loan.status"
-				:use="loan.use"
+				class="hover-borrower-info-body tw-text-small tw-font-book"
+				:use="loan.fullLoanUse"
 				:loan-id="loan.id"
-				:max-use-length="73"
+				:max-use-length="100"
 				:disable-link="true"
 				read-more-link-text="Expand to learn more"
 				@read-more-link="updateDetailedLoanIndex"
 				@track-loan-card-interaction="trackInteraction"
 			/>
-			<div class="action-row">
-				<div class="action-button-container" :class="{'full-width': isFunded || isExpired}">
-					<action-button
-						class="hover-loan-card-action-button"
-						:loan-id="loan.id"
-						:loan="loan"
-						:items-in-basket="itemsInBasket"
-						:is-lent-to="loan.userProperties.lentTo"
-						:is-funded="isFunded"
-						:is-expired="isExpired"
-						:is-selected-by-another="isSelectedByAnother"
-						:is-simple-lend-button="true"
-						:hide-adding-to-basket-text="true"
-						:minimal-checkout-button="true"
+			<div class="tw-gap-1 tw-flex tw-w-full">
+				<action-button
+					class="tw-py-1 tw-px-0 tw-m-0 tw-w-2/4 tw-shrink-0"
+					:loan-id="loan.id"
+					:loan="loan"
+					:items-in-basket="itemsInBasket"
+					:is-lent-to="loan.userProperties.lentTo"
+					:is-funded="isFunded"
+					:is-expired="isExpired"
+					:is-selected-by-another="isSelectedByAnother"
+					:is-simple-lend-button="true"
+					:minimal-checkout-button="true"
+					:is-amount-lend-button="lessThan25"
+					:amount-left="amountLeft"
+					@click.native="trackInteraction({
+						interactionType: 'addToBasket',
+						interactionElement: 'Lend25'
+					})"
 
-						@click.native="trackInteraction({
-							interactionType: 'addToBasket',
-							interactionElement: 'Lend25'
-						})"
-
-						@add-to-basket="handleAddToBasket"
-					/>
-				</div>
-				<div class="matching-text-container" :class="{hide: isFunded || isExpired}">
+					@add-to-basket="handleAddToBasket"
+				/>
+				<div v-if="!isMatchAtRisk" class="tw-mt-1" :class="{hide: isFunded || isExpired}">
 					<matching-text
 						:matching-text="loan.matchingText"
+						:match-ratio="loan.matchRatio"
 						:is-funded="isFunded"
 						:is-selected-by-another="isSelectedByAnother"
 						:wrap="true"
@@ -97,6 +92,7 @@ import BorrowerInfoName from '@/components/LoanCards/BorrowerInfo/BorrowerInfoNa
 import BorrowerInfoBody from '../BorrowerInfo/BorrowerInfoBody';
 
 export default {
+	name: 'HoverLoanCardLarge',
 	components: {
 		BorrowerInfoBody,
 		KvFlag,
@@ -135,6 +131,15 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		isMatchAtRisk: {
+			type: Boolean,
+			default: false
+		},
+	},
+	computed: {
+		lessThan25() {
+			return this.amountLeft < 25 && this.amountLeft !== 0;
+		}
 	},
 	methods: {
 		toggleFavorite() {
@@ -194,11 +199,9 @@ export default {
 			align-items: center;
 
 			.name {
-				font-size: rem-calc(20);
 				white-space: nowrap;
 				overflow: hidden;
 				text-overflow: ellipsis;
-				font-weight: 500;
 
 				/* Next line prevents a weird visual bug on chrome */
 				margin-top: rem-calc(1);
@@ -208,39 +211,6 @@ export default {
 		.flag {
 			width: rem-calc(20);
 			margin-right: 0.25rem;
-		}
-
-		.hover-borrower-info-body {
-			font-size: rem-calc(14);
-			line-height: rem-calc(18);
-		}
-
-		.action-row {
-			display: flex;
-
-			.action-button-container {
-				width: rem-calc(126);
-				flex-shrink: 0;
-
-				.hover-loan-card-action-button {
-					margin: 0;
-					font-size: rem-calc(18);
-					padding: 0.5rem 1.5rem;
-
-					&.loan-funded-text,
-					&.loan-expired-text {
-						font-size: 0.875rem;
-					}
-				}
-
-				&.full-width {
-					width: 100%;
-				}
-			}
-
-			.matching-text-container {
-				padding-left: 1rem;
-			}
 		}
 	}
 

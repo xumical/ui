@@ -1,7 +1,7 @@
 <template>
 	<div class="filter-chip-container">
 		<button @click="handleClick" class="filter-chip">
-			<div class="filter-title">
+			<div class="filter-title tw-text-small">
 				{{ title }}
 			</div>
 			<div class="filter-close-button-container">
@@ -14,6 +14,7 @@
 import KvIcon from '@/components/Kv/KvIcon';
 
 export default {
+	name: 'KvChip',
 	components: { KvIcon },
 	props: {
 		title: {
@@ -67,10 +68,6 @@ $light-calm-blue: #e7f3fd;
 				height: rem-calc(9.5);
 				width: rem-calc(9.5);
 			}
-		}
-
-		.filter-title {
-			font-size: rem-calc(14);
 		}
 
 		&:hover {

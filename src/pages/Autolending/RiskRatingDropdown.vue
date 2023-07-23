@@ -1,9 +1,9 @@
 <template>
 	<div>
-		<h3 class="filter-title">
-			Field Partner risk ratings
+		<h3 class="tw-mb-2">
+			Lending Partner risk ratings
 		</h3>
-		<kv-dropdown-rounded v-model="riskRating">
+		<kv-select v-model="riskRating">
 			<option value="0">
 				All loans
 			</option>
@@ -19,19 +19,20 @@
 			<option value="4">
 				&#9733; &#9733; &#9733; &#9733; and up
 			</option>
-		</kv-dropdown-rounded>
+		</kv-select>
 	</div>
 </template>
 
 <script>
 import _get from 'lodash/get';
-import gql from 'graphql-tag';
-import KvDropdownRounded from '@/components/Kv/KvDropdownRounded';
+import { gql } from '@apollo/client';
+import KvSelect from '@/components/Kv/KvSelect';
 
 export default {
+	name: 'RiskRatingDropdown',
 	inject: ['apollo', 'cookieStore'],
 	components: {
-		KvDropdownRounded,
+		KvSelect,
 	},
 	data() {
 		return {
@@ -41,6 +42,7 @@ export default {
 	apollo: {
 		query: gql`query autolendProfileRiskRating {
 			autolending @client {
+				id
 				currentProfile {
 					id
 					loanSearchCriteria {
@@ -68,6 +70,7 @@ export default {
 				this.apollo.mutate({
 					mutation: gql`mutation updateRiskRating($min: Float) {
 						autolending @client {
+							id
 							editProfile(profile: {
 								loanSearchCriteria: {
 									filters: {
@@ -89,6 +92,3 @@ export default {
 	},
 };
 </script>
-
-<style lang="scss">
-</style>

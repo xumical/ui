@@ -18,7 +18,7 @@
 
 		<!-- Auto Deposit Settings -->
 		<subscriptions-auto-deposit
-			v-if="!isOnetime && !isMonthlyGoodSubscriber && !isLegacySubscriber"
+			v-if="!isOnetime && !isMonthlyGoodSubscriber && !isLegacySubscriber && !hasModernSub"
 			@cancel-subscription="showConfirmationPrompt('Auto Deposit')"
 			@unsaved-changes="setUnsavedChanges"
 			ref="subscriptionsAutoDepositComponent"
@@ -34,27 +34,24 @@
 			class="cancel-confirmation-lightbox"
 			:visible="showLightbox"
 			title="Are you sure?"
+			variant="alert"
 			@lightbox-closed="showLightbox = false"
 		>
-			<template>
-				&nbsp;
-			</template>
 			<template #controls>
-				<kv-button
-					value="Yes"
-					id="cancel-subscription-yes"
-					class="button smallest"
-					@click.prevent.native="cancelSubscription"
-				>
-					Yes, cancel my {{ confirmationText }}
-				</kv-button>
 				<kv-button
 					value="No"
 					id="cancel-subscription-no"
-					class="button smallest secondary"
-					@click.prevent.native="showLightbox = false"
+					variant="secondary"
+					@click="showLightbox = false"
 				>
 					No, keep it
+				</kv-button>
+				<kv-button
+					value="Yes"
+					id="cancel-subscription-yes"
+					@click="cancelSubscription"
+				>
+					Yes, cancel my {{ confirmationText }}
 				</kv-button>
 			</template>
 		</kv-lightbox>
@@ -63,14 +60,10 @@
 		<div class="row column" v-if="isChanged">
 			<kv-button
 				data-test="subscriptions-save-button"
-				class="smaller"
-				v-if="!isSaving"
-				@click.native="saveSubscription"
+				:state="isSaving ? 'loading' : ''"
+				@click="saveSubscription"
 			>
 				Save
-			</kv-button>
-			<kv-button data-test="subscriptions-save-button" class="smaller" v-else>
-				Saving <kv-loading-spinner />
 			</kv-button>
 		</div>
 
@@ -81,21 +74,20 @@
 </template>
 
 <script>
-import _get from 'lodash/get';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 
-import KvLightbox from '@/components/Kv/KvLightbox';
-import KvButton from '@/components/Kv/KvButton';
-import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
 import KvLoadingOverlay from '@/components/Kv/KvLoadingOverlay';
 
 import SubscriptionsMonthlyGood from '@/components/Subscriptions/SubscriptionsMonthlyGood';
 import SubscriptionsOneTime from '@/components/Subscriptions/SubscriptionsOneTime';
 import SubscriptionsAutoDeposit from '@/components/Subscriptions/SubscriptionsAutoDeposit';
 import SubscriptionsLegacy from '@/components/Subscriptions/SubscriptionsLegacy';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
+import KvLightbox from '~/@kiva/kv-components/vue/KvLightbox';
 
 const pageQuery = gql`query subscriptionSettingsPage {
 	my {
+		id
 		autoDeposit {
 			id
 			isSubscriber
@@ -107,13 +99,23 @@ const pageQuery = gql`query subscriptionSettingsPage {
 			}
 		}
 	}
+	mySubscriptions(includeDisabled: false) {
+		values {
+			id
+			enabled
+			category {
+				id
+				subscriptionType
+			}
+		}
+	}
 }`;
 
 export default {
+	name: 'SubscriptionsSettingsCards',
 	components: {
 		KvButton,
 		KvLightbox,
-		KvLoadingSpinner,
 		KvLoadingOverlay,
 		SubscriptionsAutoDeposit,
 		SubscriptionsLegacy,
@@ -123,23 +125,30 @@ export default {
 	inject: ['apollo', 'cookieStore'],
 	data() {
 		return {
-			isChanged: false,
-			isSaving: false,
-			isOnetime: false,
 			confirmationText: '',
+			isChanged: false,
+			isLegacySubscriber: false,
+			isMonthlyGoodSubscriber: false,
+			isOnetime: false,
+			isSaving: false,
 			showLightbox: false,
 			showLoadingOverlay: false,
+			hasModernSub: false,
+
 		};
 	},
 	apollo: {
 		query: pageQuery,
 		preFetch: true,
 		result({ data }) {
-			this.isOnetime = _get(data, 'my.autoDeposit.isOnetime', false);
-			this.isMonthlyGoodSubscriber = _get(data, 'my.autoDeposit.isSubscriber', false);
+			this.isOnetime = data?.my?.autoDeposit?.isOnetime ?? false;
+			this.isMonthlyGoodSubscriber = data?.my?.autoDeposit?.isSubscriber ?? false;
 
-			const legacySubs = _get(data, 'my.subscriptions.values', []);
+			const legacySubs = data?.my?.subscriptions?.values ?? [];
 			this.isLegacySubscriber = legacySubs.length > 0;
+
+			const modernSubscriptions = data?.mySubscriptions?.values ?? [];
+			this.hasModernSub = modernSubscriptions.length !== 0;
 		},
 	},
 	mounted() {
@@ -184,54 +193,22 @@ export default {
 		saveSubscription() {
 			this.isSaving = true;
 			// Calls the save method in the component if component isChanged is true.
-			if (_get(this.$refs, 'subscriptionsOneTimeComponent.isChanged', false)) {
+			if (this.$refs?.subscriptionsOneTimeComponent?.isChanged) {
 				this.$refs.subscriptionsOneTimeComponent.saveOneTime().finally(() => {
 					this.isSaving = false;
 				});
 			}
-			if (_get(this.$refs, 'subscriptionsMonthlyGoodComponent.isChanged', false)) {
+			if (this.$refs?.subscriptionsMonthlyGoodComponent?.isChanged) {
 				this.$refs.subscriptionsMonthlyGoodComponent.saveMonthlyGood().finally(() => {
 					this.isSaving = false;
 				});
 			}
-			if (_get(this.$refs, 'subscriptionsAutoDepositComponent.isChanged', false)) {
+			if (this.$refs?.subscriptionsAutoDepositComponent?.isChanged) {
 				this.$refs.subscriptionsAutoDepositComponent.saveAutoDeposit().finally(() => {
 					this.isSaving = false;
 				});
 			}
 		}
-
 	},
 };
 </script>
-
-<style lang="scss">
-@import 'settings';
-
-.subscriptions {
-	.button {
-		.loading-spinner {
-			vertical-align: middle;
-			width: 1rem;
-			height: 1rem;
-
-			& >>> .line {
-				background-color: $white;
-			}
-		}
-	}
-}
-</style>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-#cancel-subscription-yes {
-	margin-right: 2rem;
-}
-
-.subscriptions-settings-page {
-	position: relative;
-	padding-bottom: 5rem;
-}
-</style>

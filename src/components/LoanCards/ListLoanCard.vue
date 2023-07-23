@@ -1,5 +1,5 @@
 <template>
-	<div class="row list-loan-card">
+	<div class="row list-loan-card tw-overflow-hidden" :class="{ 'tw-rounded': roundedCorners }">
 		<div class="list-loan-card-desktop-column show-for-large large-4 xlarge-4 columns">
 			<div class="list-loan-card-desktop-column-container row">
 				<div class="small-12 columns">
@@ -11,6 +11,7 @@
 							:standard-image-url="loan.image.default"
 							:is-visitor="isVisitor"
 							:is-favorite="isFavorite"
+							:class="{ 'tw-rounded-tl': roundedCorners }"
 
 							@track-loan-card-interaction="trackInteraction"
 							@favorite-toggled="toggleFavorite"
@@ -50,12 +51,13 @@
 						:is-visitor="isVisitor"
 						:is-favorite="isFavorite"
 						class="list-loan-card-mobile-borrower-image"
+						:class="{ 'tw-rounded': roundedCorners }"
 
 						@track-loan-card-interaction="trackInteraction"
 						@favorite-toggled="toggleFavorite"
 					/>
 				</div>
-				<div class="small-7 medium-8 large-5 xlarge-6 columns">
+				<div class="small-7 medium-8 large-5 columns">
 					<borrower-info-header
 						:country="loan.geocode.country.name"
 						:name="loan.name"
@@ -64,7 +66,7 @@
 						@track-loan-card-interaction="trackInteraction"
 					/>
 				</div>
-				<div class="large-7 xlarge-6 columns show-for-large">
+				<div class="large-7 columns show-for-large tw-py-1">
 					<action-button
 						:loan-id="loan.id"
 						:loan="loan"
@@ -73,8 +75,11 @@
 						:is-funded="isFunded"
 						:is-selected-by-another="isSelectedByAnother"
 						:is-expired="isExpired"
-						class="list-loan-card-action-button"
-
+						:is-amount-lend-button="lessThan25 && !enableFiveDollarsNotes"
+						:amount-left="amountLeft"
+						:show-now="!enableFiveDollarsNotes"
+						:enable-five-dollars-notes="enableFiveDollarsNotes"
+						class="tw-mt-0 tw-w-full"
 						@click.native="trackInteraction({
 							interactionType: 'addToBasket',
 							interactionElement: 'Lend25'
@@ -82,9 +87,10 @@
 
 						@add-to-basket="$emit('add-to-basket', $event)"
 					/>
-					<div v-if="loan.matchingText && !isFunded" class="list-loan-card-matching-text">
+					<div v-if="loan.matchingText && !isFunded && !isMatchAtRisk" class="list-loan-card-matching-text">
 						<matching-text
 							:matching-text="loan.matchingText"
+							:match-ratio="loan.matchRatio"
 							:is-funded="isFunded"
 							:is-selected-by-another="isSelectedByAnother"
 							:is-expired="isExpired"
@@ -94,11 +100,7 @@
 			</div>
 			<div class="list-loan-card-body-info row">
 				<borrower-info-body
-					:amount="loan.loanAmount"
-					:borrower-count="loan.borrowerCount"
-					:name="loan.name"
-					:status="loan.status"
-					:use="loan.use"
+					:use="loan.fullLoanUse"
 					:loan-id="loan.id"
 					class="small-12 columns"
 					@track-loan-card-interaction="trackInteraction"
@@ -118,7 +120,7 @@
 				</div>
 			</div>
 			<div class="row hide-for-large">
-				<div class="small-12 medium-8 medium-offset-2 columns">
+				<div class="small-12 medium-8 medium-offset-2 columns tw-py-1">
 					<action-button
 						:loan-id="loan.id"
 						:loan="loan"
@@ -127,17 +129,22 @@
 						:is-funded="isFunded"
 						:is-selected-by-another="isSelectedByAnother"
 						:is-expired="isExpired"
-						class="list-loan-card-action-button"
+						:is-amount-lend-button="lessThan25 && !enableFiveDollarsNotes"
+						:amount-left="amountLeft"
+						:show-now="!enableFiveDollarsNotes"
+						:enable-five-dollars-notes="enableFiveDollarsNotes"
+						class="tw-mt-0 tw-w-full"
 
 						@click.native="trackInteraction({
 							interactionType: 'addToBasket',
 							interactionElement: 'Lend25'
 						})"
 					/>
-					<div class="small-12 columns">
+					<div v-if="!isMatchAtRisk" class="small-12 columns">
 						<div v-if="loan.matchingText && !isFunded" class="list-loan-card-matching-text">
 							<matching-text
 								:matching-text="loan.matchingText"
+								:match-ratio="loan.matchRatio"
 								:is-funded="isFunded"
 								:is-selected-by-another="isSelectedByAnother"
 								:is-expired="isExpired"
@@ -159,6 +166,7 @@ import MatchingText from '@/components/LoanCards/MatchingText';
 import ActionButton from '@/components/LoanCards/Buttons/ActionButton';
 
 export default {
+	name: 'ListLoanCard',
 	components: {
 		LoanCardImage,
 		FundraisingStatus,
@@ -201,6 +209,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		isMatchAtRisk: {
+			type: Boolean,
+			default: false
+		},
 		isSelectedByAnother: {
 			type: Boolean,
 			default: false,
@@ -221,6 +233,19 @@ export default {
 			type: Number,
 			default: 0,
 		},
+		roundedCorners: {
+			type: Boolean,
+			default: false
+		},
+		enableFiveDollarsNotes: {
+			type: Boolean,
+			default: false
+		}
+	},
+	computed: {
+		lessThan25() {
+			return this.amountLeft < 25 && this.amountLeft !== 0;
+		}
 	},
 	methods: {
 		toggleFavorite() {
@@ -282,11 +307,6 @@ export default {
 				.country {
 					margin-bottom: 0;
 				}
-			}
-
-			.list-loan-card-action-button {
-				margin-top: rem-calc(20);
-				margin-bottom: 0;
 			}
 		}
 

@@ -1,4 +1,4 @@
-import { setContext } from 'apollo-link-context';
+import { setContext } from '@apollo/client/link/context';
 import _set from 'lodash/set';
 
 // Add the user info to the context and add the access token to the authorization header
@@ -10,25 +10,26 @@ function getAuthContext(context, user, token) {
 	return context;
 }
 
-export default ({ cookieStore, kvAuth0 }) => {
+export default ({ kvAuth0 }) => {
 	return setContext((operation, previousContext) => {
 		// If auth0 is not enabled, don't add anything to the context
 		if (!kvAuth0.enabled) return getAuthContext(previousContext);
 
-		const loginSyncValue = cookieStore.get('kvls');
+		// If using fake authentication, don't add anything to the context
+		if (kvAuth0.getFakeAuthCookieValue()) return getAuthContext(previousContext);
 
 		// If we already have user info, and we don't need to check login, just add that to the context
-		if (kvAuth0.user && !loginSyncValue) {
+		if (kvAuth0.getKivaId() && !kvAuth0.getSyncCookieValue()) {
 			return getAuthContext(previousContext, kvAuth0.user, kvAuth0.accessToken);
 		}
 
 		// If user is supposed to be logged out, don't add anything to the context
-		if (kvAuth0.user && loginSyncValue === 'o') {
+		if (kvAuth0.isNotedLoggedOut()) {
 			return getAuthContext(previousContext);
 		}
 
 		// If the user's kiva id matches the id stored in the login sync cookie, add the user to the context
-		if (kvAuth0.user && String(kvAuth0.getKivaId()) === String(loginSyncValue)) {
+		if (kvAuth0.getKivaId() && kvAuth0.isNotedUserSessionUser()) {
 			return getAuthContext(previousContext, kvAuth0.user, kvAuth0.accessToken);
 		}
 

@@ -1,35 +1,36 @@
 <template>
 	<div class="www-page">
-		<the-banner-area />
+		<the-banner-area v-show="!isKivaAppReferral" />
 		<the-header
+			v-show="!isKivaAppReferral"
 			:hide-search-in-header="hideSearchInHeader"
-			:theme="headerTheme"
 		/>
-		<slot name="secondary"></slot>
-		<main :class="{'gray-background': grayBackground}">
+		<slot name="secondary" v-if="!isKivaAppReferral"></slot>
+
+		<main :class="mainClasses">
 			<slot name="tertiary"></slot>
 			<slot></slot>
 		</main>
-		<the-footer
-			:theme="footerTheme"
-		/>
+		<the-footer	/>
 		<the-basket-bar />
 		<cookie-banner />
 	</div>
 </template>
 
 <script>
-import _get from 'lodash/get';
 import hasEverLoggedInQuery from '@/graphql/query/shared/hasEverLoggedIn.graphql';
-import { fetchAllExpSettings } from '@/util/experimentPreFetch';
+import { userHasEverLoggedInBefore } from '@/util/optimizelyUserMetrics';
+import logReadQueryError from '@/util/logReadQueryError';
 import appInstallMixin from '@/plugins/app-install-mixin';
 import CookieBanner from '@/components/WwwFrame/CookieBanner';
+import { assignAllActiveExperiments } from '@/util/experiment/experimentUtils';
 import TheHeader from './TheHeader';
 import TheFooter from './TheFooter';
 import TheBasketBar from './TheBasketBar';
 import TheBannerArea from './TheBannerArea';
 
 export default {
+	name: 'WwwPage',
 	inject: [
 		'apollo',
 		'cookieStore',
@@ -53,25 +54,44 @@ export default {
 			type: Boolean,
 			default: false,
 		},
-		headerTheme: {
-			type: Object,
-			default: null,
-		},
-		footerTheme: {
-			type: Object,
-			default: null,
+		mainClass: {
+			type: [Object, String],
+			default: '',
 		},
 	},
+	data() {
+		return {
+			isKivaAppReferral: false
+		};
+	},
 	apollo: {
-		preFetch(config, client, args) {
+		preFetch(_, client) {
 			return Promise.all([
 				client.query({ query: hasEverLoggedInQuery }),
-				fetchAllExpSettings(config, client, {
-					query: _get(args, 'route.query'),
-					path: _get(args, 'route.path')
-				}),
+				assignAllActiveExperiments(client)
 			]);
+		},
+	},
+	created() {
+		try {
+			const data = this.apollo.readQuery({
+				query: hasEverLoggedInQuery,
+			});
+
+			userHasEverLoggedInBefore(data?.hasEverLoggedIn);
+		} catch (e) {
+			logReadQueryError(e, 'User has ever logged in');
 		}
+
+		this.isKivaAppReferral = this.$route?.query?.kivaAppReferral === 'true';
+	},
+	computed: {
+		mainClasses() {
+			return [
+				this.mainClass,
+				{ 'tw-bg-secondary': this.grayBackground },
+			];
+		},
 	}
 };
 </script>
@@ -94,10 +114,6 @@ export default {
 
 	main {
 		flex-grow: 1;
-
-		&.gray-background {
-			background: $kiva-bg-lightgray;
-		}
 	}
 }
 </style>

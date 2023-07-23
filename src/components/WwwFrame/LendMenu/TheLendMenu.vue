@@ -1,8 +1,8 @@
 <template>
-	<div class="the-lend-menu">
+	<div>
 		<lend-list-menu
 			ref="list"
-			class="hide-for-large"
+			class="lg:tw-hidden"
 			:categories="computedCategories"
 			:regions="regions"
 			:searches="savedSearches"
@@ -10,10 +10,11 @@
 			:user-id="userId"
 			:is-regions-loading="isRegionsLoading"
 			:is-channels-loading="isChannelsLoading"
+			:show-m-g-upsell-link="showMGUpsellLink"
 		/>
 		<lend-mega-menu
 			ref="mega"
-			class="show-for-large"
+			class="tw-hidden lg:tw-block"
 			:categories="computedCategories"
 			:regions="regions"
 			:searches="savedSearches"
@@ -21,6 +22,7 @@
 			:user-id="userId"
 			:is-regions-loading="isRegionsLoading"
 			:is-channels-loading="isChannelsLoading"
+			:show-m-g-upsell-link="showMGUpsellLink"
 		/>
 	</div>
 </template>
@@ -30,7 +32,7 @@ import _get from 'lodash/get';
 import _groupBy from 'lodash/groupBy';
 import _map from 'lodash/map';
 import _sortBy from 'lodash/sortBy';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 
 import { indexIn } from '@/util/comparators';
 import publicLendMenuQuery from '@/graphql/query/lendMenuData.graphql';
@@ -40,6 +42,7 @@ import LendMegaMenu from './LendMegaMenu';
 
 const pageQuery = gql`query lendMenu {
 		my {
+			id
 			userAccount {
 				id
 			}
@@ -47,6 +50,7 @@ const pageQuery = gql`query lendMenu {
 	}`;
 
 export default {
+	name: 'TheLendMenu',
 	components: {
 		LendListMenu,
 		LendMegaMenu,
@@ -71,7 +75,8 @@ export default {
 			],
 			loadingSemaphore: 0,
 			isRegionsLoading: true,
-			isChannelsLoading: true
+			isChannelsLoading: true,
+			showMGUpsellLink: false,
 		};
 	},
 	apollo: {
@@ -101,25 +106,23 @@ export default {
 			return regions.sort(indexIn(this.regionDisplayOrder, 'name'));
 		},
 		computedCategories() {
-			return _map(this.categories, category => {
+			const categories = _map(this.categories, category => {
 				const updatedCat = JSON.parse(JSON.stringify(category));
 				updatedCat.url = updatedCat.url.replace('lend', 'lend-by-category');
 				return updatedCat;
 			});
+			return _sortBy(categories, 'name');
 		},
 		hasUserId() {
 			return !!this.userId;
 		},
 	},
 	methods: {
-		onOpen() {
-			this.$refs.mega.onOpen();
-		},
 		onClose() {
 			this.$refs.list.onClose();
 			this.$refs.mega.onClose();
 		},
-		onLoad() {
+		async onLoad() {
 			this.apollo.watchQuery({
 				query: gql`query countryFacets {
 					lend {
@@ -140,44 +143,32 @@ export default {
 					this.isRegionsLoading = false;
 				}
 			});
+
 			this.apollo.watchQuery({ query: publicLendMenuQuery }).subscribe({
 				next: ({ data }) => {
 					this.categories = _get(data, 'lend.loanChannels.values');
 					this.isChannelsLoading = false;
 				}
 			});
+
+			if (this.hasUserId) {
+				const { data } = await this.apollo.query({
+					query: privateLendMenuQuery,
+					variables: {
+						userId: this.userId,
+					},
+					fetchPolicy: 'network-only',
+				});
+
+				this.favoritesCount = data?.lend?.loans?.totalCount ?? 0;
+				this.savedSearches = data?.my?.savedSearches?.values ?? [];
+			}
 		},
 	},
 	mounted() {
-		this.apollo.query({
-			query: privateLendMenuQuery,
-			variables: {
-				userId: this.userId,
-			}
-		}).then(({ data, errors }) => {
-			if (!errors) {
-				this.favoritesCount = _get(data, 'lend.loans.totalCount');
-				this.savedSearches = _get(data, 'my.savedSearches.values');
-			} else {
-				this.favoritesCount = 0;
-				this.savedSearches = [];
-			}
-		}).finally(() => {
-			// data might have changed since the initial render, so trigger any needed updates
-			this.onOpen();
+		this.$nextTick(() => {
+			this.showMGUpsellLink = true;
 		});
 	}
 };
 </script>
-
-<style lang="scss">
-@import 'settings';
-
-.the-lend-menu {
-	.loading-spinner {
-		margin: 1rem;
-		width: 3rem;
-		height: 3rem;
-	}
-}
-</style>

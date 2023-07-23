@@ -3,12 +3,12 @@ name: Ui Tests
 on:
   push:
     branches:
-      - master
-      - 'release-*'
+      - main
+      - next
   pull_request:
     branches:
-      - master
-      - 'release-*'
+      - main
+      - next
 
 jobs:
   build:
@@ -20,24 +20,28 @@ jobs:
     - name: Use Node.js
       uses: actions/setup-node@v1
       with:
-        node-version: '14.x'
+        node-version: '16.x'
+    - name: Cache dependencies
+      uses: actions/cache@v2
+      env:
+        cache-name: cache-dependencies
+      with:
+        path: |
+          ~/.cache
+          ~/.npm
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}-
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
     - name: Update NPM to v7
-      run: npm install -g npm@latest
+      run: npm install -g npm@7
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --prefer-offline
     - name: Run Lint
       run: npm run lint
     - name: Run Unit Tests
       run: npm run unit
-    - name: Run e2e Tests
-      uses: cypress-io/github-action@v2
-      with:
-        browser: chrome
-        headless: true
-        build: npm run build:cypress
-        start: npm start -- --mock --config=local
-        wait-on: 'http://localhost:8888/ui-site-map'
-        command: npm run e2e:headless
     - name: Merge test coverage reports
       run: npm run coverage:merge
     - name: Coveralls

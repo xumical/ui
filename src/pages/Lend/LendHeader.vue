@@ -9,9 +9,10 @@
 	>
 		<div class="heading-region column small-12">
 			<view-toggle :browse-url="browseUrl" :filter-url="filterUrl" />
-
-			<h1>Make a loan, <br class="hide-for-medium">change a life</h1>
-			<p class="page-subhead show-for-large">
+			<h1 class="tw-mb-2">
+				Make a loan, <br class="hide-for-medium">change a life
+			</h1>
+			<p class="page-subhead show-for-large tw-mb-4">
 				Each Kiva loan helps people build a better future for themselves and their families.
 			</p>
 		</div>
@@ -20,8 +21,10 @@
 
 <script>
 import ViewToggle from '@/components/LoansByCategory/ViewToggle';
+import getCacheKey from '@/util/getCacheKey';
 
 export default {
+	name: 'LendHeader',
 	components: {
 		ViewToggle,
 	},
@@ -47,6 +50,19 @@ export default {
 			default: false,
 		},
 	},
+	serverCacheKey: props => {
+		const {
+			browseUrl,
+			filterUrl,
+			sidePinnedFilterPadding,
+			hardLeftAlign,
+			sideArrowsPadding
+		} = props;
+		const getValue = value => {
+			return value ? `-${value}` : '';
+		};
+		return getCacheKey(`${filterUrl}${getValue(browseUrl)}${getValue(sidePinnedFilterPadding)}${getValue(hardLeftAlign)}${getValue(sideArrowsPadding)}`); // eslint-disable-line max-len
+	},
 };
 </script>
 
@@ -66,14 +82,6 @@ export default {
 			@include breakpoint(large) {
 				margin: 0.375rem 0 0.375rem 0.375rem;
 			}
-		}
-
-		h1 {
-			margin: 0;
-		}
-
-		p {
-			margin-top: 0.75rem;
 		}
 
 		@media (hover: none) {

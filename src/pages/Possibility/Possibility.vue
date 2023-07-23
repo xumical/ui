@@ -5,9 +5,11 @@
 </template>
 
 <script>
+/* eslint-disable vue/multi-word-component-names */
 import WwwPage from '@/components/WwwFrame/WwwPage';
 
 export default {
+	name: 'Possibility',
 	components: {
 		WwwPage
 	},

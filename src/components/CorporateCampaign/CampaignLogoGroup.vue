@@ -1,12 +1,16 @@
 <template>
-	<div class="campaign-logo-group">
-		<kiva-logo class="campaign-logo-group__kiva" />
-		<span v-if="corporateLogoUrl" class="campaign-logo-group__separator" aria-hidden="true">+</span>
+	<div class="tw-flex tw-justify-center tw-items-center tw-self-center tw-my-1">
+		<kiva-logo class="tw-h-4 tw-text-brand" />
+		<span
+			v-if="corporateLogoUrl"
+			class="tw-text-secondary tw-inline-block tw-mx-2 tw-text-h2"
+			aria-hidden="true"
+		>+</span>
 		<kv-contentful-img
 			v-if="corporateLogoUrl"
-			class="campaign-logo-group__corporate"
+			:class="`campaign-logo-group__corporate ${logoClasses}`"
 			:contentful-src="corporateLogoUrl"
-			:height="28"
+			:height="Number(logoHeight)"
 			alt=""
 			fallback-format="png"
 		/>
@@ -14,10 +18,11 @@
 </template>
 
 <script>
-import KvContentfulImg from '@/components/Kv/KvContentfulImg';
 import KivaLogo from '@/assets/inline-svgs/logos/kiva-logo.svg';
+import KvContentfulImg from '~/@kiva/kv-components/vue/KvContentfulImg';
 
 export default {
+	name: 'CampaignLogoGroup',
 	components: {
 		KvContentfulImg,
 		KivaLogo,
@@ -26,50 +31,17 @@ export default {
 		corporateLogoUrl: {
 			type: String,
 			default: ''
+		},
+		logoClasses: {
+			type: String,
+			default: '',
+			required: false
+		},
+		logoHeight: {
+			type: String,
+			default: '28',
+			required: false
 		}
 	},
 };
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-$logo-color: $white;
-
-.campaign-logo-group {
-	align-self: center;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-
-	&__kiva {
-		fill: $logo-color; // IE11 fallback
-		fill: var(--logo-color, $logo-color);
-	}
-
-	&__kiva,
-	&__corporate {
-		height: 100%;
-	}
-
-	&__corporate {
-		line-height: 0;
-
-		img {
-			height: 100%;
-		}
-	}
-
-	&__separator {
-		color: $subtle-gray;
-		display: inline-block;
-		font-size: 1.5rem;
-		font-weight: bold;
-		margin: 0 0.5rem;
-
-		@include breakpoint(large) {
-			font-size: 2rem;
-			margin: 0 0.675rem;
-		}
-	}
-}
-</style>

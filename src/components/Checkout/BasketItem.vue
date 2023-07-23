@@ -1,39 +1,102 @@
 <template>
-	<div v-show="loanVisible" class="basket-item-wrapper row">
-		<div class="hide-for-small-only medium-3 large-2 columns">
+	<div v-show="loanVisible" class="basket-item-wrapper tw-flex tw-flex-col md:tw-flex-row tw-pb-5">
+		<div class="tw-hidden md:tw-block tw-flex-none md:tw-mr-3 lg:tw-mr-4.5">
 			<checkout-item-img
+				data-testid="basket-loan-image"
 				:disable-link="disableRedirects"
 				:loan-id="loan.id"
 				:name="loan.loan.name"
 				:image-url="loan.loan.image.url"
 			/>
 		</div>
-
-		<div class="small-12 medium-5 large-7 columns borrower-info-wrapper">
-			<div class="borrower-info featured-text">
-				{{ loan.loan.name }} in {{ loan.loan.geocode.country.name }}
+		<div class="tw-flex-auto borrower-info-wrapper">
+			<div class="borrower-info" data-testid="basket-loan-info">
+				<div class="tw-flex tw-mb-0.5">
+					<h2 class="tw-text-h3 tw-flex-grow" data-testid="basket-loan-name">
+						{{ loan.loan.name }} in {{ loan.loan.geocode.country.name }}
+					</h2>
+					<remove-basket-item
+						class="md:tw-hidden tw-flex-none tw-ml-1 tw-mt-0.5 tw-h-1.5"
+						:loan-id="loan.id"
+						type="loan"
+						@refreshtotals="onLoanUpdate($event)"
+						@updating-totals="$emit('updating-totals', $event)"
+					/>
+				</div>
 				<loan-matcher
+					class="tw-mb-1"
+					data-testid="basket-loan-matching-text"
 					v-if="loan.loan.matchingText"
 					:matching-text="loan.loan.matchingText"
 				/>
 				<loan-reservation
+					class="tw-mb-1"
+					data-testid="basket-loan-reservation-text"
 					:is-expiring-soon="loan.loan.loanFundraisingInfo.isExpiringSoon"
 					:is-funded="loan.isFunded"
 					:expiry-time="loan.expiryTime"
 				/>
 				<team-attribution
+					class="tw-mb-1 tw-mt-0.5"
 					v-if="teams.length"
 					:teams="teams"
 					:loan-id="loan.id"
-					:team-id="loan.team ? loan.team.id : null"
+					:team-id="loan.team ? loan.team.id : 0"
 				/>
 				<loan-promo-credits
 					:applied-promo-credits="appliedPromoCredits"
 				/>
 			</div>
 		</div>
-		<div class="small-12 medium-4 large-3 columns loan-res-price-wrapper">
+		<div
+			v-if="leftoverCreditAllocationLoanId === String(loan.id) && isCorporateCampaign"
+			class="tw-w-full
+					md:tw-w-auto
+					md:tw-ml-3
+					lg:tw-ml-6
+					tw-mt-1.5
+					md:tw-mt-0"
+		>
+			<div
+				class="
+					tw-bg-brand-50
+					tw-rounded
+					tw-p-2
+			"
+			>
+				<span
+					class="tw-text-action
+							tw-block"
+				>
+					The remaining ${{ loan.price }} will be lent to this borrower.
+				</span>
+				<span
+					class="tw-text-primary
+							tw-block"
+				>
+					<u
+						class="tw-cursor-pointer"
+						@click="$emit('jump-to-loans')"
+					>
+						Choose another borrower
+					</u>
+				</span>
+			</div>
+		</div>
+		<div
+			v-else
+			class="
+				tw-flex-none
+				tw-w-full
+				md:tw-w-auto
+				md:tw-ml-3
+				lg:tw-ml-4.5
+				tw-mt-1.5
+				md:tw-mt-0
+				loan-res-price-wrapper"
+		>
 			<loan-price
+				data-testid="basket-loan-price-selector"
 				:price="loan.price"
 				:loan-id="loan.id"
 				type="loan"
@@ -42,6 +105,7 @@
 				:funded-amount="loan.loan.loanFundraisingInfo.fundedAmount"
 				:reserved-amount="loan.loan.loanFundraisingInfo.reservedAmount"
 				:is-expiring-soon="loan.loan.loanFundraisingInfo.isExpiringSoon"
+				:enable-five-dollars-notes="enableFiveDollarsNotes"
 				@refreshtotals="onLoanUpdate($event)"
 				@updating-totals="$emit('updating-totals', $event)"
 			/>
@@ -50,23 +114,27 @@
 </template>
 
 <script>
+import { isCCPage } from '@/util/urlUtils';
 import CheckoutItemImg from '@/components/Checkout/CheckoutItemImg';
 import LoanMatcher from '@/components/Checkout/LoanMatcher';
 import LoanPromoCredits from '@/components/Checkout/LoanPromoCredits';
 import LoanReservation from '@/components/Checkout/LoanReservation';
 import LoanPrice from '@/components/Checkout/LoanPrice';
+import RemoveBasketItem from '@/components/Checkout/RemoveBasketItem';
 import TeamAttribution from '@/components/Checkout/TeamAttribution';
 
 export default {
+	name: 'BasketItem',
 	components: {
 		CheckoutItemImg,
 		LoanMatcher,
 		LoanPromoCredits,
 		LoanReservation,
 		LoanPrice,
+		RemoveBasketItem,
 		TeamAttribution
 	},
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	props: {
 		disableRedirects: {
 			type: Boolean,
@@ -79,6 +147,10 @@ export default {
 		teams: {
 			type: Array,
 			default: () => []
+		},
+		enableFiveDollarsNotes: {
+			type: Boolean,
+			default: false
 		}
 	},
 	data() {
@@ -88,18 +160,24 @@ export default {
 		};
 	},
 	computed: {
+		isCorporateCampaign() {
+			return isCCPage(this.$route);
+		},
 		creditsUsed() {
 			return this.loan?.creditsUsed ?? [];
 		},
 		appliedPromoCredits() {
 			if (this.creditsUsed.length) {
 				const appliedCredits = this.creditsUsed.filter(credit => {
-					return credit.applied !== null && credit.creditType !== 'kiva_credit';
+					return credit.creditType !== 'kiva_credit';
 				});
 				return appliedCredits.length ? appliedCredits : [];
 			}
 			return [];
-		}
+		},
+		leftoverCreditAllocationLoanId() {
+			return this.cookieStore.get('lcaid');
+		},
 	},
 	methods: {
 		onLoanUpdate($event) {
@@ -116,18 +194,4 @@ export default {
 		}
 	},
 };
-
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.basket-item-wrapper {
-	margin-bottom: rem-calc(30);
-}
-
-.borrower-info {
-	line-height: 1.25;
-	font-weight: $global-weight-highlight;
-}
-</style>

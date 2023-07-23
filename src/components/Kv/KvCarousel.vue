@@ -12,7 +12,7 @@
 		>
 			<button
 				class="kv-carousel__arrows-btn kv-carousel__arrows-btn--left"
-				:disabled="embla && !embla.canScrollPrev()"
+				:disabled="embla && !canScrollPrev"
 				@click="handleUserInteraction(previousIndex, 'click-left-arrow')"
 			>
 				<kv-icon
@@ -24,7 +24,7 @@
 			</button>
 			<button
 				class="kv-carousel__arrows-btn kv-carousel__arrows-btn--right"
-				:disabled="embla && !embla.canScrollNext()"
+				:disabled="embla && !canScrollNext"
 				@click="handleUserInteraction(nextIndex, 'click-right-arrow')"
 			>
 				<kv-icon
@@ -34,7 +34,8 @@
 					title="Show next slide"
 				/>
 			</button>
-			<div class="kv-carousel__viewport"
+			<div
+				class="kv-carousel__viewport"
 				ref="KvCarousel"
 			>
 				<div
@@ -60,7 +61,7 @@
 				]"
 				@click="handleUserInteraction(index, 'click-indicator-button')"
 			>
-				<span class="show-for-sr">Show slide {{ index + 1 }}</span>
+				<span class="tw-sr-only">Show slide {{ index + 1 }}</span>
 			</button>
 		</div>
 	</div>
@@ -73,6 +74,7 @@ import EmblaCarousel from 'embla-carousel';
 import KvIcon from '@/components/Kv/KvIcon';
 
 export default {
+	name: 'KvCarousel',
 	components: {
 		KvIcon,
 	},
@@ -140,6 +142,8 @@ export default {
 		return {
 			embla: null,
 			slides: [],
+			canScrollPrev: false,
+			canScrollNext: true,
 			currentIndex: 0,
 			paused: false,
 			intervalTimerCurrentTime: 0,
@@ -258,6 +262,9 @@ export default {
 				await this.$nextTick(); // wait for embla.
 				this.goToSlide(index);
 			}
+			// Update navigation state
+			this.canScrollPrev = this.embla.canScrollPrev();
+			this.canScrollNext = this.embla.canScrollNext();
 			/**
 			 * Fires when the user interacts with the carousel.
 			 * Contains the interaction type (swipe-left, click-left-arrow, etc.)
@@ -434,7 +441,7 @@ $bar-indicator-margin: rem-calc(4);
 			&::after {
 				display: block;
 				content: '';
-				background: hsla(0, 0, 100, 0.5);
+				background: hsla(0, 0%, 100%, 0.5);
 				width: 100%;
 				height: 100%;
 				transform-origin: left;
@@ -509,7 +516,7 @@ $bar-indicator-margin: rem-calc(4);
 				&::after {
 					display: block;
 					content: '';
-					background: hsla(0, 0, 100, 0.5);
+					background: hsla(0, 0%, 100%, 0.5);
 					width: 100%;
 					height: 100%;
 				}

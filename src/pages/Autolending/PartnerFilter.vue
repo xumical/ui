@@ -1,8 +1,8 @@
 <template>
 	<div>
-		<h3 class="specific-filter-title">
-			Field Partners
-		</h3>
+		<h4 class="tw-mb-2">
+			Lending Partners
+		</h4>
 		<div class="row collapse">
 			<div class="small-12 columns">
 				<check-list
@@ -20,12 +20,13 @@
 import _get from 'lodash/get';
 import _map from 'lodash/map';
 import _sortBy from 'lodash/sortBy';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import partnerListQuery from '@/graphql/query/autolending/partnerList.graphql';
 import anyOrSelectedAutolendingFilter from '@/plugins/any-or-selected-autolending-filter-mixin';
 import CheckList from './CheckList';
 
 export default {
+	name: 'PartnerFilter',
 	inject: ['apollo', 'cookieStore'],
 	components: {
 		CheckList,
@@ -71,6 +72,7 @@ export default {
 			this.apollo.mutate({
 				mutation: gql`mutation updatePartners($partners: [Int]) {
 					autolending @client {
+						id
 						editProfile(profile: {
 							loanSearchCriteria: {
 								filters: {
@@ -88,13 +90,3 @@ export default {
 	},
 };
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.specific-filter-title {
-	font-size: 1rem;
-	margin: 0 auto 0.5rem;
-	font-weight: $global-weight-highlight;
-}
-</style>

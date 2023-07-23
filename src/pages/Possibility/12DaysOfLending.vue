@@ -6,7 +6,7 @@
 			</template>
 		</kv-hero>
 		<div class="row intro">
-			<div class="text-center featured-text columns large-10 large-offset-1">
+			<div class="tw-text-center columns large-10 large-offset-1">
 				<p>
 					Join us in a series of daily challenges to amplify your impact! Check back every morning
 					to see what surprises we have up our sleeves. Can't wait? Click below to support
@@ -37,7 +37,7 @@
 
 <script>
 import _get from 'lodash/get';
-import contentful from '@/graphql/query/contentful.graphql';
+import contentfulEntries from '@/graphql/query/contentfulEntries.graphql';
 import KvHero from '@/components/Kv/KvHero';
 import KvResponsiveImage from '@/components/Kv/KvResponsiveImage';
 import KivaContentBlock from '@/pages/Possibility/KivaContentBlock';
@@ -46,6 +46,7 @@ import TwelveDaysCalendar from './TwelveDaysCalendar';
 const possibilitiesImageRequire = require.context('@/assets/images/possibilities-banners/', true);
 
 export default {
+	name: '12DaysOfLending',
 	components: {
 		KvHero,
 		KvResponsiveImage,
@@ -75,7 +76,7 @@ export default {
 	inject: ['apollo'],
 	created() {
 		this.apollo.query({
-			query: contentful,
+			query: contentfulEntries,
 			variables: {
 				contentType: 'uiSetting',
 				contentKey: 'ui-global-promo',

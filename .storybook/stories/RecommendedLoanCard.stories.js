@@ -1,4 +1,3 @@
-import StoryRouter from 'storybook-vue-router';
 import RecommendedLoanCard from '@/components/LoanCards/RecommendedLoanCard';
 import apolloStoryMixin from '../mixins/apollo-story-mixin';
 import cookieStoreStoryMixin from '../mixins/cookie-store-story-mixin';
@@ -22,14 +21,16 @@ const queryResult = {
 				sector: {
 					name: "Services"
 				},
-				whySpecial: "It helps Field Partners withstand negative economic impacts of the COVID-19 pandemic.",
+				whySpecial: "It helps Lending Partners withstand negative economic impacts of the COVID-19 pandemic.",
 				userProperties: {
 					lentTo: null
 				},
-				use: "this Field Partner provide loans to women in rural Malawi during the COVID-19 crisis.",
+				use: "this Lending Partner provide loans to women in rural Malawi during the COVID-19 crisis.",
 				status: "fundraising",
 				loanAmount: "250000.00",
 				borrowerCount: 1,
+				anonymizationLevel: "none",
+				fullLoanUse: "A loan of $250,000 helps this Lending Partner provide loans to women in rural Malawi during the COVID-19 crisis.",
 				loanFundraisingInfo: {
 					fundedAmount: "218950.00",
 					reservedAmount: "0.00",
@@ -44,7 +45,6 @@ const queryResult = {
 export default {
 	title: 'Loan Cards/Recommended Loan Card',
 	component: RecommendedLoanCard,
-	decorators: [StoryRouter()],
 };
 
 export const Default = () => ({

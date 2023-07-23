@@ -1,6 +1,6 @@
 <template>
-	<www-page-minimal :header-theme="headerTheme">
-		<div class="page-wrap">
+	<www-page-minimal>
+		<div class="tw-relative tw-overflow-hidden md:tw-bg-secondary">
 			<router-view />
 		</div>
 	</www-page-minimal>
@@ -9,32 +9,13 @@
 <script>
 import WwwPageMinimal from '@/components/WwwFrame/WwwPageMinimal';
 
-import { lightHeader } from '@/util/siteThemes';
-
 export default {
+	name: 'GetStarted',
 	components: {
 		WwwPageMinimal,
 	},
 	metaInfo: {
 		title: 'Get Started'
 	},
-	data() {
-		return {
-			headerTheme: lightHeader
-		};
-	},
 };
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.page-wrap {
-	position: relative;
-	overflow: hidden;
-
-	@include breakpoint(large) {
-		background: $kiva-bg-lightgray;
-	}
-}
-</style>

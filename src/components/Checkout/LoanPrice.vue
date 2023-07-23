@@ -1,25 +1,34 @@
 <template>
-	<div class="loan-price-wrapper">
-		<div class="loan-price-select">
-			<select
+	<div class="loan-price-wrapper tw-flex">
+		<div v-if="price > 24 || enableFiveDollarsNotes" class="loan-price-select tw-flex-grow">
+			<label for="loan-price" class="tw-sr-only">Loan Price</label>
+			<kv-select
 				v-model="selectedOption"
-				class="loan-price medium-text-font-size"
-				@change="updateLoanReservation()"
+				class="loan-price tw-w-full"
+				style="max-width: 18rem;"
+				id="loan-price"
+				@update:modelValue="updateLoanReservation()"
 			>
-				<option v-for="priceOption in prices"
+				<option
+					v-for="priceOption in prices"
 					:key="priceOption"
 					:value="priceOption"
 				>
 					${{ priceOption }}
 				</option>
-			</select>
+			</kv-select>
 		</div>
-		<button
-			class="remove-wrapper"
-			@click="updateLoanReservation('remove')"
-		>
-			<kv-icon class="remove-x" name="small-x" :from-sprite="true" title="Remove from cart" />
-		</button>
+		<p v-else class="tw-text-h3 tw-mb-0">
+			${{ price }}
+		</p>
+		<remove-basket-item
+			class="tw-hidden tw-flex-none tw-ml-2 tw-py-0.5 md:tw-py-1 md:tw-flex tw-items-center"
+			:loan-id="loanId"
+			:ids-in-group="idsInGroup"
+			:type="type"
+			@refreshtotals="$emit('refreshtotals', $event)"
+			@updating-totals="$emit('updating-totals', $event)"
+		/>
 	</div>
 </template>
 
@@ -28,12 +37,15 @@ import numeral from 'numeral';
 import _forEach from 'lodash/forEach';
 import updateLoanReservation from '@/graphql/mutation/updateLoanReservation.graphql';
 import updateKivaCardAmount from '@/graphql/mutation/updateKivaCardAmount.graphql';
-import KvIcon from '@/components/Kv/KvIcon';
-import { buildPriceArray } from '@/util/loanUtils';
+import RemoveBasketItem from '@/components/Checkout/RemoveBasketItem';
+import { getDropdownPriceArrayCheckout } from '@/util/loanUtils';
+import KvSelect from '~/@kiva/kv-components/vue/KvSelect';
 
 export default {
+	name: 'LoanPrice',
 	components: {
-		KvIcon
+		KvSelect,
+		RemoveBasketItem,
 	},
 	inject: ['apollo'],
 	props: {
@@ -73,6 +85,10 @@ export default {
 			type: Array,
 			default: () => []
 		},
+		enableFiveDollarsNotes: {
+			type: Boolean,
+			default: false
+		}
 	},
 	data() {
 		return {
@@ -97,7 +113,12 @@ export default {
 				remainingAmount = Math.max(remainingAmount, parseFloat(this.price));
 
 				const minAmount = parseFloat(this.minAmount || 25); // 25_hard_coded
-				return buildPriceArray(remainingAmount, minAmount);
+
+				const priceArray = getDropdownPriceArrayCheckout(remainingAmount, minAmount, this.enableFiveDollarsNotes); // eslint-disable-line max-len
+				if (!priceArray.includes(Number(this.price).toFixed())) {
+					priceArray.push(Number(this.price).toFixed());
+				}
+				return priceArray;
 			}
 			if (this.type === 'kivaCard') {
 				// convert this to formatted array for our select element
@@ -109,18 +130,13 @@ export default {
 		}
 	},
 	methods: {
-		updateLoanReservation(changeType) {
+		updateLoanReservation() {
 			if (this.type === 'loan') {
 				if (this.selectedOption !== this.price) {
 					this.$emit('updating-totals', true);
-					let updatedPrice;
-					// If the loan remove X is clicked: set updatedPrice to 0
-					// else pull the value out of the loanPrice select and keep moving through method
-					if (changeType === 'remove') {
-						updatedPrice = 0;
-					} else {
-						updatedPrice = numeral(this.selectedOption).format('0.00');
-					}
+
+					const updatedPrice = numeral(this.selectedOption).format('0.00');
+
 					this.apollo.mutate({
 						mutation: updateLoanReservation,
 						variables: {
@@ -150,12 +166,12 @@ export default {
 							this.$kvTrackEvent(
 								'basket',
 								'Update Loan Amount',
-								updatedPrice === 0 ? 'Loan Removed' : 'Update Success',
+								'Update Success',
 								// pass updated loan amount as whole number
 								numeral(updatedPrice).value(),
 								numeral(updatedPrice).value()
 							);
-							this.$emit('refreshtotals', this.changeType === 'remove' ? 'removeLoan' : '');
+							this.$emit('refreshtotals');
 							this.$emit('updating-totals', false);
 							this.cachedSelection = this.selectedOption;
 						}
@@ -167,14 +183,9 @@ export default {
 			} else if (this.type === 'kivaCard') {
 				if (this.selectedOption !== this.price) {
 					this.$emit('updating-totals', true);
-					let updatedPrice;
-					// If the loan remove X is clicked: set updatedPrice to 0
-					// else pull the value out of the loanPrice select and keep moving through method
-					if (changeType === 'remove') {
-						updatedPrice = 0;
-					} else {
-						updatedPrice = numeral(this.selectedOption).format('0.00');
-					}
+
+					const updatedPrice = numeral(this.selectedOption).format('0.00');
+
 					this.apollo.mutate({
 						mutation: updateKivaCardAmount,
 						variables: {
@@ -192,11 +203,11 @@ export default {
 							this.$kvTrackEvent(
 								'basket',
 								'Update Kiva Card Amount',
-								updatedPrice === 0 ? 'Kiva Card Removed' : 'Update Success',
+								'Update Success',
 								// pass updated Kiva Card amount as whole number
 								numeral(updatedPrice).value()
 							);
-							this.$emit('refreshtotals', this.changeType === 'remove' ? 'removeLoan' : '');
+							this.$emit('refreshtotals');
 							this.$emit('updating-totals', false);
 							this.cachedSelection = this.selectedOption;
 						}
@@ -211,82 +222,3 @@ export default {
 };
 
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.loan-price-wrapper {
-	display: flex;
-	align-items: flex-start;
-	white-space: nowrap;
-	justify-content: flex-start;
-
-	@include breakpoint(medium) {
-		justify-content: flex-end;
-	}
-}
-
-.remove-wrapper {
-	display: inline-block;
-	margin-left: rem-calc(56);
-	cursor: pointer;
-
-	@include breakpoint(medium) {
-		margin-left: rem-calc(10);
-	}
-}
-
-.loan-price-select {
-	float: left;
-	width: rem-calc(95);
-
-	@include breakpoint(medium) {
-		margin-right: rem-calc(20);
-	}
-}
-
-.loan-price {
-	border: 1px solid $charcoal;
-	width: rem-calc(132);
-	border-radius: $button-radius;
-	height: rem-calc(50);
-	background-image: url('~@/assets/images/customDropdown.png');
-	background-size: 2rem 2rem;
-	color: $charcoal;
-	font-size: $medium-text-font-size;
-	font-weight: $global-weight-highlight;
-	cursor: pointer;
-
-	@include breakpoint(medium) {
-		height: inherit;
-		width: rem-calc(110);
-		background-size: rem-calc(23) rem-calc(20);
-	}
-}
-
-// Media query targeting IE 10+ only
-@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
-	.loan-price {
-		width: 100%;
-		background-position: left 3.8rem center;
-	}
-}
-
-// Media query targeting IE EDGE
-@supports (-ms-ime-align:auto) {
-	.loan-price {
-		background-position: right -1.2rem center;
-	}
-}
-
-.remove-x {
-	fill: $subtle-gray;
-	display: inline-block;
-	width: 1.1rem;
-	height: rem-calc(50);
-
-	@include breakpoint(medium) {
-		height: rem-calc(36);
-	}
-}
-</style>

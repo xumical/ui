@@ -1,5 +1,5 @@
 <template>
-	<div class="hover-loan-card-small" :class="{expanded}">
+	<div class="hover-loan-card-small tw-bg-primary" :class="{expanded}">
 		<loan-card-image
 			class="hover-loan-card-image"
 			:loan-id="loan.id"
@@ -16,7 +16,7 @@
 			class="hover-loan-card-data-wrap"
 			@click="handleClick"
 		>
-			<p class="name">
+			<p class="name tw-text-primary">
 				{{ loan.name }}
 			</p>
 			<div class="minimal-fundraising-meter">
@@ -27,7 +27,7 @@
 					:short-meter="true"
 				/>
 			</div>
-			<p class="small-text loan-data">
+			<p class="tw-text-small tw-text-secondary loan-data">
 				{{ loan.geocode.country.name }} / {{ loan.activity.name }}
 			</p>
 		</div>
@@ -39,6 +39,7 @@ import FundraisingStatusMeter from '@/components/LoanCards/FundraisingStatus/Fun
 import hoverLoanCardMixin from '@/components/LoanCards/HoverLoanCard/hoverLoanCardMixin';
 
 export default {
+	name: 'HoverLoanCardSmall',
 	components: {
 		LoanCardImage,
 		FundraisingStatusMeter,
@@ -89,8 +90,6 @@ export default {
 		text-align: center;
 
 		.name {
-			line-height: rem-calc(20);
-			color: $kiva-text-dark;
 			margin-bottom: 0.75rem;
 			white-space: nowrap;
 			overflow: hidden;
@@ -102,9 +101,7 @@ export default {
 		}
 
 		.loan-data {
-			color: $kiva-text-light;
 			margin: 0;
-			line-height: 1.2;
 			white-space: nowrap;
 			overflow: hidden;
 			text-overflow: ellipsis;

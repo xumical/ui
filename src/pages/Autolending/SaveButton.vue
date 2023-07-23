@@ -18,7 +18,7 @@
 			title="Criteria too narrow"
 			class="lightbox"
 		>
-			<p class="warning-text">
+			<p class="tw-mb-4 tw-text-subhead">
 				There {{ beVerb }} {{ loansLeft }} that {{ matchVerb }} your criteria -
 				we may not be able to lend your funds.
 			</p>
@@ -38,12 +38,13 @@
 
 <script>
 import _get from 'lodash/get';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import KvButton from '@/components/Kv/KvButton';
-import KvLightbox from '@/components/Kv/KvLightbox';
 import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
+import KvLightbox from '~/@kiva/kv-components/vue/KvLightbox';
 
 export default {
+	name: 'SaveButton',
 	inject: ['apollo', 'cookieStore'],
 	components: {
 		KvButton,
@@ -85,6 +86,7 @@ export default {
 	apollo: {
 		query: gql`query autolendProfileChanged {
 			autolending @client {
+				id
 				currentLoanCount
 				profileChanged
 				savingProfile
@@ -120,6 +122,7 @@ export default {
 			this.apollo.mutate({
 				mutation: gql`mutation saveProfile {
 					autolending @client {
+						id
 						saveProfile
 					}
 				}`
@@ -149,11 +152,6 @@ export default {
 		& >>> .line {
 			background-color: $white;
 		}
-	}
-
-	.warning-text {
-		font-size: rem-calc(18);
-		margin-bottom: 1.5rem;
 	}
 
 	.warning-buttons {

@@ -1,12 +1,10 @@
-const isomorphicFetch = require('isomorphic-fetch');
-const https = require('https');
+const minipassFetch = require('make-fetch-happen');
 
 module.exports = function fetch(url, options) {
-	return isomorphicFetch(url, {
+	const onVm = url.indexOf('vm') > -1;
+	return minipassFetch(url, {
+		// fix request blocked b/c of self-signed certificate on dev-vm.
+		strictSSL: !onVm,
 		...options,
-		agent: new https.Agent({
-			// fix request blocked b/c of self-signed certificate on dev-vm. TODO: maybe do a prod check?
-			rejectUnauthorized: false
-		}),
 	});
 };

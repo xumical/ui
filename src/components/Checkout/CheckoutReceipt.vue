@@ -3,20 +3,20 @@
 		<h2 class="checkout-receipt__headline">
 			Order Confirmation
 		</h2>
-		<div class="checkout-receipt__wrapper">
-			<section data-test="lender-info" class="section section--lender-info">
+		<div class="checkout-receipt__wrapper tw-bg-primary tw-p-4 tw-rounded-sm tw-border tw-border-tertiary">
+			<section data-testid="lender-info" class="section section--lender-info">
 				<div>{{ formattedTransactionTime }}</div>
-				<div class="fs-exclude">
+				<div class="data-hj-suppress">
 					{{ lender.firstName }} {{ lender.lastName }}
 				</div>
-				<div class="fs-exclude">
+				<div class="data-hj-suppress">
 					{{ lender.email }}
 				</div>
 			</section>
 			<section>
 				<div
-					data-test="print-kcard-msg"
-					class="section text-center hide-for-print"
+					data-testid="print-kcard-msg"
+					class="section tw-text-center hide-for-print"
 					v-if="printableKivaCards.length > 0"
 				>
 					<h2>Print your Kiva {{ printableKivaCards.length > 1 ? 'Cards' : 'Card' }}</h2>
@@ -30,15 +30,16 @@
 				<ul class="checkout-receipt__item-list">
 					<!-- Loans -->
 					<li
+						data-testid="receipt-item-loan"
 						class="section"
 						v-for="loan in loans"
 						:key="loan.id"
 					>
 						<div
-							data-test="loan"
+							data-testid="loan"
 							class="loan"
 						>
-							<h3 class="loan__name fs-exclude">
+							<h3 class="loan__name data-hj-suppress" data-testid="loan-name">
 								<template v-if="disableRedirects">
 									{{ loan.loan.name }}
 								</template>
@@ -49,8 +50,8 @@
 									{{ loan.loan.name }}
 								</router-link>
 							</h3>
-							<div class="loan__meta">
-								<p class="loan__meta-city">
+							<div class="tw-text-small">
+								<p class="tw-text-secondary" data-testid="loan-country">
 									<template v-if="loan.loan.geocode && loan.loan.geocode.city">
 										{{ loan.loan.geocode.city }},
 									</template>
@@ -58,43 +59,52 @@
 										{{ loan.loan.geocode.country.name }}
 									</template>
 								</p>
-								<p v-if="loan.loan.use" class="loan__meta-use">
+								<p v-if="loan.loan.use" data-testid="loan-use">
 									A loan helps {{ loan.loan.use }}
 								</p>
 							</div>
-							<div class="loan__amount">
+							<div class="loan__amount tw-text-h3" data-testid="loan-amount">
 								${{ loan.price }}
 							</div>
 						</div>
 					</li>
 					<!-- Kiva Cards -->
 					<li
+						data-testid="receipt-item-kcard"
 						class="section"
 						v-for="card in kivaCards"
 						:key="card.id"
 					>
 						<div
-							data-test="kcard"
+							data-testid="kcard"
 							class="loan kcard"
 						>
 							<template v-if="card.kivaCardObject.deliveryType === 'print'">
 								<div>
-									<h3 class="loan__name loan__name--inline">
+									<h3
+										class="loan__name loan__name--inline"
+										data-testid="kcard-type-print"
+									>
 										Print-it-yourself Kiva Card
 									</h3>
 									<kv-icon
+										data-testid="kcard-tool-tip-control"
 										name="question"
 										:id="`print-card-${card.id}`"
-										class="loan__question-icon"
+										class="loan__question-icon tw-fill-current tw-text-tertiary"
 									/>
-									<kv-tooltip :controller="`print-card-${card.id}`">
+									<kv-tooltip
+										data-testid="kcard-tool-tip-text"
+										:controller="`print-card-${card.id}`" theme="mint"
+									>
 										You can print this card now. We'll also send it to
 										you in an email so you can print it later.
 									</kv-tooltip>
 								</div>
 
 								<kv-button
-									class="smallest"
+									data-testid="kcard-print-button"
+									class="tw-mb-2"
 									target="_blank"
 									:href="`/gifts/kiva-cards/print?giftCode=${card.kivaCardObject.redemptionCode}`"
 								>
@@ -102,10 +112,10 @@
 								</kv-button>
 							</template>
 							<template v-else-if="card.kivaCardObject.deliveryType === 'postal'">
-								<h3 class="loan__name">
+								<h3 class="loan__name" data-testid="kcard-type-postal">
 									Postal delivery Kiva Card
 								</h3>
-								<div class="loan__details fs-exclude">
+								<div class="loan__details data-hj-suppress" data-testid="kcard-details">
 									For: {{ card.kivaCardObject.mailingInfo.firstName }}
 									{{ card.kivaCardObject.mailingInfo.lastName }}<br>
 									{{ card.kivaCardObject.mailingInfo.address }}<br>
@@ -118,21 +128,22 @@
 								</div>
 							</template>
 							<template v-else-if="card.kivaCardObject.deliveryType === 'lender'">
-								<h3 class="loan__name">
+								<h3 class="loan__name" data-testid="kcard-type-lender">
 									Kiva Card
 								</h3>
 								<div
-									class="loan__details fs-exclude"
+									data-testid="kcard-details"
+									class="loan__details data-hj-suppress"
 									v-if="card.kivaCardObject.recipient.name"
 								>
 									For: {{ card.kivaCardObject.recipient.name }}
 								</div>
 							</template>
 							<template v-else-if="card.kivaCardObject.deliveryType === 'email'">
-								<h3 class="loan__name">
+								<h3 class="loan__name" data-testid="kcard-type-email">
 									Email delivery Kiva Card
 								</h3>
-								<div class="loan__details fs-exclude">
+								<div class="loan__details data-hj-suppress" data-testid="kcard-details">
 									For:
 									<template v-if="card.kivaCardObject.recipient.name">
 										{{ card.kivaCardObject.recipient.name }} &ndash;
@@ -140,18 +151,19 @@
 									{{ card.kivaCardObject.recipient.email }}
 								</div>
 							</template>
-							<div class="loan__amount">
+							<div class="loan__amount tw-text-h3" data-testid="kcard-amount">
 								${{ card.price }}
 							</div>
 						</div>
 					</li>
 					<li
-						data-test="kcard-portfolio"
-						class="section text-center"
+						data-testid="kcard-portfolio"
+						class="section tw-text-center"
 						v-if="kivaCards.length > 0"
 					>
 						For more details about all your Kiva Card purchases, please visit your
-						<router-link to="/portfolio/kiva-cards"
+						<router-link
+							to="/portfolio/kiva-cards"
 							v-kv-track-event="['Thanks','click', 'kiva-card-portfolio']"
 						>
 							Kiva portfolio
@@ -164,94 +176,111 @@
 					<li class="section">
 						<div
 							class="loan"
-							data-test="donation"
+							data-testid="donation"
 						>
 							<h3 class="loan__name">
 								Donation to Kiva
 							</h3>
 							<router-link
 								v-if="receipt.totals.donationTotal > 0"
+								data-testid="print-donation-information"
 								class="smallest"
 								to="/portfolio/donations"
 							>
 								Print Donation Information
 							</router-link>
-							<div class="loan__amount">
+							<div class="loan__amount tw-text-h3" data-testid="donation-amount">
 								${{ receipt.totals.donationTotal }}
 							</div>
 						</div>
 					</li>
 					<li
-						data-test="receipt-total"
+						data-testid="receipt-total"
 						class="section total"
 					>
-						<h3 class="total__header">
+						<h3 class="total__header tw-text-h3">
 							Total:
 						</h3>
-						<span class="total__amount">${{ receipt.totals.itemTotal }}</span>
+						<span
+							class="total__amount tw-text-h3"
+							data-testid="total-amount"
+						>${{ receipt.totals.itemTotal }}</span>
 					</li>
 				</ul>
 			</section>
 			<section class="section payments">
-				<h3 class="payments__header">
+				<h3 class="tw-text-secondary">
 					Payments
 				</h3>
 				<ul class="payments__list">
 					<li
-						data-test="kcard-payment"
+						data-testid="payment-type-kcard"
 						class="total"
 						v-if="receipt.totals.redemptionCodeAppliedTotal > 0"
 					>
-						<span class="total__header">Kiva Card:</span>
-						<span class="total__amount">${{ receipt.totals.redemptionCodeAppliedTotal }}</span>
+						<span class="total__header tw-text-h3">Kiva Card:</span>
+						<span class="total__amount tw-text-h3" data-testid="kcard-payment-amount">
+							${{ receipt.totals.redemptionCodeAppliedTotal }}
+						</span>
 					</li>
 					<li
-						data-test="free-trial"
+						data-testid="payment-type-free-trial"
 						class="total"
 						v-if="receipt.totals.freeTrialAppliedTotal > 0"
 					>
-						<span class="total__header">Free Trial:</span>
-						<span class="total__amount">Free!</span>
+						<span class="total__header tw-text-h3">Free Trial:</span>
+						<span class="total__amount tw-text-h3" data-testid="free-trial-payment-amount">Free!</span>
 					</li>
 					<li
-						data-test="free-credit"
+						data-testid="payment-type-free-credit"
 						class="total"
 						v-if="receipt.totals.bonusAppliedTotal > 0"
 					>
-						<span class="total__header">Free credit:</span>
-						<span class="total__amount">{{ receipt.totals.bonusAppliedTotal }}</span>
+						<span class="total__header tw-text-h3">Free credit:</span>
+						<span
+							class="total__amount tw-text-h3"
+							data-testid="free-credit-payment-amount"
+						>{{ receipt.totals.bonusAppliedTotal }}</span>
 					</li>
 					<li
-						data-test="kiva-credit-added"
+						data-testid="payment-type-kiva-credit-added"
 						class="total"
 						v-if="receipt.totals.depositTotals.kivaCreditAdded > 0"
 					>
-						<span class="total__header">Kiva credit added:</span>
-						<span class="total__amount">${{ receipt.totals.depositTotals.kivaCreditAdded }}</span>
+						<span class="total__header tw-text-h3">Kiva credit added:</span>
+						<span class="total__amount tw-text-h3" data-testid="kiva-credit-added-payment-amount">
+							${{ receipt.totals.depositTotals.kivaCreditAdded }}
+						</span>
 					</li>
 					<li
-						data-test="kiva-credit-used"
+						data-testid="payment-kiva-credit-used"
 						class="total"
 						v-if="receipt.totals.depositTotals.kivaCreditUsed > 0"
 					>
-						<span class="total__header">Kiva credit:</span>
-						<span class="total__amount">${{ receipt.totals.depositTotals.kivaCreditUsed }}</span>
+						<span class="total__header tw-text-h3">Kiva credit:</span>
+						<span class="total__amount tw-text-h3" data-testid="kiva-credit-use-payment-amount">
+							${{ receipt.totals.depositTotals.kivaCreditUsed }}
+						</span>
 					</li>
 					<li
-						data-test="amount-charged"
+						data-testid="payment-type-amount-charged"
 						class="total"
 						v-if="parseFloat(receipt.totals.depositTotals.depositTotal) > 0"
 					>
-						<span class="total__header">Amount charged:</span>
-						<span class="total__amount">
+						<span class="total__header tw-text-h3">Amount charged:</span>
+						<span class="total__amount tw-text-h3" data-testid="amount-charged-payment-amount">
 							${{ receipt.totals.depositTotals.depositTotal }}
 						</span>
 					</li>
 				</ul>
 			</section>
 			<section class="section section--print hide-for-print">
-				<button class="print" @click="printReceipt">
-					<kv-icon name="print" class="print__icon" />
+				<button
+					data-testid="print-receipt"
+					class="print tw-text-link tw-flex tw-items-center tw-gap-1"
+					@click="printReceipt"
+				>
+					<kv-icon name="print" class="print__icon tw-fill-current" />
 					<span>Print this receipt</span>
 				</button>
 			</section>
@@ -261,9 +290,9 @@
 
 <script>
 import { format } from 'date-fns';
-import KvButton from '@/components/Kv/KvButton';
 import KvIcon from '@/components/Kv/KvIcon';
 import KvTooltip from '@/components/Kv/KvTooltip';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
 
 // Ensures the date renders the same on client or SSR in any timezone.
 // Taken from https://github.com/date-fns/date-fns/issues/376#issuecomment-353871093
@@ -281,6 +310,7 @@ const getUTCDate = (dateString = Date.now()) => {
 };
 
 export default {
+	name: 'CheckoutReceipt',
 	components: {
 		KvButton,
 		KvIcon,
@@ -305,16 +335,22 @@ export default {
 			return `${format(getUTCDate(this.receipt.transactionTime), 'MMMM dd, yyyy h:mm a')} GMT`;
 		},
 		loans() {
+			if (!this.receiptValues.length) return [];
 			return this.receipt.items.values.filter(item => item.basketItemType === 'loan_reservation');
 		},
 		kivaCards() {
+			if (!this.receiptValues.length) return [];
 			return this.receipt.items.values.filter(item => item.basketItemType === 'kiva_card');
 		},
 		printableKivaCards() {
+			if (!this.receiptValues.length) return [];
 			return this.kivaCards.filter(card => card.kivaCardObject.deliveryType === 'print');
 		},
 		donations() {
 			return this.receipt.items.values.filter(item => item.basketItemType === 'donation');
+		},
+		receiptValues() {
+			return this.receipt?.items?.values ?? [];
 		}
 	},
 	methods: {
@@ -331,7 +367,7 @@ export default {
 @import 'settings';
 
 .section {
-	border-bottom: solid rem-calc(1) $light-gray;
+	border-bottom: solid rem-calc(1) rgb(var(--border-tertiary));
 	padding: $global-margin 0;
 	display: block;
 	overflow: hidden;
@@ -350,16 +386,7 @@ export default {
 }
 
 .checkout-receipt {
-	&__wrapper {
-		background: #fff;
-		padding: 2rem 2rem 1rem 2rem;
-		border: 1px solid $kiva-stroke-gray;
-		border-radius: rem-calc(2);
-	}
-
 	&__headline {
-		@include big-text();
-
 		text-align: center;
 		margin-bottom: 1.5rem;
 	}
@@ -373,8 +400,7 @@ export default {
 
 .loan {
 	&__name {
-		font-size: $medium-text-font-size;
-		font-weight: $global-weight-bold;
+		margin-bottom: 0.5rem;
 	}
 
 	&__name--inline {
@@ -383,25 +409,9 @@ export default {
 
 	&__question-icon {
 		width: 1rem;
-		fill: $light-gray;
-	}
-
-	&__meta {
-		@include small-text();
-	}
-
-	&__meta-city {
-		color: $kiva-text-light;
-		margin: 0;
-	}
-
-	&__meta-use {
-		margin: 0;
 	}
 
 	&__amount {
-		font-size: $medium-text-font-size;
-		font-weight: $global-weight-highlight;
 		text-align: right;
 	}
 }
@@ -412,8 +422,6 @@ export default {
 
 	&__header,
 	&__amount {
-		font-size: $medium-text-font-size;
-		font-weight: $global-weight-highlight;
 		text-align: right;
 		flex: 1;
 	}
@@ -423,25 +431,8 @@ export default {
 	}
 }
 
-.section.total {
-	.total__header,
-	.total__amount {
-		font-weight: $global-weight-bold;
-	}
-}
-
 .payments {
 	border-bottom: none;
-
-	&__header {
-		color: $kiva-text-light;
-	}
-
-	&__list {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-	}
 
 	&__type {
 		display: flex;
@@ -455,26 +446,11 @@ export default {
 }
 
 .print {
-	display: flex;
 	margin: 0 auto;
-	color: $anchor-color;
-	text-decoration: $anchor-text-decoration;
 
 	&__icon {
 		height: rem-calc(16);
 		width: rem-calc(16);
-		margin-right: 0.5rem;
-		fill: $anchor-color;
-	}
-
-	&:hover,
-	&:focus {
-		text-decoration: $anchor-text-decoration-hover;
-		color: $anchor-color-hover;
-
-		.print__icon {
-			fill: $anchor-color-hover;
-		}
 	}
 }
 </style>

@@ -1,9 +1,14 @@
 <template>
 	<www-page class="lend-filter-page" :gray-background="true" :hide-search-in-header="algoliaSearchEnabled">
-		<kv-message>
-			Welcome to Kiva's new filter page! Take it for a spin below, or
-			<a @click="exitLendFilterExp('click-return-classic')">return to the classic view</a> at any time.
-		</kv-message>
+		<div class="tw-flex tw-items-center tw-justify-center tw-px-2 tw-py-1 tw-gap-1 tw-text-center">
+			<span class="tw-bg-caution tw-text-black tw-text-small tw-px-2 tw-py-0.5">Beta</span>
+			<p>
+				Welcome to Kiva's new filter page! Take it for a spin below, or
+				<button class="tw-text-link" @click="advancedFilters">
+					return to the classic view
+				</button> at any time.
+			</p>
+		</div>
 		<lend-header
 			:hard-left-align="true"
 			:side-pinned-filter-padding="filterMenuPinned"
@@ -27,12 +32,13 @@
 					:all-loan-theme-names="allLoanThemeNames"
 					:all-tag-names="allTagNames"
 					:filter-menu-pinned="filterMenuPinned"
+					:hide-non-flss-filters="hideNonFlssFilters"
 					:initially-expanded-filters="initiallyExpandedFilters"
 					@clear-custom-categories="clearCustomCategories"
 					@hide-filter-menu="hideFilterMenu"
 					@show-filter-menu="showFilterMenu"
 					@toggle-custom-category="toggleCustomCategory"
-					@exit-lend-filter-exp="exitLendFilterExp('click-advanced-filters')"
+					@exit-lend-filter-exp="advancedFilters"
 				/>
 				<!-- eslint-disable vue/attribute-hyphenation -->
 				<div class="lend-filter-results-container small-12 columns">
@@ -50,7 +56,10 @@
 						@remove-custom-category="removeCustomCategory"
 						@clear-custom-categories="clearCustomCategories"
 					/>
-					<algolia-search-box class="algolia-search-box-component" v-if="algoliaSearchEnabled" />
+					<algolia-search-box
+						class="algolia-search-box-component"
+						v-if="algoliaSearchEnabled && !hideNonFlssFilters"
+					/>
 					<!-- eslint-disable-next-line max-len -->
 					<algolia-pagination-stats class="algolia-pagination-stats-component" />
 					<ais-state-results class="ais-state-results-component">
@@ -94,6 +103,12 @@
 import _get from 'lodash/get';
 import _map from 'lodash/map';
 import _forEach from 'lodash/forEach';
+import {
+	getExperimentSettingAsync,
+	getExperimentSettingCached,
+	trackExperimentVersion
+} from '@/util/experiment/experimentUtils';
+import experimentAssignmentQuery from '@/graphql/query/experimentAssignment.graphql';
 
 // Algolia Imports
 import {
@@ -112,20 +127,50 @@ import LendFilterMenu from '@/pages/Lend/Filter/FilterComponents/LendFilterMenu'
 import SelectedRefinements from '@/pages/Lend/Filter/FilterComponents/SelectedRefinements';
 import AlgoliaSearchBox from '@/pages/Lend/AlgoliaSearchBox';
 import AlgoliaTrackState from '@/pages/Lend/Filter/FilterComponents/AlgoliaTrackState';
+import retryAfterExpiredBasket from '@/plugins/retry-after-expired-basket-mixin';
 
 // TODO: Use this
 // import KvLoadingOverlay from '@/components/Kv/KvLoadingOverlay';
 import WwwPage from '@/components/WwwFrame/WwwPage';
 import LendHeader from '@/pages/Lend/LendHeader';
-import KvMessage from '@/components/Kv/KvMessage';
 
 import lendFilterPageQuery from '@/graphql/query/lendFilterPage.graphql';
 
-import lendFilterExpMixin from '@/plugins/lend-filter-page-exp-mixin';
+const lendFilterRedirectEXP = 'lend_filter_flss_v1';
+
+function isFLSSEligible(route = {}) {
+	// check route for eligibility
+	const eligibleQueryParams = [
+		'page',
+		'sortBy',
+		'gender',
+		'registration',
+		'utm_source',
+		'utm_medium',
+		'utm_campaign'
+	];
+	const queryParamKeys = Object.keys(route?.query);
+	const allowedSorts = ['expiringSoon', 'loanAmountDesc', 'loanAmount']; // 'popularity'
+	// eligible by default, no params is also eligible
+	let isEligible = true;
+
+	queryParamKeys.forEach(queryParam => {
+		// ensure any query params are eligible
+		if (!eligibleQueryParams.includes(queryParam)) {
+			isEligible = false;
+		}
+		// ensure allowedSorts are observed
+		if (queryParam === 'sortBy' && !allowedSorts.includes(route.query.sortBy)) {
+			isEligible = false;
+		}
+	});
+
+	return isEligible;
+}
 
 export default {
+	name: 'LendFilterPage',
 	components: {
-		KvMessage,
 		SelectedRefinements,
 		// TODO: Use this
 		// KvLoadingOverlay,
@@ -149,7 +194,7 @@ export default {
 	mixins: [
 		algoliaInit,
 		algoliaCustomCategories,
-		lendFilterExpMixin,
+		retryAfterExpiredBasket
 	],
 	created() {
 		// subscribe to and set page query data
@@ -167,9 +212,6 @@ export default {
 				this.userId = _get(data, 'my.userAccount.id') || '';
 			},
 		});
-
-		// Get Lend Filter Exp version
-		this.getLendFilterExpVersion();
 	},
 	data() {
 		return {
@@ -177,6 +219,7 @@ export default {
 			isLoggedIn: false,
 			userId: '',
 			filterMenuOpen: false,
+			hideNonFlssFilters: false,
 			selectedCustomCategories: {},
 			filterMenuPinned: false,
 			algoliaSearchEnabled: true,
@@ -223,13 +266,35 @@ export default {
 		'cookieStore',
 	],
 	apollo: {
-		preFetch(config, client, { cookieStore }) {
+		preFetch(config, client, { cookieStore, route }) {
 			// prefetch page data + experiment settings
 			return client.query({
 				query: lendFilterPageQuery,
 				variables: {
 					basketId: cookieStore.get('kvbskt')
 				},
+			}).then(() => {
+				// check route for eligibility
+				if (isFLSSEligible(route)) {
+					return getExperimentSettingAsync(client, lendFilterRedirectEXP)
+						.then(() => {
+							// Assign the exp
+							return client.query({
+								query: experimentAssignmentQuery,
+								variables: { id: lendFilterRedirectEXP }
+							});
+						}).then(({ data }) => {
+							// Rediect if we are in the experiment group
+							if (data?.experiment?.version === 'b') {
+								return Promise.reject({
+									path: '/lend/filter-alpha',
+									query: route.query,
+								});
+							}
+						});
+				}
+				// Otherwise just resolve
+				Promise.resolve();
 			});
 		}
 	},
@@ -239,8 +304,19 @@ export default {
 			this.filterMenuPinned = true;
 		}
 
-		// update global lend filter experiment setting
-		this.updateLendFilterExp();
+		// Check cached for lend/filter-alpha experiment state and track if present
+		// NOTE: The cached setting/exp state may not be available on subsequent page loads after algolia alters params
+		const { enabled } = getExperimentSettingCached(this.apollo, lendFilterRedirectEXP);
+		if (enabled) {
+			// this method will get the version from the apollo cache
+			trackExperimentVersion(
+				this.apollo,
+				this.$kvTrackEvent,
+				'Lending',
+				lendFilterRedirectEXP,
+				'EXP-VUE-1061-June2022'
+			);
+		}
 	},
 	methods: {
 		hideFilterMenu() {
@@ -273,6 +349,11 @@ export default {
 					false,
 				);
 			});
+		},
+		advancedFilters() {
+			this.$kvTrackEvent('Lending', 'click-advanced-filters', 'Advanced filters');
+
+			window.location.href = '/lend?kexpn=lend_filter.lend_filter_versions&kexpv=c';
 		},
 	},
 };

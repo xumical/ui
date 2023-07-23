@@ -5,6 +5,7 @@ import parseGACookie from '@/util/parseGACookie';
 import parseSPCookie from '@/util/parseSPCookie';
 
 export default {
+	name: 'PostPurchase',
 	render(h) {
 		return h('div');
 	},
@@ -34,9 +35,13 @@ export default {
 						// get tracking data from snowplow cookie
 						const { snowplowUserId, snowplowSessionId } = parseSPCookie(cookieStore);
 
+						// If challenge query exists, then redirect to challenge thanks page
+						const successPath = route.query.challenge
+							? `/checkout/thanks/${route.query.challenge}` : '/thanks';
+
 						// build route for thanks page redirect
 						const successRoute = {
-							path: '/thanks',
+							path: successPath,
 							query: { kiva_transaction_id: transactionId },
 						};
 

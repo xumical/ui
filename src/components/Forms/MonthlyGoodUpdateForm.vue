@@ -4,15 +4,16 @@
 		novalidate
 	>
 		<fieldset :disabled="this.disabled">
-			<div class="row column">
+			<div>
 				<strong>Each month on the</strong>
 				<label
-					class="show-for-sr"
+					class="tw-sr-only"
 					:class="{ 'error': $v.form.dayOfMonth.$invalid }" :for="form.dayOfMonth"
 				>
 					Day of the Month
 				</label>
-				<input v-if="isDayInputShown"
+				<kv-text-input
+					v-if="isDayInputShown"
 					@blur="hideDayInput()"
 					class="text-input__day"
 					id="dayOfMonth"
@@ -22,14 +23,18 @@
 					min="1"
 					max="31"
 					v-model.number="form.dayOfMonth"
-				>
+				/>
 				<button
-					class="button--ordinal-day"
+					class="tw-text-link tw-font-medium"
 					@click="isDayInputShown = true"
 					v-if="!isDayInputShown"
 				>
 					<strong>{{ form.dayOfMonth | numeral('Oo') }}</strong>
-					<kv-icon class="icon-pencil" name="pencil" title="Edit" />
+					<kv-material-icon
+						class="tw-w-2.5 tw-h-2.5 tw-text-action"
+						:icon="mdiPencil"
+						:title="'Edit'"
+					/>
 				</button>
 				<strong>we'll process the following:</strong>
 				<ul class="validation-errors" v-if="$v.form.dayOfMonth.$invalid">
@@ -46,31 +51,31 @@
 					</small>
 				</div>
 			</div>
-			<div class="middle-wrapper">
-				<div class="row align-middle">
-					<div class="columns">
+			<div>
+				<div class="tw-flex tw-items-center tw-justify-between tw-mt-2">
+					<div>
 						<span>
 							Deposit for lending
 						</span>
 					</div>
 
-					<div class="small-6 medium-4 columns">
+					<div>
 						<label
-							class="show-for-sr"
+							class="tw-sr-only"
 							:class="{ 'error': $v.form.mgAmount.$invalid }"
 							for="amount"
 						>
 							Amount
 						</label>
 						<kv-currency-input
-							class="text-input"
 							id="amount"
+							class="tw-w-15"
 							v-model="form.mgAmount"
 						/>
 					</div>
 				</div>
-				<div class="row columns align-middle">
-					<ul class="text-right validation-errors" v-if="$v.form.mgAmount.$invalid">
+				<div>
+					<ul class="tw-text-right validation-errors" v-if="$v.form.mgAmount.$invalid">
 						<li v-if="!$v.form.mgAmount.required">
 							Field is required
 						</li>
@@ -79,48 +84,49 @@
 						</li>
 					</ul>
 				</div>
-				<div class="row align-middle">
-					<div class="columns">
+				<div class="tw-flex tw-items-center tw-justify-between tw-mt-2">
+					<div>
 						<span>
 							Optional donation to support Kiva
 						</span>
 					</div>
 
-					<div class="small-6 medium-4 columns">
+					<div>
 						<label
-							class="show-for-sr"
+							class="tw-sr-only"
 							:class="{ 'error': $v.form.donation.$invalid }"
 							for="donation"
 						>
 							Donation
 						</label>
 						<kv-currency-input
-							class="text-input"
 							id="donation"
+							class="tw-w-15"
 							v-model="form.donation"
 						/>
 					</div>
 				</div>
-				<div class="row column align-middle">
-					<ul class="text-right validation-errors" v-if="$v.form.donation.$invalid">
+				<div>
+					<ul class="tw-text-right validation-errors" v-if="$v.form.donation.$invalid">
 						<li v-if="!$v.form.donation.minValue || !$v.form.donation.maxValue">
 							Enter an amount of $0-$10,000
 						</li>
 					</ul>
 				</div>
-				<div class="row">
-					<div class="columns">
+				<div class="tw-flex tw-items-center tw-justify-between tw-mt-2">
+					<div>
 						<strong>Total/month</strong>
 					</div>
 
-					<div class="small-6 medium-4 columns">
+					<div>
 						<strong
 							class="additional-left-pad-currency"
 						>{{ totalCombinedDeposit | numeral('$0,0.00') }}</strong>
 					</div>
 				</div>
-				<div class="row column">
-					<ul class="text-center validation-errors"
+				<div>
+					<ul
+						class="tw-text-center validation-errors"
 						v-if="!$v.form.mgAmount.maxTotal || !$v.form.donation.maxTotal"
 					>
 						<li>
@@ -130,14 +136,14 @@
 					</ul>
 				</div>
 			</div>
-			<div class="row align-middle">
-				<div class="column">
-					<strong>Your contribution will:</strong>
+			<div class="tw-flex tw-items-center tw-justify-between tw-mt-2">
+				<div>
+					<label class="tw-font-medium" for="monthly-good-categories-select">Your contribution will:</label>
 				</div>
-				<div class="column">
-					<kv-dropdown-rounded
+				<div>
+					<kv-select
 						v-model="form.category"
-						class="group-dropdown"
+						id="monthly-good-categories-select"
 					>
 						<option
 							v-for="(option, index) in lendingCategories"
@@ -146,7 +152,7 @@
 						>
 							{{ option.label }}
 						</option>
-					</kv-dropdown-rounded>
+					</kv-select>
 				</div>
 			</div>
 		</fieldset>
@@ -158,10 +164,11 @@ import { validationMixin } from 'vuelidate';
 import { required, minValue, maxValue } from 'vuelidate/lib/validators';
 
 import loanGroupCategoriesMixin from '@/plugins/loan-group-categories';
-
 import KvCurrencyInput from '@/components/Kv/KvCurrencyInput';
-import KvDropdownRounded from '@/components/Kv/KvDropdownRounded';
-import KvIcon from '@/components/Kv/KvIcon';
+import { mdiPencil } from '@mdi/js';
+import KvSelect from '~/@kiva/kv-components/vue/KvSelect';
+import KvTextInput from '~/@kiva/kv-components/vue/KvTextInput';
+import KvMaterialIcon from '~/@kiva/kv-components/vue/KvMaterialIcon';
 
 /**
  * This form contains all the fields and validation to modify a MG Subscription
@@ -170,10 +177,12 @@ import KvIcon from '@/components/Kv/KvIcon';
  * so a parent component can access them.
  */
 export default {
+	name: 'MonthlyGoodUpdateForm',
 	components: {
-		KvIcon,
+		KvMaterialIcon,
 		KvCurrencyInput,
-		KvDropdownRounded,
+		KvSelect,
+		KvTextInput,
 	},
 	data() {
 		return {
@@ -184,6 +193,7 @@ export default {
 				mgAmount: this.mgAmount,
 			},
 			isDayInputShown: false,
+			mdiPencil,
 		};
 	},
 	props: {
@@ -256,7 +266,7 @@ export default {
 		}
 	},
 	mounted() {
-		/** Accomodate for special cases where MG category might be legacy or null.
+		/** Accommodate for special cases where MG category might be legacy or null.
 		 */
 		if (!this.category) {
 			this.lendingCategories.push(
@@ -303,24 +313,8 @@ form {
 		margin-bottom: 0.25em;
 	}
 
-	// styles to match KvDropDownRounded
-	input.text-input {
-		border: 1px solid $charcoal;
-		border-radius: $button-radius;
-		color: $charcoal;
-		font-size: $medium-text-font-size;
-		font-weight: $global-weight-highlight;
-		margin: 0;
-	}
-
 	.additional-left-pad-currency {
 		padding-left: 0.65rem;
-	}
-
-	.button--ordinal-day {
-		color: $kiva-accent-blue;
-		fill: $kiva-accent-blue;
-		cursor: pointer;
 	}
 
 	.icon-pencil {
@@ -329,14 +323,9 @@ form {
 	}
 
 	.text-input__day {
-		display: inline-block;
-		width: 3.5rem;
-		padding: 0.25rem 0.5rem;
 		margin: 0 0 0 0.25rem;
-		height: 2rem;
 	}
 
-	.text-input,
 	.validation-errors {
 		margin: 0;
 	}

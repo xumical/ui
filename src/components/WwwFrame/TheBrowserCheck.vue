@@ -3,7 +3,7 @@
 		v-if="isUnsupportedBrowser"
 		variant="caution"
 	>
-		<div class="text-center strong">
+		<div class="tw-text-center tw-font-medium">
 			Your browser is unsupported.
 			Please use
 			<template v-if="isAppleDevice">
@@ -20,6 +20,7 @@
 import KvAlert from '@/components/Kv/KvAlert';
 
 export default {
+	name: 'TheBrowserCheck',
 	inject: ['device'],
 	components: {
 		KvAlert,

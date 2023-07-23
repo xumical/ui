@@ -4,7 +4,8 @@
 		:to="`/lend/${loanId}`"
 		v-kv-track-event="['basket', 'click-Read more', 'Photo', loanId, loanId]"
 	>
-		<img class="loan-img"
+		<img
+			class="loan-img tw-w-12 lg:tw-w-13 tw-h-12 lg:tw-h-13 tw-rounded"
 			:src="imageUrl"
 			:alt="'photo of ' + name"
 		>
@@ -13,6 +14,7 @@
 
 <script>
 export default {
+	name: 'CheckoutItemImg',
 	props: {
 		disableLink: {
 			type: Boolean,
@@ -33,13 +35,3 @@ export default {
 	}
 };
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.loan-img {
-	height: rem-calc(80);
-	width: rem-calc(80);
-}
-
-</style>

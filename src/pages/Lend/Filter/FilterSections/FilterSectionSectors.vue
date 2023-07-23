@@ -18,6 +18,7 @@
 							:disabled="item.count === 0"
 							:checked="item.isRefined"
 							@change="refine(item.value)"
+							class="tw-mb-1"
 						>
 							{{ item.label }} ({{ item.count }})
 						</kv-checkbox>
@@ -36,6 +37,7 @@ import FilterMenuSection from '@/pages/Lend/Filter/FilterComponents/FilterMenuSe
 import KvCheckbox from '@/components/Kv/KvCheckbox';
 
 export default {
+	name: 'FilterSectionSectors',
 	components: {
 		FilterMenuSection,
 		AisRefinementList,

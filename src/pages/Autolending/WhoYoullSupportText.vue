@@ -2,61 +2,65 @@
 	<div>
 		You’ll automatically lend to
 		<template v-if="kivaChooses">
-			<kv-button class="text-link"
+			<button
+				class="tw-text-link tw-font-medium"
 				data-test="autolending-who"
-				@click.native.prevent="$emit('click', $event)"
+				@click="$emit('click', $event)"
 			>
 				borrowers
-			</kv-button>,
-			<kv-button class="text-link"
+			</button>,
+			<button
+				class="tw-text-link tw-font-medium"
 				data-test="autolending-who"
-				@click.native.prevent="$emit('click', $event)"
+				@click="$emit('click', $event)"
 			>
 				countries
-			</kv-button>, and
-			<kv-button class="text-link"
+			</button>, and
+			<button
+				class="tw-text-link tw-font-medium"
 				data-test="autolending-who"
-				@click.native.prevent="$emit('click', $event)"
+				@click="$emit('click', $event)"
 			>
 				sectors
-			</kv-button> based on your lending history.
+			</button> based on your lending history.
 		</template>
 		<template v-if="!kivaChooses">
-			<kv-button class="text-link"
+			<button
+				class="tw-text-link tw-font-medium"
 				data-test="autolending-who"
-				@click.native.prevent="$emit('click', $event)"
+				@click="$emit('click', $event)"
 			>
 				{{ borrowersText }}
-			</kv-button>, in
-			<kv-button class="text-link"
+			</button>, in
+			<button
+				class="tw-text-link tw-font-medium"
 				data-test="autolending-who"
-				@click.native.prevent="$emit('click', $event)"
+				@click="$emit('click', $event)"
 			>
 				{{ countriesText }}
-			</kv-button>,
-			and <kv-button class="text-link"
+			</button>,
+			and <button
+				class="tw-text-link tw-font-medium"
 				data-test="autolending-who"
-				@click.native.prevent="$emit('click', $event)"
+				@click="$emit('click', $event)"
 			>
 				{{ sectorText }}
-			</kv-button><span v-if="advancedText"> and <kv-button class="text-link"
+			</button><span v-if="advancedText"> and <button
+				class="tw-text-link tw-font-medium"
 				data-test="autolending-who"
-				@click.native.prevent="$emit('click', $event)"
-			>{{ advancedText }}</kv-button></span>.
+				@click="$emit('click', $event)"
+			>{{ advancedText }}</button></span>.
 		</template>
 	</div>
 </template>
 
 <script>
 import _get from 'lodash/get';
-import gql from 'graphql-tag';
-import KvButton from '@/components/Kv/KvButton';
+import { gql } from '@apollo/client';
 
 export default {
+	name: 'WhoYoullSupportText',
 	inject: ['apollo', 'cookieStore'],
-	components: {
-		KvButton,
-	},
 	data() {
 		return {
 			gender: 'both',
@@ -70,6 +74,7 @@ export default {
 	apollo: {
 		query: gql`query whoYoullSupport {
 			autolending @client {
+				id
 				currentProfile {
 					id
 					kivaChooses
@@ -174,6 +179,3 @@ export default {
 	}
 };
 </script>
-
-<style lang="scss" scoped>
-</style>

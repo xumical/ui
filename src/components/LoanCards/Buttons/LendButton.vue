@@ -1,36 +1,28 @@
 <template>
-	<kv-button @click.native="addToBasket"
-		v-kv-track-event="['Lending', 'Add to basket', 'lend-button-click', loanId, loanId]"
-		v-if="!loading"
-		class="lend-button"
-	>
-		<slot>Lend now</slot>
-	</kv-button>
 	<kv-button
-		v-else
-		class="lend-button adding-to-basket"
-		:class="{'hide-adding-to-basket-text': hideAddingToBasketText}"
+		:state="buttonState"
+		@click="addToBasket"
 	>
-		<kv-loading-spinner />
-		<span v-if="!hideAddingToBasketText">Adding to basket</span>
+		<slot v-if="!loading">
+			Lend now
+		</slot>
 	</kv-button>
 </template>
 
 <script>
-import _forEach from 'lodash/forEach';
 import numeral from 'numeral';
-import * as Sentry from '@sentry/browser';
+import * as Sentry from '@sentry/vue';
 import updateLoanReservation from '@/graphql/mutation/updateLoanReservation.graphql';
 import loanCardBasketed from '@/graphql/query/loanCardBasketed.graphql';
-import KvButton from '@/components/Kv/KvButton';
-import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
+import { handleInvalidBasket, hasBasketExpired } from '@/util/basketUtils';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
 
 export default {
+	name: 'LendButton',
 	components: {
 		KvButton,
-		KvLoadingSpinner,
 	},
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	props: {
 		loanId: {
 			type: Number,
@@ -40,10 +32,6 @@ export default {
 			type: [Number, String],
 			default: 25,
 		},
-		hideAddingToBasketText: {
-			type: Boolean,
-			default: false,
-		},
 	},
 	data() {
 		return {
@@ -52,6 +40,13 @@ export default {
 	},
 	methods: {
 		addToBasket() {
+			this.$kvTrackEvent(
+				'Lending',
+				'Add to basket',
+				'lend-button-click',
+				this.loanId,
+				this.price
+			);
 			this.setLoading(true);
 			this.apollo.mutate({
 				mutation: updateLoanReservation,
@@ -67,8 +62,7 @@ export default {
 
 				if (errors) {
 					// Handle errors from adding to basket
-					_forEach(errors, error => {
-						this.$showTipMsg(error.message, 'error');
+					errors.forEach(error => {
 						try {
 							this.$kvTrackEvent(
 								'Lending',
@@ -76,6 +70,18 @@ export default {
 								`Failed: ${error.message.substring(0, 40)}...`
 							);
 							Sentry.captureMessage(`Add to Basket: ${error.message}`);
+							if (hasBasketExpired(error?.extensions?.code)) {
+								// eslint-disable-next-line max-len
+								this.$showTipMsg('There was a problem adding the loan to your basket, refreshing the page to try again.', 'error');
+								return handleInvalidBasket({
+									cookieStore: this.cookieStore,
+									loan: {
+										id: this.loanId,
+										price: this.price
+									}
+								});
+							}
+							this.$showTipMsg(error.message, 'error');
 						} catch (e) {
 							// no-op
 						}
@@ -111,45 +117,12 @@ export default {
 			this.$emit('update:loading', isLoading);
 		},
 	},
+	computed: {
+		buttonState() {
+			if (this.loading) return 'loading';
+			return '';
+		},
+	}
 };
 
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.loading-spinner {
-	width: 1.5rem;
-	height: 1.5rem;
-	vertical-align: middle;
-	margin-right: 3px;
-}
-
-.lend-by-category-page .loading-spinner {
-	width: 1.25rem;
-	height: 1.25rem;
-}
-
-.loading-spinner >>> .line {
-	background-color: $white;
-}
-
-.secondary .loading-spinner >>> .line {
-	background-color: $charcoal;
-}
-
-.secondary:hover .loading-spinner >>> .line {
-	background-color: $kiva-accent-blue;
-}
-
-.lend-by-category-page .adding-to-basket.button.smaller {
-	font-size: 1rem;
-
-	&.hide-adding-to-basket-text {
-		.loading-spinner {
-			height: 1.125rem;
-			width: 1.125rem;
-		}
-	}
-}
-</style>

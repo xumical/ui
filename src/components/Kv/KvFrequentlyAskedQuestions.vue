@@ -1,52 +1,65 @@
 <template>
-	<div class="frequently-asked-questions-section-wrapper row" id="frequently-asked-questions">
-		<div class="small-12 columns">
-			<h2>
+	<kv-grid>
+		<div v-if="headline">
+			<h2 class="tw-text-h2">
 				{{ headline }}
 			</h2>
 		</div>
-		<div class="small-12 columns">
-			<div class="row collapse">
-				<kv-expandable-question
-					v-for="(question, index) in faqsContentful"
-					:key="index"
-					:title="question.name"
-					:content="convertFromRichTextToHtml(question.richText)"
-					class="small-12 columns"
-					:id="question.name | changeCase('paramCase')"
-				/>
-			</div>
+		<div v-if="questions" class="tw-divide-y tw-whitespace-normal">
+			<kv-expandable-question
+				v-for="(question, index) in questions"
+				:key="index"
+				:title="question.name"
+				:content="convertFromRichTextToHtml(question.richText)"
+				:id="question.name | changeCase('paramCase')"
+				:active="isActive(question.name)"
+				@toggle="setActiveAccordion"
+			/>
 		</div>
-	</div>
+	</kv-grid>
 </template>
 
 <script>
 import KvExpandableQuestion from '@/components/Kv/KvExpandableQuestion';
-import { documentToHtmlString } from '~/@contentful/rich-text-html-renderer';
+import { richTextRenderer } from '@/util/contentful/richTextRenderer';
+import KvGrid from '~/@kiva/kv-components/vue/KvGrid';
 
 export default {
+	name: 'KvFrequentlyAskedQuestions',
 	components: {
-		KvExpandableQuestion
-	},
-	props: {
-		faqsContentful: {
-			type: Array,
-			default() {
-				return [];
-			}
-		},
-		headline: {
-			type: String,
-			default: ''
-		},
+		KvExpandableQuestion,
+		KvGrid,
 	},
 	data() {
 		return {
+			activeAccordion: '',
 		};
+	},
+	props: {
+		/**
+		 * FAQ Headline
+		* */
+		headline: {
+			type: String,
+			default: '',
+		},
+		/**
+		 * Array of questions - output of contentful content field. each questions is a contentful rich text object
+		* */
+		questions: {
+			type: Array,
+			default: () => [],
+		},
 	},
 	methods: {
 		convertFromRichTextToHtml(rawRichText) {
-			return documentToHtmlString(rawRichText);
+			return rawRichText ? richTextRenderer(rawRichText) : '';
+		},
+		setActiveAccordion({ title }) {
+			this.activeAccordion = title;
+		},
+		isActive(title) {
+			return this.activeAccordion === title;
 		}
 	},
 	mounted() {
@@ -61,22 +74,4 @@ export default {
 		});
 	}
 };
-
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.frequently-asked-questions-section-wrapper {
-	margin-bottom: 4rem;
-
-	h2 {
-		margin-bottom: 1.85rem;
-		font-weight: bold;
-
-		@include breakpoint(large) {
-			@include large-text();
-		}
-	}
-}
-</style>

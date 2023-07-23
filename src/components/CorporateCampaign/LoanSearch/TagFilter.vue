@@ -18,6 +18,7 @@ import anyOrSelectedAutolendingFilter from '@/plugins/any-or-selected-autolendin
 import CheckList from '@/pages/Autolending/CheckList';
 
 export default {
+	name: 'TagFilter',
 	components: {
 		CheckList,
 	},
@@ -65,6 +66,10 @@ export default {
 				}
 				if (this.initialTags.length) {
 					return this.initialTags.includes(tag.id) || false;
+				}
+				// omit private tags
+				if (tag.vocabularyId === 3) {
+					return false;
 				}
 				return true;
 			});

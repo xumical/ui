@@ -1,4 +1,4 @@
-import { onError } from 'apollo-link-error';
+import { onError } from '@apollo/client/link/error';
 import logFormatter from '@/util/logFormatter';
 
 export default () => {
@@ -8,8 +8,7 @@ export default () => {
 		forward
 	}) => {
 		if (networkError) {
-			logFormatter(operation, 'error');
-			logFormatter(networkError, 'error');
+			logFormatter(`Apollo network error: ${networkError}`, 'error', { operation, networkError });
 		}
 		forward();
 	});

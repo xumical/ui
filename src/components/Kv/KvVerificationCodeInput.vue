@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="kv-verification-code-input"
+		class="kv-verification-code-input tw-border tw-border-tertiary"
 		:style="cssVars"
 	>
 		<!--
@@ -43,6 +43,7 @@
 // https://www.twilio.com/blog/html-attributes-two-factor-authentication-autocomplete
 
 export default {
+	name: 'KvVerificationCodeInput',
 	model: {
 		prop: 'value',
 		event: 'input'

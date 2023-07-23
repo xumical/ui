@@ -5,7 +5,19 @@ export const lightHeader = {
 	linkColor: '#767676',
 	linkHoverColor: '#efefef',
 	separatorColor: 'transparent',
-	shadow: '0 0 0.5rem 0 rgba(0, 0, 0, 0.15)'
+	shadow: '0 0 0.5rem 0 rgba(0, 0, 0, 0.15)',
+	textColor: '#484848',
+};
+
+export const greenHeader = {
+	themeKey: 'greenHeader',
+	backgroundColor: '#4faf4e',
+	logoColor: '#fff',
+	linkColor: '#fff',
+	linkHoverColor: '#49953f',
+	separatorColor: '#49953f',
+	shadow: 'none',
+	textColor: '#fff',
 };
 
 export const lightFooter = {

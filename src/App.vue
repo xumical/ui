@@ -1,5 +1,9 @@
 <template>
-	<div id="app">
+	<div
+		id="app"
+		class="tw-h-full tw-bg-primary"
+		:data-hydrated="dataHydrated"
+	>
 		<router-view />
 		<vue-progress-bar />
 		<the-tip-message />
@@ -7,21 +11,34 @@
 </template>
 
 <script>
+import '@/assets/scss/tailwind/tailwind.css';
 import TheTipMessage from '@/components/WwwFrame/TheTipMessage';
 import webmanifest from '@/manifest.webmanifest';
+import unbounceEventMixin from '@/plugins/unbounce-event-mixin';
 
 export default {
 	name: 'App',
+	data() {
+		return {
+			dataHydrated: false
+		};
+	},
 	components: {
 		TheTipMessage,
 	},
+	mixins: [unbounceEventMixin],
 	metaInfo() {
 		return {
 			title: 'Loans that change lives',
 			titleTemplate: '%s | Kiva',
 			/* eslint-disable global-require */
 			meta: [
-				// General Meta Tags
+				// Referrer policy
+				{
+					vmid: 'referrer',
+					name: 'referrer',
+					content: 'strict-origin-when-cross-origin'
+				},
 				{
 					vmid: 'description',
 					name: 'description',
@@ -48,9 +65,13 @@ export default {
 				// eslint-disable-next-line max-len
 				{ property: 'og:description', vmid: 'og:description', content: 'Support women, entrepreneurs, students and refugees around the world with as little as $25 on Kiva. 100% of your loans go to support borrowers.' },
 				{ property: 'theme-color', content: '#4faf4e' },
-				{ property: 'og:image', content: 'https://www-kiva-org.freetls.fastly.net/cms/kiva-og-image.jpg' },
-				{ property: 'og:image:width', content: '1200' },
-				{ property: 'og:image:height', content: '630' },
+				{
+					property: 'og:image',
+					vmid: 'og:image',
+					content: 'https://www-kiva-org.freetls.fastly.net/cms/kiva-og-image.jpg'
+				},
+				{ property: 'og:image:width', vmid: 'og:image:width', content: '1200' },
+				{ property: 'og:image:height', vmid: 'og:image:height', content: '630' },
 			]).concat([
 				// Microsoft Tile Tags
 				{
@@ -84,10 +105,36 @@ export default {
 				},
 				{
 					name: 'twitter:image',
+					vmid: 'twitter:image',
 					content: 'https://www-kiva-org.freetls.fastly.net/cms/kiva-ogtwitter-image.jpg'
 				},
 			]),
 			link: [
+				// Fonts in format woff2nt'
+				{
+					rel: 'preload',
+					href: require('@/assets/fonts/PostGrotesk-Medium.woff2'),
+					crossorigin: 'anonymous',
+					as: 'font'
+				},
+				{
+					rel: 'preload',
+					href: require('@/assets/fonts/PostGrotesk-MediumItalic.woff2'),
+					crossorigin: 'anonymous',
+					as: 'font'
+				},
+				{
+					rel: 'preload',
+					href: require('@/assets/fonts/PostGrotesk-Book.woff2'),
+					crossorigin: 'anonymous',
+					as: 'font'
+				},
+				{
+					rel: 'preload',
+					href: require('@/assets/fonts/PostGrotesk-BookItalic.woff2'),
+					crossorigin: 'anonymous',
+					as: 'font'
+				},
 				// apple icons
 				{
 					rel: 'apple-touch-icon',
@@ -98,7 +145,29 @@ export default {
 					sizes: '152x152',
 					href: require('@/assets/images/favicons/apple-touch-icon-152x152.png')
 				},
-			].concat([
+				{
+					vmid: 'canonical',
+					rel: 'canonical',
+					href: `${this.$appConfig.transport}://${this.$appConfig.host}${this.$route.path}`
+				}
+			].concat(/^[a-z]+:\/\//i.test(this.$appConfig?.publicPath) ? [
+				{
+					vmid: 'dns-prefetch',
+					rel: 'dns-prefetch',
+					href: `https://${new URL(this.$appConfig.publicPath).hostname}`
+				},
+				{
+					vmid: 'preconnect',
+					rel: 'preconnect',
+					href: `https://${new URL(this.$appConfig.publicPath).hostname}`
+				},
+				{
+					vmid: 'preconnect-crossorigin',
+					rel: 'preconnect',
+					crossorigin: '',
+					href: `https://${new URL(this.$appConfig.publicPath).hostname}`
+				},
+			] : []).concat([
 				// Standard Favicons + Android favicons
 				{
 					rel: 'icon',
@@ -134,7 +203,7 @@ export default {
 					type: 'image/x-icon',
 					href: require('@/assets/images/favicons/favicon-196x196.png'),
 					sizes: '196x196'
-				},
+				}
 			].concat([
 				{
 					// Web Manifest. Required for promoting the Android App on our site with smart-banners.
@@ -143,14 +212,13 @@ export default {
 				}
 			]))
 		};
+	},
+	mounted() {
+		this.dataHydrated = true;
 	}
 };
 </script>
 
 <style lang="scss">
 @import 'app.scss';
-
-#app {
-	height: 100%;
-}
 </style>

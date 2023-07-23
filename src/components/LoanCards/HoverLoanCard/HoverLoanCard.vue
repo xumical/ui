@@ -31,6 +31,7 @@
 				:percent-raised="percentRaised"
 				:expanded="expanded"
 				:expiring-soon-message="expiringSoonMessage"
+				:is-match-at-risk="isMatchAtRisk"
 				:is-visitor="isVisitor"
 				:is-selected-by-another="isSelectedByAnother"
 				:items-in-basket="itemsInBasket"
@@ -58,6 +59,7 @@ import HoverLoanCardLarge from './HoverLoanCardLarge';
 import hoverLoanCardMixin from './hoverLoanCardMixin';
 
 export default {
+	name: 'HoverLoanCard',
 	components: {
 		HoverLoanCardSmall,
 		HoverLoanCardLarge,
@@ -79,6 +81,10 @@ export default {
 		itemsInBasket: {
 			type: Array,
 			default: () => [],
+		},
+		isMatchAtRisk: {
+			type: Boolean,
+			default: false
 		},
 		isVisitor: {
 			type: Boolean,
@@ -104,6 +110,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		showTags: {
+			type: Boolean,
+			default: false,
+		}
 	},
 	computed: {
 		expanded() {
@@ -218,7 +228,7 @@ export default {
 
 		.more-details-wrapper {
 			position: absolute;
-			bottom: rem-calc(-118);
+			bottom: rem-calc(-116);
 			left: 50%;
 			cursor: pointer;
 			opacity: 0;

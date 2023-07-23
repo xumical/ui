@@ -1,13 +1,13 @@
 <template functional>
 	<span
-		class="small-text matching-text"
+		class="tw-text-small tw-text-tertiary matching-text"
 		:class="{
-			'has-match': props.matchingText,
+			'has-match': props.matchingText && !props.isMatchAtRisk,
 			'hide-match': props.isFunded || props.isSelectedByAnother || props.isExpired,
 			'wrap': props.wrap,
 		}"
 	>
-		2x matching by {{ props.matchingText }}
+		{{ props.matchRatio + 1 }}x matching by {{ props.matchingText }}
 	</span>
 </template>
 
@@ -16,7 +16,6 @@
 
 .matching-text {
 	display: block;
-	color: $kiva-text-light;
 	visibility: hidden;
 	overflow: hidden;
 	text-overflow: ellipsis;

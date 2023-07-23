@@ -1,5 +1,6 @@
 <template>
-	<div class="dropdown-pane"
+	<div
+		class="dropdown-pane"
 		:class="{'is-open': show}"
 		:style="styles"
 		:aria-hidden="show ? 'false' : 'true'"
@@ -9,8 +10,6 @@
 </template>
 
 <script>
-import Popper from 'popper.js';
-import _map from 'lodash/map';
 import dropdownQuery from '@/graphql/query/dropdown.graphql';
 import {
 	onBodyTouchstart,
@@ -19,6 +18,7 @@ import {
 } from '@/util/touchEvents';
 
 export default {
+	name: 'KvDropdown',
 	inject: ['apollo', 'cookieStore'],
 	props: {
 		controller: { type: String, required: true },
@@ -59,7 +59,11 @@ export default {
 		},
 	},
 	mounted() {
-		this.makeDropdown();
+		if (this.reference) {
+			this.makeDropdown();
+		} else {
+			console.error(`KvDropdown: Controller element with id ${this.controller} not found in document.`);
+		}
 	},
 	updated() {
 		if (this.popper) {
@@ -71,7 +75,8 @@ export default {
 	},
 	methods: {
 		open() {
-			this.setTimeout(() => {
+			this.setTimeout(async () => {
+				await this.initPopper();
 				this.show = true;
 				if (this.usingTouch) {
 					this.attachBodyEvents();
@@ -94,7 +99,6 @@ export default {
 			}
 		},
 		makeDropdown() {
-			this.initPopper();
 			this.attachEvents();
 		},
 		unmakeDropdown() {
@@ -107,7 +111,10 @@ export default {
 			this.unmakeDropdown();
 			this.makeDropdown();
 		},
-		initPopper() {
+		async initPopper() {
+			if (this.popper) return;
+			const { default: Popper } = await import('popper.js');
+			if (this.popper) return; // in case popper was initialized in another callback while importing
 			this.popper = new Popper(this.reference, this.$el, {
 				placement: 'bottom-start',
 				modifiers: {
@@ -156,7 +163,8 @@ export default {
 			offBodyTouchstart(this.bodyTouchHandler);
 		},
 		setAttributes(attrs) {
-			_map(attrs, (value, attr) => {
+			Object.keys(attrs).forEach(attr => {
+				const value = attrs[attr];
 				if (value === false) {
 					this.$el.removeAttribute(attr);
 				} else {
@@ -176,4 +184,10 @@ export default {
 @import 'settings';
 @import 'foundation';
 @include foundation-dropdown;
+</style>
+
+<style lang="postcss" scoped>
+.dropdown-pane {
+	@apply !tw-z-overlay;
+}
 </style>

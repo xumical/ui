@@ -26,11 +26,6 @@ function buildRouteJSON() {
 		if (cleanString !== '*' && cleanString !== '' && cleanString.indexOf('/') === 0) {
 			paths.push(cleanString);
 		}
-		// allow styleguide children
-		// TODO: find some better way to handle children arrays
-		if (cleanString === '/styleguide') {
-			paths.push('/styleguide/:any');
-		}
 	}
 	// add /static path and anything against it to allow initial calls for static assets
 	paths.push('/static/:any');
@@ -43,11 +38,14 @@ function buildRouteJSON() {
 	paths.push('/timesync');
 	// add paths for healthcheck
 	paths.push('/healthcheck');
+	// add paths for sitemap
+	paths.push('/sitemaps/ui.xml');
 
 	return paths;
 }
 
 // eslint-disable-next-line
 module.exports = (req, res, next) => {
+	res.set('Cache-Control', 'no-cache, no-store, max-age=0, no-transform, private');
 	res.json(buildRouteJSON());
 };

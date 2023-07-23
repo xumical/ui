@@ -1,4 +1,5 @@
 query wwwHeader($basketId: String) {
+	hasEverLoggedIn @client
 	shop (basketId: $basketId) {
 		id
 		nonTrivialItemCount
@@ -18,6 +19,7 @@ query wwwHeader($basketId: String) {
 				}
 			}
 			totals {
+				creditAvailableTotal
 				bonusAvailableTotal
 				freeTrialAvailableTotal
 				redemptionCodeAvailableTotal
@@ -26,6 +28,7 @@ query wwwHeader($basketId: String) {
 		}
 	}
 	my {
+		id
 		userAccount {
 			id
 			balance

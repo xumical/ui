@@ -7,6 +7,7 @@
 		:body="body"
 		:image-url="imageUrl"
 		:is-open="isOpen"
+		:disclaimer="hasDisclaimer"
 		@toggle-banner="onToggleBanner"
 		@amount-selected="onAmountSelected"
 	/>
@@ -20,6 +21,7 @@ import AppealBannerCircular from '@/components/WwwFrame/PromotionalBanner/Banner
 import { documentToHtmlString } from '~/@contentful/rich-text-html-renderer';
 
 export default {
+	name: 'AppealBannerCircularContainer',
 	components: {
 		AppealBannerCircular
 	},
@@ -70,6 +72,10 @@ export default {
 			return this.appealBannerContent?.additionalContent
 				?.find(content => content?.fields?.name === 'Progress Meter Image')
 				.fields?.images?.[0]?.fields?.file?.url || '';
+		},
+		hasDisclaimer() {
+			const disclaimer = this.appealBannerContent?.disclaimers?.content?.[0] ?? '';
+			return disclaimer !== '';
 		}
 	},
 	created() {

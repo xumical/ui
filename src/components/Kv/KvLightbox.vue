@@ -12,23 +12,24 @@
 			v-show="isShown"
 		>
 			<focus-lock
-				v-if="isShown"
+				:disabled="!isShown"
 				class="kv-lightbox__focus-lock"
 				:return-focus="true"
 			>
 				<div
-					class="kv-lightbox__container"
+					class="kv-lightbox__container tw-bg-primary"
 					@click.stop
 					tabindex="-1"
 					ref="kvLightbox"
 					role="dialog"
-					data-test="kv-lightbox"
+					data-testid="kv-lightbox"
 					:aria-labelledby="title ? 'lightbox-title' : null"
 					aria-modal="true"
 				>
 					<div class="kv-lightbox__header">
-						<h2 v-if="title"
-							class="kv-lightbox__title"
+						<h2
+							v-if="title"
+							class="kv-lightbox__title tw-mb-1"
 							id="lightbox-title"
 						>
 							{{ title }}
@@ -46,7 +47,8 @@
 							/>
 						</button>
 					</div>
-					<div class="kv-lightbox__body"
+					<div
+						class="kv-lightbox__body"
 						ref="kvLightboxBody"
 					>
 						<!-- gives lightbox content foundation grids the correct margins -->
@@ -71,6 +73,7 @@ import KvIcon from '@/components/Kv/KvIcon';
 import lockScrollUtils from '@/plugins/lock-scroll';
 
 export default {
+	name: 'KvLightbox',
 	components: {
 		FocusLock,
 		KvIcon,
@@ -205,7 +208,6 @@ export default {
 		overflow: hidden;
 		padding: 1.5rem;
 		max-height: 100%;
-		background: $white;
 		position: absolute;
 		top: 0;
 		left: 0;

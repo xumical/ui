@@ -1,4 +1,5 @@
 query checkoutReceipt($checkoutId: Int!, $visitorId: String) {
+	hasEverLoggedIn @client
 	shop {
 		id
 		receipt(checkoutId: $checkoutId, visitorId: $visitorId) {
@@ -61,21 +62,41 @@ query checkoutReceipt($checkoutId: Int!, $visitorId: String) {
 							image {
 								id
 								url
+								default: url(customSize: "w480h300")
+								hash
 							}
 							use
+							fundraisingPercent @client
+							fundraisingTimeLeft @client
+							fundraisingTimeLeftMilliseconds @client
+							plannedExpirationDate
 							geocode {
 								city
 								country {
 									name
 								}
 							}
+							loanAmount
+							loanFundraisingInfo {
+								fundedAmount
+								reservedAmount
+							}
+							distributionModel
+							unreservedAmount @client
+							inPfp
 						}
+						team {
+							id
+							name
+						}
+
 					}
 				}
 			}
 		}
 	}
 	my {
+		id
 		autoDeposit {
 			id
 			isSubscriber
@@ -90,12 +111,32 @@ query checkoutReceipt($checkoutId: Int!, $visitorId: String) {
 				}
 			}
 		}
+		lender {
+			id
+			name
+		}
 		userAccount {
 			id
 			firstName
 			lastName
 			email
 			inviterName
+			public
+		}
+		loans {
+			totalCount
+		}
+	}
+	general {
+		shareAskCopy: uiExperimentSetting(key: "share_ask_copy") {
+			key
+			value
+		}
+	}
+	mySubscriptions(includeDisabled: false) {
+		values {
+			id
+			enabled
 		}
 	}
 	contentful {

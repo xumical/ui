@@ -7,7 +7,7 @@
 			:class="`slide-${index}`"
 		>
 			<div class="row">
-				<div class="columns small-12 hide-for-large small-image text-center">
+				<div class="columns small-12 hide-for-large small-image tw-text-center">
 					<kv-responsive-image :images="images" alt="" />
 				</div>
 				<div class="columns small-12 large-7">
@@ -44,6 +44,7 @@ import KvCarouselSlide from '@/components/Kv/KvCarouselSlide';
 const kivaContentBlockImageRequire = require.context('@/assets/images/possibilities-banners/kiva-content-block/', true);
 
 export default {
+	name: 'KivaContentBlock',
 	components: {
 		KvButton,
 		KvResponsiveImage,

@@ -1,14 +1,15 @@
 <template>
 	<ais-pagination :padding="padding">
-		<div slot-scope="{
-			currentRefinement,
-			nbPages,
-			pages,
-			isFirstPage,
-			isLastPage,
-			refine,
-			createURL
-		}"
+		<div
+			slot-scope="{
+				currentRefinement,
+				nbPages,
+				pages,
+				isFirstPage,
+				isLastPage,
+				refine,
+				createURL
+			}"
 		>
 			<algolia-pagination
 				:current-refinement="currentRefinement"
@@ -28,6 +29,7 @@ import { AisPagination } from 'vue-instantsearch';
 import AlgoliaPagination from '@/pages/Lend/AlgoliaPagination';
 
 export default {
+	name: 'AlgoliaPaginationWrapper',
 	components: {
 		AisPagination,
 		AlgoliaPagination,

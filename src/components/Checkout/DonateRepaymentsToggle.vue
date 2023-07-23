@@ -1,24 +1,59 @@
 <template>
-	<div v-if="showToggle" class="donate-repayments-toggle">
-		<kv-checkbox
-			class="donate-repayments-label"
-			id="donate-repayments"
-			:checkbox-right="true"
-			v-if="!myDonateRepayments"
-			v-model="donateRepayments"
-			@change="toggleDonateRepayments"
+	<div>
+		<div
+			v-if="showToggle"
+			class="tw-mt-2 tw-flex donate-repayments-toggle"
 		>
-			<span id="donate-repayments-tooltip">Donate loan repayments instead?</span>
-		</kv-checkbox>
-		<kv-tooltip controller="donate-repayments-tooltip">
-			<template #title>
-				Thanks for your support!
-			</template>
-			When you check this box, repayments go back to Kiva in the form of donations,
-			helping us cover operating costs and reach even more borrowers worldwide.
-			<br>
-			Repayments from selected loans will not be added back to your account as Kiva credit.
-		</kv-tooltip>
+			<button
+				v-if="!myDonateRepayments"
+				class="tw-flex-1 tw-pt-0.5 md:tw-pt-0 tw-text-base
+					tw-font-medium tw-text-left md:tw-text-right tw-mr-2
+					tw-cursor-pointer"
+				@click="toggleCheckbox"
+				data-testid="basket-donation-repayments-button"
+				aria-hidden="true"
+			>
+				Donate loan repayments instead?
+			</button>
+			<kv-checkbox
+				class="tw-relative tw-cursor-pointer md:tw-text-right kv-checkbox tw-pt-0 donate-repayments-label"
+				id="donate-repayments"
+				data-testid="donate-repayments"
+				v-if="!myDonateRepayments"
+				v-model="donateRepayments"
+				@update:modelValue="setDonateRepayments"
+			>
+				<span
+					id="donate-repayments-tooltip"
+					data-testid="donate-repayments-tooltip"
+					class="tw-text-small tw-font-medium tw-sr-only"
+				>
+					Donate loan repayments instead?
+				</span>
+			</kv-checkbox>
+			<kv-lightbox
+				:visible="isLightboxVisible"
+				title="Donate your loan repayments"
+				@lightbox-closed="closeLightbox"
+			>
+				When you check this box, repayments go back to Kiva in the form of donations,
+				helping us cover operating costs and reach even more borrowers worldwide.
+				Repayments from selected loans will not be added back to your account as Kiva credit.
+			</kv-lightbox>
+		</div>
+		<div
+			v-if="showToggle"
+			class="tw-flex tw-mt-2"
+		>
+			<button
+				class="tw-text-link tw-text-left md:tw-text-right tw-w-full"
+				@click="isLightboxVisible = true;"
+				data-testid="basket-donation-repayments-lightbox"
+				v-kv-track-event="['basket', 'Donation Info Lightbox', 'Open Lightbox']"
+			>
+				Learn more
+			</button>
+		</div>
 	</div>
 </template>
 
@@ -27,15 +62,16 @@ import _get from 'lodash/get';
 import _filter from 'lodash/filter';
 import _forEach from 'lodash/forEach';
 import numeral from 'numeral';
-import KvCheckbox from '@/components/Kv/KvCheckbox';
-import KvTooltip from '@/components/Kv/KvTooltip';
 import initializeCheckout from '@/graphql/query/checkout/initializeCheckout.graphql';
 import updateLoanReservationDonateRepayments from '@/graphql/mutation/updateLoanReservationDonateRepayments.graphql';
+import KvLightbox from '~/@kiva/kv-components/vue/KvLightbox';
+import KvCheckbox from '~/@kiva/kv-components/vue/KvCheckbox';
 
 export default {
+	name: 'DonateRepaymentsToggle',
 	components: {
 		KvCheckbox,
-		KvTooltip
+		KvLightbox,
 	},
 	inject: ['apollo'],
 	data() {
@@ -44,6 +80,7 @@ export default {
 			myDonateRepayments: false,
 			totals: {},
 			loans: [],
+			isLightboxVisible: false,
 		};
 	},
 	created() {
@@ -78,9 +115,16 @@ export default {
 			}
 
 			return true;
-		}
+		},
 	},
 	methods: {
+		toggleCheckbox() {
+			// toggle the donateRepayments value, in order
+			// to trigger the donateRepayments checkbox
+			this.donateRepayments = !this.donateRepayments;
+			// then call the toggleDonateRepayments function to handle the rest
+			this.toggleDonateRepayments();
+		},
 		toggleDonateRepayments() {
 			if (this.donateRepayments) {
 				this.setDonateRepayments(true);
@@ -131,56 +175,20 @@ export default {
 				console.error(error);
 				return error;
 			});
-		}
+		},
+		openLightbox() {
+			this.isLightboxVisible = true;
+		},
+		closeLightbox() {
+			this.isLightboxVisible = false;
+		},
 	}
 };
 </script>
 
-<style lang="scss" scoped>
-@import 'settings';
-
-.donate-repayments-toggle {
-	.donate-repayments-label {
-		position: relative;
-		padding: 0.5rem 0 0 0.55rem;
-		line-height: 1;
-		font-size: $small-text-font-size;
-		cursor: pointer;
-
-		@include breakpoint(medium) {
-			text-align: right;
-			padding: 0.05rem 0 0 0.5rem;
-		}
-	}
-
-	.donate-repayments-checkbox {
-		position: relative;
-		left: -1000rem;
-		margin: 0;
-	}
-
-	.donate-repayments-icon {
-		margin: 0 0.5rem 0 0;
-		display: inline-block;
-
-		@include breakpoint(medium) {
-			margin: 0 0 0 0.5rem;
-		}
-
-		svg {
-			height: 1.2rem;
-			width: 1.2rem;
-		}
-	}
-
-	#donate-repayments-tooltip {
-		font-weight: $global-weight-normal;
-		color: $kiva-accent-blue;
-		line-height: $small-text-line-height;
-
-		@include breakpoint(medium) {
-			text-align: right;
-		}
-	}
+<style lang="postcss" scoped>
+/* Hack to remove spacing from right side of checkbox, to align items on checkout page... */
+.kv-checkbox >>> label > div {
+	@apply tw-mr-0;
 }
 </style>

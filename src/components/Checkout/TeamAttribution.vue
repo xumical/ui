@@ -1,21 +1,26 @@
 <template>
-	<div class="team-select-wrapper">
+	<div class="team-select-wrapper tw-whitespace-nowrap">
 		<div class="team-select">
-			<select
+			<label for="team_select" class="tw-sr-only">Attribute to team</label>
+			<kv-select
+				id="team_select"
+				data-testid="basket-loan-team-selector"
 				v-model="selectedId"
-				class="team-select-dd small-text fs-mask"
-				@change="updateLoanReservation()"
+				class="team-select-dd data-hj-suppress tw-float-left"
+				style="max-width: rem-calc(250);"
+				@update:modelValue="updateLoanReservation()"
 			>
 				<option value="0">
 					None
 				</option>
-				<option v-for="team in sortTeams"
+				<option
+					v-for="team in sortTeams"
 					:key="team.id"
 					:value="team.id"
 				>
 					{{ team.name }}
 				</option>
-			</select>
+			</kv-select>
 		</div>
 	</div>
 </template>
@@ -25,8 +30,10 @@ import _forEach from 'lodash/forEach';
 import _orderBy from 'lodash/orderBy';
 import numeral from 'numeral';
 import updateLoanReservationTeam from '@/graphql/mutation/updateLoanReservationTeam.graphql';
+import KvSelect from '~/@kiva/kv-components/vue/KvSelect';
 
 export default {
+	name: 'TeamAttribution',
 	props: {
 		teams: {
 			type: Array,
@@ -42,6 +49,7 @@ export default {
 		},
 	},
 	components: {
+		KvSelect
 	},
 	inject: ['apollo'],
 	data() {
@@ -55,12 +63,21 @@ export default {
 			return _orderBy(this.teams, 'name');
 		}
 	},
+	watch: {
+		// watch for updated changes to the teamId prop
+		// typically this is derived from the team assigned to the loan reservation
+		teamId(newId, prevId) {
+			if (newId !== prevId) {
+				this.selectedId = newId;
+			}
+		}
+	},
 	mounted() {
 		this.selectedId = this.teamId || 0;
 	},
 	methods: {
 		updateLoanReservation() {
-			if (this.selectedId !== this.loanId) {
+			if (this.selectedId !== this.teamId) {
 				this.$emit('updating-totals', true);
 				const updatedTeamId = numeral(this.selectedId).value();
 
@@ -97,36 +114,3 @@ export default {
 };
 
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.team-select-wrapper {
-	white-space: nowrap;
-}
-
-.team-select {
-	float: left;
-	max-width: rem-calc(250);
-}
-
-.team-select-dd {
-	border: 1px solid $gray;
-	border-radius: $button-radius;
-	height: rem-calc(40);
-	background-image: url('~@/assets/images/customDropdown999.png');
-	background-position: right -2.5rem center;
-	background-size: 2rem 2rem;
-	padding: 0 3rem 0 0.5rem;
-	text-indent: 0.02rem;
-	color: $dark-gray;
-	cursor: pointer;
-
-	@include breakpoint(medium) {
-		height: rem-calc(25);
-		padding: 0 2.15rem 0 0.5rem;
-		background-size: rem-calc(23) rem-calc(20);
-		background-position: right -1.9rem center;
-	}
-}
-</style>

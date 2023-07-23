@@ -1,63 +1,45 @@
 <template>
-	<div class="promo-tags">
-		<template
-			v-for="(promoCredit, index) in appliedPromoCredits"
+	<div class="promo-tags tw-clear-both tw-mt-0.5 tw-mx-0 tw-mb-0.5">
+		<div
+			v-for="(promoCredit, index) in formattedPromoCredits"
+			class="tw-text-small tw-text-secondary" :key="index" data-testid="basket-loan-promo-credit"
 		>
-			<div class="promo-tags__item" :key="index">
-				<span class="promo-tags__item-credit">
-					<strong>{{ promoCredit.amount }} credit applied</strong>
-				</span>
-				<span class="promo-tags__item-sponsor">
-					Sponsored by:
-					<br>
-					<strong>{{ promoCredit.promoFund.displayName }}</strong>
-				</span>
-			</div>
-		</template>
+			<span
+				v-if="promoCredit.amount !== 0"
+				class="
+					tw-inline-block tw-rounded-sm
+					-tw-ml-1 tw-mb-1 tw-pt-0.5 tw-px-1 tw-pb-0
+					tw-text-brand-1000 tw-bg-secondary"
+			>
+				<strong>{{ promoCredit.amount }} credit applied</strong>
+			</span>
+			<span v-if="promoCredit.displayName" class="tw-py-0.5 tw-px-0 tw-block">
+				Sponsored by:
+				<br>
+				<strong>{{ promoCredit.displayName }}</strong>
+			</span>
+		</div>
 	</div>
 </template>
 
 <script>
 export default {
+	name: 'LoanPromoCredits',
 	props: {
 		appliedPromoCredits: {
 			type: Array,
 			default: () => []
 		}
 	},
-	data() {
-		return {
-
-		};
-	},
+	computed: {
+		formattedPromoCredits() {
+			return this.appliedPromoCredits.map(credit => {
+				return {
+					amount: credit?.amount ?? 0,
+					displayName: credit?.promoFund?.displayName ?? null
+				};
+			});
+		}
+	}
 };
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.promo-tags {
-	clear: both;
-	margin: 0.375rem 0 0.5rem;
-
-	&__item {
-		font-size: 0.8rem;
-		color: $kiva-text-medium;
-	}
-
-	&__item-credit {
-		color: $kiva-darkgreen;
-		display: inline-block;
-		margin-bottom: 0.25rem;
-		background: $very-light-gray;
-		padding: 0.3rem 0.3rem 0.1rem;
-		margin-left: -0.2rem;
-		border-radius: 0.25rem;
-	}
-
-	&__item-sponsor {
-		display: block;
-		padding: 0.2rem 0;
-	}
-}
-</style>

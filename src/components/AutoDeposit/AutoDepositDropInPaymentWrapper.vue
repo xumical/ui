@@ -1,37 +1,34 @@
 <template>
-	<div class="row">
-		<div class="dropin-payment-holder small-12 columns">
-			<braintree-drop-in-interface
-				ref="braintreeDropInInterface"
-				:amount="amount | numeral('0.00')"
-				flow="vault"
-				:payment-types="['paypal', 'card']"
-				:preselect-vaulted-payment-method="action === 'Registration'"
-				@transactions-enabled="enableConfirmButton = $event"
-			/>
-			<div id="dropin-button">
-				<kv-button
-					value="submit"
-					id="dropin-submit"
-					class="button"
-					:disabled="!enableConfirmButton || submitting"
-					@click.native="submitDropInAutoDeposit"
-				>
-					<kv-icon name="lock" />
-					Confirm <kv-loading-spinner v-if="submitting" />
-				</kv-button>
-			</div>
-
-			<p class="dropin-wrapper-attribution-text">
-				Thanks to PayPal, Kiva receives free payment processing for all loans.
-			</p>
+	<div class="dropin-payment-holder tw-px-0 tw-mt-4">
+		<braintree-drop-in-interface
+			v-if="isClientReady"
+			ref="braintreeDropInInterface"
+			:amount="amount | numeral('0.00')"
+			flow="vault"
+			:payment-types="['paypal', 'card']"
+			:preselect-vaulted-payment-method="action === 'Registration'"
+			@transactions-enabled="enableConfirmButton = $event"
+		/>
+		<div id="dropin-submit" class="tw-w-full">
+			<kv-button
+				class="tw-w-full tw-mb-2"
+				:state="buttonState"
+				@click="submitDropInAutoDeposit"
+			>
+				<kv-icon name="lock" />
+				{{ buttonText }}
+			</kv-button>
 		</div>
+
+		<p class="tw-text-small tw-text-secondary tw-text-center tw-px-2">
+			Thanks to PayPal, Kiva receives free payment processing for all loans.
+		</p>
 	</div>
 </template>
 
 <script>
 import numeral from 'numeral';
-import * as Sentry from '@sentry/browser';
+import * as Sentry from '@sentry/vue';
 
 import braintreeDropInError from '@/plugins/braintree-dropin-error-mixin';
 
@@ -39,17 +36,15 @@ import braintreeCreateAutoDepositSubscription from '@/graphql/mutation/braintree
 import braintreeUpdateSubscriptionPaymentMethod from
 	'@/graphql/mutation/braintreeUpdateSubscriptionPaymentMethod.graphql';
 
-import KvButton from '@/components/Kv/KvButton';
 import KvIcon from '@/components/Kv/KvIcon';
-import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
-import BraintreeDropInInterface from '@/components/Payment/BraintreeDropInInterface';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
 
 export default {
+	name: 'AutoDepositDropInPaymentWrapper',
 	components: {
-		BraintreeDropInInterface,
+		BraintreeDropInInterface: () => import('@/components/Payment/BraintreeDropInInterface'),
 		KvButton,
 		KvIcon,
-		KvLoadingSpinner
 	},
 	inject: ['apollo'],
 	mixins: [braintreeDropInError],
@@ -57,6 +52,10 @@ export default {
 		amount: {
 			type: Number,
 			default: 0
+		},
+		buttonText: {
+			type: String,
+			default: 'Confirm'
 		},
 		donateAmount: {
 			type: Number,
@@ -82,8 +81,12 @@ export default {
 	data() {
 		return {
 			enableConfirmButton: false,
+			isClientReady: false,
 			submitting: false,
 		};
+	},
+	mounted() {
+		this.isClientReady = !this.$isServer;
 	},
 	methods: {
 		submitDropInAutoDeposit() {
@@ -99,6 +102,7 @@ export default {
 						this.doBraintreeAutoDeposit(transactionNonce, deviceData, paymentType);
 					}
 				}).catch(btSubmitError => {
+					this.submitting = false;
 					console.error(btSubmitError);
 					// Fire specific exception to Sentry/Raven
 					Sentry.withScope(scope => {
@@ -193,9 +197,12 @@ export default {
 			}
 		},
 	},
+	computed: {
+		buttonState() {
+			if (this.submitting) return 'loading';
+			if (!this.enableConfirmButton) return 'disabled';
+			return '';
+		}
+	}
 };
 </script>
-
-<style lang="scss" scoped>
-@import "settings";
-</style>

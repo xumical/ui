@@ -1,4 +1,4 @@
-import StoryRouter from 'storybook-vue-router';
+import cookieStoreStoryMixin from '../mixins/cookie-store-story-mixin';
 import apolloStoryMixin from '../mixins/apollo-story-mixin';
 import kvAuth0StoryMixin from '../mixins/kv-auth0-story-mixin';
 
@@ -20,7 +20,6 @@ import WwwPage from '@/components/WwwFrame/WwwPage';
 export default {
 	title: 'WwwFrame/WwwPage',
 	component: WwwPage,
-	decorators: [StoryRouter()],
 	args: {
 		grayBackground: false,
 		hideSearchInHeader: false,
@@ -63,18 +62,18 @@ export const Default = (args, { argTypes }) => ({
 	components: {
 		WwwPage
 	},
-	mixins: [apolloStoryMixin(), kvAuth0StoryMixin],
+	mixins: [apolloStoryMixin(), cookieStoreStoryMixin(), kvAuth0StoryMixin ],
 	template: `
-	<www-page
-		:gray-background="grayBackground"
-		:hide-search-in-header="hideSearchInHeader"
-		:header-theme="headerTheme"
-		:footer-theme="footerTheme"
-	>
-		<div class="row" style="padding: 1.625rem 0;">
-			<div class="small-12 columns"><h1>Lorem ipsum</h1></div>
-		</div>
-	</www-page>
+		<www-page
+			:gray-background="grayBackground"
+			:hide-search-in-header="hideSearchInHeader"
+			:header-theme="headerTheme"
+			:footer-theme="footerTheme"
+		>
+			<div class="row" style="padding: 1.625rem 0;">
+				<div class="small-12 columns"><h1>Lorem ipsum</h1></div>
+			</div>
+		</www-page>
 	`,
 });
 

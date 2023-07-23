@@ -9,6 +9,7 @@
 			:expiring-soon-message="expiringSoonMessage"
 			:is-favorite="isFavorite"
 			:is-funded="isFunded"
+			:is-match-at-risk="isMatchAtRisk"
 			:is-selected-by-another="isSelectedByAnother"
 			:is-visitor="isVisitor"
 			:items-in-basket="itemsInBasket"
@@ -20,6 +21,7 @@
 			:category-set-id="categorySetId"
 			:row-number="rowNumber"
 			:card-number="cardNumber"
+			:enable-five-dollars-notes="enableFiveDollarsNotes"
 
 			@track-loan-card-interaction="trackInteraction"
 			@favorite-toggled="toggleFavorite"
@@ -33,6 +35,13 @@ import ExpandableLoanCard from '@/components/LoanCards/ExpandableLoanCard/Expand
 import expandableLoanCardMixin from '@/components/LoanCards/ExpandableLoanCard/expandableLoanCardMixin';
 
 export default {
+	name: 'ExpandableLoanCardCollapsed',
+	props: {
+		enableFiveDollarsNotes: {
+			type: Boolean,
+			default: false
+		}
+	},
 	components: {
 		ExpandableLoanCard,
 	},

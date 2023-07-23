@@ -1,8 +1,5 @@
 import Vue from 'vue'
-import StoryRouter from 'storybook-vue-router';
 import apolloStoryMixin from '../mixins/apollo-story-mixin';
-
-
 import GridLoanCard from '@/components/LoanCards/GridLoanCard';
 
 // import plugins
@@ -12,7 +9,6 @@ Vue.use(kivaPlugins)
 export default {
 	title: 'Loan Cards/Grid Loan Card',
 	component: GridLoanCard,
-	decorators: [StoryRouter()],
 	args: {
 		amountLeft: 250,
 		expiringSoonMessage: 'Only 3 Days Left!',
@@ -51,6 +47,7 @@ export default {
 				reservedAmount: 0,
 				isExpiringSoon: false,
 			},
+			fullLoanUse: 'A loan of $1,250 helps to buy more fire wood to sell at local market to meet customer demand.'
 		},
 	},
 };
@@ -61,7 +58,6 @@ export const Default = (args, { argTypes }) => ({
 	components: {
 		GridLoanCard,
 	},
-
 	template: `
 		<grid-loan-card
 			:items-in-basket="itemsInBasket"
@@ -74,6 +70,29 @@ export const Default = (args, { argTypes }) => ({
 			:is-visitor="isVisitor"
 			:percent-raised="percentRaised"
 			:title="title"
+		/>
+	`,
+});
+
+export const Tags = (args, { argTypes }) => ({
+	props: Object.keys(argTypes),
+	mixins: [apolloStoryMixin()],
+	components: {
+		GridLoanCard,
+	},
+	template: `
+		<grid-loan-card
+			:items-in-basket="itemsInBasket"
+			:loan="loan"
+			:amount-left="amountLeft"
+			:expiring-soon-message="expiringSoonMessage"
+			:is-favorite="isFavorite"
+			:is-funded="isFunded"
+			:is-selected-by-another="isSelectedByAnother"
+			:is-visitor="isVisitor"
+			:percent-raised="percentRaised"
+			:title="title"
+			:show-tags="true"
 		/>
 	`,
 });

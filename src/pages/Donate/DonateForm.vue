@@ -25,23 +25,25 @@
 					v-model="isMonthly"
 					v-kv-track-event="['Donate form', 'toggle-monthly-donation', 'Make a monthly donation.']"
 				>
-					<template #after>
-						Make a monthly donation.
-					</template>
+					Make a monthly donation.
 				</kv-base-input>
 				<donate-form-drop-in-payment-wrapper
 					v-if="isMonthly"
 					:disclaimer="formDisclaimerCopy"
 					:donate-amount="selectedAmount"
-					:id="id"
 					@completed="subscriptionApplied = true"
 				/>
-				<kv-button v-if="!isMonthly" class="smaller submit-btn" type="submit" :disabled="$v.$invalid">
+				<kv-button
+					v-if="!isMonthly"
+					class="smaller submit-btn"
+					type="submit"
+					:state="$v.$invalid ? 'disabled' : ''"
+				>
 					{{ buttonText }}
 				</kv-button>
 				<!-- Donation Disclaimer should always be present if we have a payment option active -->
 				<div
-					class="attribution-text text-center"
+					class="tw-text-base tw-mt-3 tw-text-action tw-text-center"
 					v-if="showDisclaimer && !isMonthly && !subscriptionApplied"
 					v-html="formDisclaimerCopy"
 				></div>
@@ -51,24 +53,28 @@
 </template>
 
 <script>
+import { handleInvalidBasketForDonation, hasBasketExpired } from '@/util/basketUtils';
 import numeral from 'numeral';
-import _forEach from 'lodash/forEach';
 import { validationMixin } from 'vuelidate';
 import { minValue, maxValue } from 'vuelidate/lib/validators';
+import retryAfterExpiredBasket from '@/plugins/retry-after-expired-basket-mixin';
 import DonateFormDropInPaymentWrapper from '@/pages/Donate/DonateFormDropInPaymentWrapper';
 import MultiAmountSelector from '@/components/Forms/MultiAmountSelector';
 import KvBaseInput from '@/components/Kv/KvBaseInput';
-import KvButton from '@/components/Kv/KvButton';
 import updateDonation from '@/graphql/mutation/updateDonation.graphql';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
 
 export default {
+	name: 'DonateForm',
 	components: {
 		DonateFormDropInPaymentWrapper,
 		KvBaseInput,
 		KvButton,
 		MultiAmountSelector,
 	},
+	inject: ['apollo', 'cookieStore'],
 	mixins: [
+		retryAfterExpiredBasket,
 		validationMixin
 	],
 	validations() {
@@ -96,15 +102,6 @@ export default {
 			type: String,
 			default: '',
 		},
-		formSubmitAnalytics: {
-			type: Object,
-			default: () => {
-				return {
-					category: 'Donate Form',
-					action: 'click-donate-support-us-form',
-				};
-			},
-		},
 		id: { // used when you have multiple instances of this form on one page.
 			type: String,
 			default: 'instance1',
@@ -113,14 +110,18 @@ export default {
 			type: Boolean,
 			default: false
 		},
+		selectedAmountSetting: {
+			type: Number,
+			default: null
+		},
 	},
-	inject: ['apollo'],
 	data() {
 		return {
 			defaultDisclaimer: '<p>Thanks to PayPal, Kiva receives free payment processing.</p>',
 			donationAmountSelection: '500',
 			donationCustomAmount: 500,
 			donationAmount: 500,
+			formSubmitted: false,
 			minDonationAmount: 1,
 			maxDonationAmount: 10000,
 			isMonthly: false,
@@ -174,43 +175,65 @@ export default {
 		},
 		submit() {
 			// exit form submit if a monthly donation was processed
-			if (this.isMonthly) {
+			if (this.isMonthly || this.formSubmitted) {
 				return false;
 			}
+			// allow form submission only once
+			this.formSubmitted = true;
+
+			const donationAmount = numeral(this.selectedAmount).value();
 
 			this.apollo.mutate({
 				mutation: updateDonation,
 				variables: {
-					price: numeral(this.selectedAmount).format('0.00'),
+					price: donationAmount,
 					isTip: true
 				}
 			}).then(data => {
-				if (data.errors) {
-					_forEach(data.errors, ({ message }) => {
-						this.$showTipMsg(message, 'error');
+				if (data?.errors) {
+					let hasFailedAddToBasket = false;
+
+					data?.errors.forEach(error => {
+						this.$showTipMsg(error?.message, 'error');
+						if (hasBasketExpired(error?.extensions?.code)) {
+							hasFailedAddToBasket = true;
+						}
 					});
+
+					if (hasFailedAddToBasket) {
+						handleInvalidBasketForDonation({
+							cookieStore: this.cookieStore,
+							donationAmount,
+							navigateToCheckout: true
+						});
+					}
 				} else {
 					this.$kvTrackEvent(
-						this.formSubmitAnalytics.category,
-						this.formSubmitAnalytics.action,
-						this.buttonText,
+						'donation',
+						'add-to-basket',
+						'donation-one-time',
+						null,
 						// pass donation amount as whole number
-						numeral(this.selectedAmount).value() * 100,
 						numeral(this.selectedAmount).value() * 100
 					);
 					this.$router.push({
 						path: '/checkout',
 					});
 				}
-			}).catch(error => {
-				console.error(error);
 			});
 		}
 	},
 	mounted() {
 		this.$nextTick(() => {
 			// set a default selection
-			const initialSelection = this.donationAmountOptions[1]?.key;
+			let initialSelection;
+			// if a selectedAmountSetting prop is passed in, and selected amount is in the list of options use that
+			if (this.selectedAmountSetting && this.data.includes(this.selectedAmountSetting)) {
+				initialSelection = this.selectedAmountSetting;
+			} else {
+				// otherwise use the middle option in the list
+				initialSelection = this.donationAmountOptions[2]?.key;
+			}
 			this.donationAmountSelected(initialSelection);
 			this.updateAmount(initialSelection);
 			this.donationCustomAmount = numeral(initialSelection).value();
@@ -241,20 +264,9 @@ export default {
 	position: relative;
 }
 
-.attribution-text {
-	color: $kiva-text-light;
-	margin-top: 1.5625rem;
-	font-size: 1rem;
-}
-
 .submit-btn {
 	width: 100%;
 	margin: 0.5rem 0;
-}
-
-::v-deep label,
-::v-deep input {
-	font-weight: 700;
 }
 
 ::v-deep .validation-errors {

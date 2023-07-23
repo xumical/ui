@@ -1,9 +1,9 @@
 <template>
 	<div class="loan-increment-dropdown">
-		<h3 class="filter-title">
-			Loan sizes
+		<h3 class="tw-mb-2">
+			Max loan amount
 		</h3>
-		<kv-dropdown-rounded v-model="loanIncrement">
+		<kv-select v-model="loanIncrement">
 			<option value="any">
 				Any amounts
 			</option>
@@ -28,19 +28,20 @@
 			<option value="1000">
 				$1000
 			</option>
-		</kv-dropdown-rounded>
+		</kv-select>
 	</div>
 </template>
 
 <script>
 import _get from 'lodash/get';
-import gql from 'graphql-tag';
-import KvDropdownRounded from '@/components/Kv/KvDropdownRounded';
+import { gql } from '@apollo/client';
+import KvSelect from '@/components/Kv/KvSelect';
 
 export default {
+	name: 'LoanIncrementDropdown',
 	inject: ['apollo', 'cookieStore'],
 	components: {
-		KvDropdownRounded,
+		KvSelect,
 	},
 	data() {
 		return {
@@ -50,6 +51,7 @@ export default {
 	apollo: {
 		query: gql`query autolendProfileLoanLimit {
 			autolending @client {
+				id
 				currentProfile {
 					id
 					loanSearchCriteria {
@@ -71,6 +73,7 @@ export default {
 				this.apollo.mutate({
 					mutation: gql`mutation updateLoanLimit($loanLimit: Int) {
 						autolending @client {
+							id
 							editProfile(profile: {
 								loanSearchCriteria: {
 									filters: {
@@ -89,6 +92,3 @@ export default {
 	},
 };
 </script>
-
-<style lang="scss" scoped>
-</style>

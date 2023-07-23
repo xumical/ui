@@ -1,10 +1,13 @@
 <template>
 	<div class="thanks-page">
 		<!-- Thanks Page V2 - Desktop -->
-		<div class="row show-for-large thanks-page--large-up">
+		<div
+			class="row show-for-large thanks-page--large-up"
+			data-testid="thanks-page-large-up"
+		>
 			<div class="small-6 columns hide-for-print">
 				<kv-icon-button
-					data-test="thanks-page-button--guest"
+					data-testid="thanks-page-button-guest"
 					class="thanks-page__icon-button expanded"
 					v-if="showGuestUpsell"
 					:class="{ active: isGuestSelected }"
@@ -12,20 +15,21 @@
 				>
 					<template #icon-left>
 						<kv-icon
+							class="tw-w-2.5"
 							name="alert-circle"
 						/>
 					</template>
 					Create your account
 					<template #icon-right>
 						<kv-icon
-							class="arrow-icon"
+							class="arrow-icon tw-w-3 tw-h-3"
 							:class="{ obfuscate: !isGuestSelected }"
 							name="arrow"
 						/>
 					</template>
 				</kv-icon-button>
 				<kv-icon-button
-					data-test="thanks-page-button--mg"
+					data-testid="thanks-page-button-mg"
 					class="thanks-page__icon-button expanded"
 					v-if="showMgCta"
 					:class="{ active: isMgSelected }"
@@ -33,40 +37,42 @@
 				>
 					<template #icon-left>
 						<kv-icon
+							class="tw-w-2.5"
 							name="alert-circle"
 						/>
 					</template>
 					Monthly Good
 					<template #icon-right>
 						<kv-icon
-							class="arrow-icon"
+							class="arrow-icon tw-w-3 tw-h-3"
 							:class="{ obfuscate: !isMgSelected }"
 							name="arrow"
 						/>
 					</template>
 				</kv-icon-button>
 				<kv-icon-button
-					data-test="thanks-page-button--receipt"
+					data-testid="thanks-page-button-receipt"
 					class="thanks-page__icon-button expanded"
 					:class="{ active: isReceiptSelected }"
 					@click.native="setVisibleSection('receipt')"
 				>
 					<template #icon-left>
 						<kv-icon
+							class="tw-w-2.5"
 							name="receipt-outline"
 						/>
 					</template>
 					Order Confirmation
 					<template #icon-right>
 						<kv-icon
-							class="arrow-icon"
+							class="arrow-icon tw-w-3 tw-h-3"
 							:class="{ obfuscate: !isReceiptSelected }"
 							name="arrow"
 						/>
 					</template>
 				</kv-icon-button>
 				<kv-icon-button
-					data-test="thanks-page-button--share"
+					data-testid="thanks-page-button-share"
 					class="thanks-page__icon-button expanded"
 					:class="{ active: isShareSelected }"
 					@click.native="setVisibleSection('share')"
@@ -74,13 +80,14 @@
 				>
 					<template #icon-left>
 						<kv-icon
+							class="tw-w-2.5"
 							name="share"
 						/>
 					</template>
 					Share
 					<template #icon-right>
 						<kv-icon
-							class="arrow-icon"
+							class="arrow-icon tw-w-3 tw-h-3"
 							:class="{ obfuscate: !isShareSelected }"
 							name="arrow"
 						/>
@@ -92,7 +99,7 @@
 					v-if="showGuestUpsell"
 					v-show="isGuestSelected"
 					class="thanks-page__content-area thanks-page__content-area--guest"
-					data-test="thanks-page-content--guest"
+					data-testid="thanks-page-content-guest"
 				>
 					<slot name="guest">
 					</slot>
@@ -101,7 +108,7 @@
 					v-if="showMgCta"
 					v-show="isMgSelected"
 					class="thanks-page__content-area thanks-page__content-area--mg"
-					data-test="thanks-page-content--mg"
+					data-testid="thanks-page-content-mg"
 				>
 					<slot name="mg">
 					</slot>
@@ -109,7 +116,7 @@
 				<div
 					v-show="isReceiptSelected"
 					class="thanks-page__content-area thanks-page__content-area--receipt"
-					data-test="thanks-page-content--receipt"
+					data-testid="thanks-page-content-receipt"
 				>
 					<slot name="receipt">
 					</slot>
@@ -117,7 +124,7 @@
 				<div
 					v-show="isShareSelected"
 					class="thanks-page__content-area thanks-page__content-area--share"
-					data-test="thanks-page-content--share"
+					data-testid="thanks-page-content-share"
 				>
 					<slot name="share">
 					</slot>
@@ -126,7 +133,10 @@
 		</div>
 
 		<!-- Thanks Page V2 - Mobile -->
-		<div class="row hide-for-large thanks-page--medium-down">
+		<div
+			class="row hide-for-large thanks-page--medium-down"
+			data-testid="thanks-page-medium-down"
+		>
 			<div class="small-12 columns">
 				<!-- guest -->
 				<div
@@ -136,7 +146,8 @@
 					}"
 					v-if="showGuestUpsell"
 				>
-					<kv-icon-button class="thanks-page__icon-button expanded"
+					<kv-icon-button
+						data-testid="thanks-page-guest-button" class="thanks-page__icon-button expanded"
 						:class="{ active: isGuestSelected }"
 						aria-controls="`kv-accordion-mg-accordion`"
 						:aria-expanded="isGuestSelected ? 'true' : 'false'"
@@ -144,12 +155,14 @@
 					>
 						<template #icon-left>
 							<kv-icon
+								class="tw-w-2.5"
 								name="alert-circle"
 							/>
 						</template>
 						Create your account
 						<template #icon-right>
 							<kv-icon
+								class="tw-w-2.5 tw-h-2.5"
 								name="fat-chevron"
 								:from-sprite="true"
 							/>
@@ -157,6 +170,7 @@
 					</kv-icon-button>
 					<kv-expandable>
 						<div
+							data-testid="thanks-page-accordion-guest"
 							class="kv-accordion__pane"
 							id="kv-accordion-guest-accordion"
 							v-show="isGuestSelected"
@@ -176,20 +190,24 @@
 					}"
 					v-if="showMgCta"
 				>
-					<kv-icon-button class="thanks-page__icon-button expanded"
+					<kv-icon-button
+						data-testid="thanks-page-mg-button" class="thanks-page__icon-button expanded"
 						:class="{ active: isMgSelected }"
 						aria-controls="`kv-accordion-mg-accordion`"
 						:aria-expanded="isMgSelected ? 'true' : 'false'"
+						v-kv-track-event="['thanks', 'click-Monthly-Good', 'Monthly Good']"
 						@click.native="setVisibleSection('mg')"
 					>
 						<template #icon-left>
 							<kv-icon
+								class="tw-w-2.5"
 								name="alert-circle"
 							/>
 						</template>
 						Monthly Good
 						<template #icon-right>
 							<kv-icon
+								class="tw-w-2.5 tw-h-2.5"
 								name="fat-chevron"
 								:from-sprite="true"
 							/>
@@ -197,6 +215,7 @@
 					</kv-icon-button>
 					<kv-expandable>
 						<div
+							data-testid="thanks-page-accordion-mg"
 							class="kv-accordion__pane"
 							id="kv-accordion-mg-accordion"
 							v-show="isMgSelected"
@@ -215,20 +234,24 @@
 						'kv-accordion--open' : isReceiptSelected,
 					}"
 				>
-					<kv-icon-button class="thanks-page__icon-button expanded"
+					<kv-icon-button
+						data-testid="thanks-page-receipt-button" class="thanks-page__icon-button expanded"
 						:class="{ active: isReceiptSelected }"
 						aria-controls="`kv-accordion-receipt-accordion`"
 						:aria-expanded="isReceiptSelected ? 'true' : 'false'"
+						v-kv-track-event="['thanks', 'click-Order-Confirmation', 'Order Confirmation']"
 						@click.native="setVisibleSection('receipt')"
 					>
 						<template #icon-left>
 							<kv-icon
+								class="tw-w-2.5"
 								name="receipt-outline"
 							/>
 						</template>
 						Order Confirmation
 						<template #icon-right>
 							<kv-icon
+								class="tw-w-2.5 tw-h-2.5"
 								name="fat-chevron"
 								:from-sprite="true"
 							/>
@@ -236,6 +259,7 @@
 					</kv-icon-button>
 					<kv-expandable>
 						<div
+							data-testid="thanks-page-accordion-receipt"
 							class="kv-accordion__pane"
 							id="kv-accordion-receipt-accordion"
 							v-show="isReceiptSelected"
@@ -255,20 +279,24 @@
 					}"
 					v-if="showShare"
 				>
-					<kv-icon-button class=" thanks-page__icon-button expanded"
+					<kv-icon-button
+						data-testid="thanks-page-share-button" class="thanks-page__icon-button expanded"
 						:class="{ active: isShareSelected }"
 						aria-controls="`kv-accordion-share-accordion`"
 						:aria-expanded="isShareSelected ? 'true' : 'false'"
+						v-kv-track-event="['thanks', 'click-Share', 'Share']"
 						@click.native="setVisibleSection('share')"
 					>
 						<template #icon-left>
 							<kv-icon
+								class="tw-w-2.5"
 								name="share"
 							/>
 						</template>
 						Share
 						<template #icon-right>
 							<kv-icon
+								class="tw-w-3 tw-h-2.5"
 								name="fat-chevron"
 								:from-sprite="true"
 							/>
@@ -276,6 +304,7 @@
 					</kv-icon-button>
 					<kv-expandable>
 						<div
+							data-testid="thanks-page-maccordion-share"
 							class="kv-accordion__pane"
 							id="kv-accordion-share-accordion"
 							v-show="isShareSelected"
@@ -293,11 +322,13 @@
 </template>
 
 <script>
+import _throttle from 'lodash/throttle';
 import KvIconButton from '@/components/Kv/KvIconButton';
 import KvIcon from '@/components/Kv/KvIcon';
 import KvExpandable from '@/components/Kv/KvExpandable';
 
 export default {
+	name: 'ThanksLayoutV2',
 	components: {
 		KvExpandable,
 		KvIcon,
@@ -315,20 +346,27 @@ export default {
 		showShare: {
 			type: Boolean,
 			default: true
-		},
+		}
 	},
 	data() {
 		let visibleSection = 'receipt';
 		if (this.showGuestUpsell) {
 			visibleSection = 'guest';
+		} else if (this.showShare) {
+			visibleSection = 'share';
 		} else if (this.showMgCta) {
 			visibleSection = 'mg';
 		}
+
 		return {
+			isMobile: false,
 			visibleSection,
 		};
 	},
 	methods: {
+		determineIfMobile() {
+			this.isMobile = document.documentElement.clientWidth < 681;
+		},
 		setVisibleSection(section) {
 			this.visibleSection = section;
 		}
@@ -346,6 +384,18 @@ export default {
 		isShareSelected() {
 			return this.visibleSection === 'share';
 		}
+	},
+	beforeDestroy() {
+		window.removeEventListener('resize', _throttle(() => {
+			this.determineIfMobile();
+		}, 200));
+	},
+	mounted() {
+		window.addEventListener('resize', _throttle(() => {
+			this.determineIfMobile();
+		}, 200));
+
+		this.determineIfMobile();
 	},
 };
 </script>
@@ -365,7 +415,8 @@ export default {
 }
 
 .thanks-page {
-	margin-bottom: 2rem;
+	margin: 0 1rem 2rem 1rem;
+	width: 100%;
 
 	&__content-area {
 		border-radius: rem-calc(10);
@@ -379,16 +430,12 @@ export default {
 			text-align: left;
 
 			&__headline {
-				@include medium-text();
-
 				text-align: left;
 				margin-top: 0;
 				margin-bottom: 1.5rem;
 			}
 
 			&__subhead {
-				@include medium-text();
-
 				margin-bottom: 1rem;
 			}
 		}
@@ -533,7 +580,7 @@ export default {
 // Mobile/Medium Styles
 .thanks-page--medium-down {
 	.thanks-page__content-area.kv-accordion--open {
-		background-color: $white;
+		background-color: rgb(var(--bg-primary));
 	}
 
 	.kv-accordion {
@@ -557,7 +604,7 @@ export default {
 // Desktop/Large Styles
 .thanks-page--large-up {
 	.thanks-page__content-area {
-		background-color: $white;
+		background-color: rgb(var(--bg-primary));
 	}
 
 	.thanks-page__icon-button {

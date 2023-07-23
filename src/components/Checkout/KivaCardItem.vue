@@ -1,81 +1,122 @@
 <template>
-	<div class="basket-item-wrapper row">
-		<div class="hide-for-small-only medium-3 large-2 columns">
-			<div class="kiva-card-icon">
+	<div class="basket-item-wrapper tw-flex tw-flex-col md:tw-flex-row tw-pb-5">
+		<div class="tw-hidden md:tw-block tw-flex-none md:tw-mr-3 lg:tw-mr-4.5">
+			<div class="kiva-card-icon" data-testid="basket-kiva-card-image-container">
 				<!-- Print Kiva Card -->
 				<img
 					v-if="cardType == 'print'"
 					alt="print-kiva-card"
-					class="card-preview"
+					class="card-preview tw-w-12 lg:tw-w-13 tw-h-12 lg:tw-h-13 tw-rounded"
 					src="~@/assets/images/checkout/kiva_card_print_preview.jpg"
 				>
 				<!-- Postal Kiva Card -->
 				<img
 					v-if="cardType == 'postal'"
 					alt="postal-kiva-card"
-					class="card-preview"
+					class="card-preview tw-w-12 lg:tw-w-13 tw-h-12 lg:tw-h-13 tw-rounded"
 					src="~@/assets/images/checkout/kiva_card_postal_preview.jpg"
 				>
-				<!-- Email Kiva Card -->
+				<!-- Email or Lender Kiva Card -->
 				<img
-					v-if="cardType == 'email'"
+					v-if="cardType === 'email' || cardType === 'lender'"
 					alt="email-kiva-card"
-					class="card-preview"
+					class="card-preview tw-w-12 lg:tw-w-13 tw-h-12 lg:tw-h-13 tw-rounded"
 					src="~@/assets/images/checkout/kiva_card_email_preview.jpg"
 				>
 			</div>
 		</div>
-		<div class="small-12 medium-5 large-7 columns kiva-card-info-wrapper">
+		<div class="tw-flex-auto kiva-card-info-wrapper">
 			<!-- Main line text -->
-			<div class="kiva-card-info featured-text">
-				<!-- Print Kiva Card -->
-				<span v-if="cardType == 'print'">Print-it-yourself Kiva Card
-					<span v-if="quantity > 1">({{ quantity }})</span>
-				</span>
-				<!-- Postal Kiva Card -->
-				<span v-if="cardType == 'postal'">Postal delivery Kiva Card
-					<span v-if="quantity > 1">({{ quantity }})</span>
-				</span>
-				<!-- Email Kiva Card -->
-				<span v-if="cardType == 'email'">Email delivery Kiva Card</span>
-
-				<a :href="formedEditUrl"
-					v-kv-track-event="['basket', 'Edit Kiva Card', cardType]"
-				>
-					<kv-icon
-						class="edit-pencil-icon"
-						name="pencil"
-					/>
-				</a>
-
-				<div class="sub-text-container">
+			<div class="kiva-card-info">
+				<div class="tw-flex tw-mb-0.5">
 					<!-- Print Kiva Card -->
-					<span v-if="cardType == 'print'">
-						<div class="small-text">Available after checkout</div>
-						<div class="small-text" v-if="recipientName">For {{ recipientName }}</div>
-					</span>
+					<h2 class="tw-text-h3" v-if="cardType == 'print'" data-testid="basket-kiva-card-title">
+						Print-it-yourself Kiva Card
+						<span v-if="quantity > 1">({{ quantity }})</span>
+					</h2>
 					<!-- Postal Kiva Card -->
-					<span v-if="cardType == 'postal'">
-						<div class="small-text">
+					<h2 class="tw-text-h3" v-if="cardType == 'postal'" data-testid="basket-kiva-card-title">
+						Postal delivery Kiva Card
+						<span v-if="quantity > 1">({{ quantity }})</span>
+					</h2>
+					<!-- Email or Lender Kiva Card -->
+					<h2
+						class="tw-text-h3"
+						v-if="cardType === 'email' || cardType === 'lender'"
+						data-testid="basket-kiva-card-title"
+					>
+						Email delivery Kiva Card
+					</h2>
+
+					<a
+						class="tw-flex-none tw-mr-auto tw-ml-1"
+						data-testid="basket-kiva-card-edit-button"
+						style="margin-top: 0.25rem;"
+						:href="formedEditUrl"
+						v-kv-track-event="['basket', 'Edit Kiva Card', cardType]"
+					>
+						<kv-material-icon
+							class="tw-w-2 tw-h-2"
+							:icon="mdiPencil"
+						/>
+					</a>
+
+					<remove-basket-item
+						class="md:tw-hidden tw-flex-none tw-ml-1 tw-mt-0.5 tw-h-1.5"
+						:ids-in-group="kivaCard.idsInGroup"
+						type="kivaCard"
+						@refreshtotals="onLoanUpdate($event)"
+						@updating-totals="$emit('updating-totals', $event)"
+					/>
+				</div>
+
+				<div class="tw-text-secondary">
+					<!-- Print Kiva Card -->
+					<div v-if="cardType == 'print'">
+						<p class="tw-text-small tw-mb-1" data-testid="basket-kiva-card-info-1">
+							Available after checkout
+						</p>
+						<p class="tw-text-small tw-mb-1" v-if="recipientName" data-testid="basket-kiva-card-info-2">
+							For {{ recipientName }}
+						</p>
+					</div>
+					<!-- Postal Kiva Card -->
+					<div v-if="cardType == 'postal'">
+						<p class="tw-text-small tw-mb-1" data-testid="basket-kiva-card-info-1">
 							{{ mailingFirstName }}
 							{{ mailingLastName }}
 							{{ mailingStreet }}
 							{{ mailingCity }},
 							{{ mailingState }}
 							{{ mailingZip }}
-						</div>
-					</span>
-					<!-- Email Kiva Card -->
-					<span v-if="cardType == 'email'">
-						<div class="small-text">Scheduled to be sent  {{ deliveryDate }}</div>
-						<div class="small-text">For {{ recipientName }} {{ recipientEmail }}</div>
-					</span>
+						</p>
+					</div>
+					<!-- Email or Lender Kiva Card -->
+					<div v-if="cardType === 'email' || cardType === 'lender'">
+						<p class="tw-text-small tw-mb-1" data-testid="basket-kiva-card-info-1">
+							Scheduled to be sent  {{ deliveryDate }}
+						</p>
+						<p class="tw-text-small tw-mb-1" data-testid="basket-kiva-card-info-2">
+							For {{ recipientName }} {{ recipientEmail }}
+						</p>
+					</div>
 				</div>
 			</div>
 		</div>
-		<div class="small-12 medium-4 large-3 columns price-wrapper medium-text-font-size">
+		<div
+			class="
+			tw-flex-none
+			tw-w-full
+			md:tw-w-auto
+			md:tw-ml-3
+			lg:tw-ml-4.5
+			tw-mt-1.5
+			md:tw-mt-0
+			price-wrapper"
+		>
 			<!-- Kiva card amount dropdown section -->
 			<loan-price
+				data-testid="basket-kiva-card-price-selector"
 				:ids-in-group="kivaCard.idsInGroup"
 				:price="kivaCard.individualPrice"
 				type="kivaCard"
@@ -88,13 +129,17 @@
 
 <script>
 import { format, parseISO } from 'date-fns';
-import KvIcon from '@/components/Kv/KvIcon';
+import { mdiPencil } from '@mdi/js';
 import LoanPrice from '@/components/Checkout/LoanPrice';
+import RemoveBasketItem from '@/components/Checkout/RemoveBasketItem';
+import KvMaterialIcon from '~/@kiva/kv-components/vue/KvMaterialIcon';
 
 export default {
+	name: 'KivaCardItem',
 	components: {
-		KvIcon,
-		LoanPrice
+		KvMaterialIcon,
+		LoanPrice,
+		RemoveBasketItem,
 	},
 	props: {
 		kivaCard: {
@@ -113,6 +158,7 @@ export default {
 			mailingCity: this.kivaCard.kivaCardObject.mailingInfo.city,
 			mailingState: this.kivaCard.kivaCardObject.mailingInfo.state,
 			mailingZip: this.kivaCard.kivaCardObject.mailingInfo.zip,
+			mdiPencil,
 			quantity: this.kivaCard.quantity,
 			idsInGroup: this.kivaCard.idsInGroup
 		};
@@ -143,43 +189,3 @@ export default {
 };
 
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.basket-item-wrapper {
-	margin-bottom: rem-calc(30);
-}
-
-.kiva-card-info {
-	line-height: 1.25;
-	font-weight: $global-weight-highlight;
-}
-
-.sub-text-container {
-	color: $gray;
-	font-weight: $global-weight-normal;
-}
-
-.sub-text-container div.small-text {
-	margin-bottom: rem-calc(5);
-}
-
-.edit-pencil-icon {
-	width: 1rem;
-	height: 1rem;
-	margin: 0 0.4rem 0 0.6rem;
-	cursor: pointer;
-
-	@include breakpoint(medium) {
-		width: 0.8rem;
-		height: 0.8rem;
-		margin: 0 0.2rem 0 0.8rem;
-	}
-}
-
-.card-preview {
-	height: rem-calc(80);
-	width: rem-calc(80);
-}
-</style>

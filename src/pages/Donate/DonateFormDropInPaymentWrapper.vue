@@ -1,9 +1,8 @@
 <template>
-	<div class="donate-form-dropin-payment-wrapper row">
-		<div v-if="!completed" class="small-12 columns">
+	<div class="dropin-payment-holder">
+		<div v-if="!completed">
 			<kv-button
 				v-if="!isLoggedIn"
-				class="smaller submit-btn"
 				:href="loginHref"
 				v-kv-track-event="['Donate form', 'click-login', 'Sign in to set up']"
 			>
@@ -19,7 +18,7 @@
 				</router-link>.
 			</kv-alert>
 			<braintree-drop-in-interface
-				v-if="isLoggedIn && !hasExistingAutoDeposit"
+				v-if="isClientReady && isLoggedIn && !hasExistingAutoDeposit"
 				ref="braintreeDropInInterface"
 				:amount="donateAmountAsString"
 				flow="vault"
@@ -27,25 +26,25 @@
 				:preselect-vaulted-payment-method="true"
 				@transactions-enabled="enableConfirmButton = $event"
 			/>
-			<kv-button
-				v-if="isLoggedIn && !hasExistingAutoDeposit"
-				class="dropin-submit"
-				:id="`${id}-dropin-submit`"
-				:disabled="!enableConfirmButton || submitting"
-				@click.native="submitDropInAutoDeposit"
-				v-kv-track-event="['Donate form', 'click-save-monthly-donation', 'Save Monthly Donation']"
-			>
-				<kv-icon name="lock" />
-				Save Monthly Donation
-				<kv-loading-spinner v-if="submitting" />
-			</kv-button>
+			<div id="dropin-submit" class="tw-w-full">
+				<kv-button
+					v-if="isLoggedIn && !hasExistingAutoDeposit"
+					class="tw-w-full tw-mb-2"
+					:state="submitButtonState"
+					@click="submitDropInAutoDeposit"
+					v-kv-track-event="['Donate form', 'click-save-monthly-donation', 'Save Monthly Donation']"
+				>
+					<kv-icon name="lock" />
+					Save Monthly Donation
+				</kv-button>
+			</div>
 			<div
-				class="attribution-text text-center"
+				class="tw-text-small tw-text-secondary tw-text-center tw-px-2"
 				v-if="isLoggedIn && !hasExistingAutoDeposit"
 				v-html="disclaimer"
 			></div>
 		</div>
-		<div v-else class="dropin-payment-thanks small-12 columns">
+		<div v-else>
 			<hr>
 			<br>
 			<h3>
@@ -56,34 +55,32 @@
 				<router-link to="/settings/subscriptions">
 					subscription settings
 				</router-link>
-				page to review and or make adjustments.
+				page to review, make adjustments, or cancel.
 			</p>
 		</div>
 	</div>
 </template>
 
 <script>
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import numeral from 'numeral';
-import * as Sentry from '@sentry/browser';
+import * as Sentry from '@sentry/vue';
 
 import braintreeDropInError from '@/plugins/braintree-dropin-error-mixin';
 
 import braintreeCreateAutoDepositSubscription from '@/graphql/mutation/braintreeCreateAutoDepositSubscription.graphql';
 
 import KvAlert from '@/components/Kv/KvAlert';
-import KvButton from '@/components/Kv/KvButton';
 import KvIcon from '@/components/Kv/KvIcon';
-import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
-import BraintreeDropInInterface from '@/components/Payment/BraintreeDropInInterface';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
 
 export default {
+	name: 'DonateFormDropInPaymentWrapper',
 	components: {
-		BraintreeDropInInterface,
+		BraintreeDropInInterface: () => import('@/components/Payment/BraintreeDropInInterface'),
 		KvAlert,
 		KvButton,
 		KvIcon,
-		KvLoadingSpinner
 	},
 	inject: ['apollo', 'cookieStore'],
 	mixins: [braintreeDropInError],
@@ -96,10 +93,6 @@ export default {
 			type: Number,
 			default: 0
 		},
-		id: { // used when you have multiple instances of this form on one page.
-			type: String,
-			default: 'instance1',
-		},
 	},
 	data() {
 		return {
@@ -110,12 +103,14 @@ export default {
 			isInMonthlyGood: false,
 			hasExistingAutoDeposit: false,
 			completed: false,
+			isClientReady: false,
 		};
 	},
 	apollo: {
 		preFetch: true,
 		query: gql`query donateForm {
 			my {
+				id
 				userAccount {
 					id
 				}
@@ -150,6 +145,18 @@ export default {
 			const doneUrl = `${this.$route.fullPath}?setMonthly=true`;
 			return `/ui-login?force=true&doneUrl=${encodeURIComponent(doneUrl)}`;
 		},
+		submitButtonState() {
+			if (!this.enableConfirmButton) {
+				return 'disabled';
+			}
+			if (this.submitting) {
+				return 'loading';
+			}
+			return '';
+		}
+	},
+	mounted() {
+		this.isClientReady = !this.$isServer;
 	},
 	methods: {
 		submitDropInAutoDeposit() {
@@ -165,6 +172,7 @@ export default {
 						this.doBraintreeAutoDeposit(transactionNonce, deviceData, paymentType);
 					}
 				}).catch(btSubmitError => {
+					this.submitting = false;
 					console.error(btSubmitError);
 					// TODO: alert user about error?
 					// Fire specific exception to Sentry/Raven
@@ -217,40 +225,3 @@ export default {
 	}
 };
 </script>
-
-<style lang="scss">
-@import "settings";
-
-.donate-form-dropin-payment-wrapper {
-	.dropin-submit {
-		width: 100%;
-		font-size: 1.25rem;
-		margin-top: 1rem;
-
-		.icon-lock {
-			height: rem-calc(20);
-			width: rem-calc(20);
-			fill: white;
-			top: rem-calc(3);
-			position: relative;
-			margin-right: rem-calc(8);
-		}
-
-		.loading-spinner {
-			vertical-align: middle;
-			width: 1rem;
-			height: 1rem;
-		}
-
-		.loading-spinner .line {
-			background-color: $white;
-		}
-	}
-
-	.dropin-payment-thanks {
-		h3 {
-			font-weight: 500;
-		}
-	}
-}
-</style>

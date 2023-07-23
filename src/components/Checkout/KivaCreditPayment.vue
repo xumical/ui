@@ -1,10 +1,11 @@
 <template>
 	<kv-button
 		type="submit"
-		class="smaller"
+		id="kiva-credit-submit"
+		class="tw-mb-2"
 		v-kv-track-event="['payment.continueBtn']"
 		title="Checkout using your Kiva credit"
-		@click.prevent.native="validateCreditBasket"
+		@click.native.prevent="validateCreditBasket"
 	>
 		<slot>Complete order</slot>
 	</kv-button>
@@ -12,9 +13,10 @@
 
 <script>
 import checkoutUtils from '@/plugins/checkout-utils-mixin';
-import KvButton from '@/components/Kv/KvButton';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
 
 export default {
+	name: 'KivaCreditPayment',
 	components: {
 		KvButton
 	},
@@ -53,7 +55,9 @@ export default {
 					} else {
 						// checkout failed
 						this.$emit('updating-totals', false);
-						this.showCheckoutError(transactionResult);
+						const errorResult = transactionResult?.errors ?? [];
+						this.showCheckoutError(errorResult);
+						this.$emit('checkout-failure', errorResult);
 					}
 				}).catch(errorResponse => {
 					this.$emit('updating-totals', false);
@@ -63,7 +67,3 @@ export default {
 	}
 };
 </script>
-
-<style>
-
-</style>

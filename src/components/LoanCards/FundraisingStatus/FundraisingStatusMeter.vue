@@ -1,12 +1,14 @@
 <template functional>
-	<div class="fundraising-status-meter" :class="{short: props.shortMeter}">
-		<span v-if="props.isFunded"
-			class="meter"
+	<div class="fundraising-status-meter tw-bg-tertiary" :class="{short: props.shortMeter}">
+		<span
+			v-if="props.isFunded"
+			class="meter tw-bg-brand"
 			style="width: 100%;"
 		>
 		</span>
-		<span v-else
-			class="meter"
+		<span
+			v-else
+			class="meter tw-bg-brand"
 			:style="`width: ${(props.percentRaised * 100)}%;`"
 		>
 		</span>
@@ -23,11 +25,9 @@ $loan-card-meter-height: rem-calc(8);
 	height: $loan-card-meter-height;
 	width: 100%;
 	border-radius: $loan-card-meter-height;
-	background-color: $kiva-stroke-gray;
 
 	.meter {
 		border-radius: $loan-card-meter-height;
-		background-color: $kiva-green;
 		display: block;
 		height: 100%;
 		transition: width 1s;

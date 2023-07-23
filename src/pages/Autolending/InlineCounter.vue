@@ -1,18 +1,22 @@
 <template>
-	<h4 :class="{'bold' : strong, 'normal': !strong }">
+	<p
+		class="tw-mt-2"
+		:class="{'tw-font-medium' : strong, 'tw-font-book': !strong }"
+	>
 		<!-- eslint-disable-next-line max-len  -->
 		Currently, <loan-count-span class="count-value" :count="count" :counting="counting" /> loans match your criteria.
-	</h4>
+	</p>
 </template>
 
 <script>
 import _get from 'lodash/get';
 import _throttle from 'lodash/throttle';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import numeral from 'numeral';
 import LoanCountSpan from './LoanCountSpan';
 
 export default {
+	name: 'InlineCounter',
 	inject: ['apollo', 'cookieStore'],
 	props: {
 		strong: {
@@ -36,6 +40,7 @@ export default {
 	apollo: {
 		query: gql`query autolendProfileLoanCount {
 			autolending @client {
+				id
 				currentLoanCount
 				countingLoans
 				warningThreshold
@@ -110,24 +115,3 @@ export default {
 	},
 };
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-h4 {
-	margin-top: 1rem;
-
-	&.normal {
-		font-weight: $global-weight-normal;
-	}
-
-	&.bold {
-		font-weight: $global-weight-bold;
-	}
-}
-
-::v-deep .loading-spinner {
-	height: 1rem;
-	width: 1rem;
-}
-</style>

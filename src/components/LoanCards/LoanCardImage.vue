@@ -12,7 +12,8 @@
 			class="borrower-image-link"
 			:target="linkTarget"
 		>
-			<img class="borrower-image"
+			<img
+				class="borrower-image"
 				:srcset="retinaImageUrl + ' 2x'"
 				:src="standardImageUrl"
 				:alt="'photo of ' + name"
@@ -21,7 +22,8 @@
 				loading="lazy"
 			>
 
-			<favorite-star class="favorite-star"
+			<favorite-star
+				class="tw-absolute tw-bottom-0 tw-right-0"
 				v-if="!isVisitor"
 				:is-favorite="isFavorite"
 				:loan-id="loanId"
@@ -35,6 +37,7 @@
 import FavoriteStar from '@/components/LoanCards/FavoriteStar';
 
 export default {
+	name: 'LoanCardImage',
 	components: {
 		FavoriteStar,
 	},
@@ -114,12 +117,6 @@ export default {
 
 		.borrower-image {
 			position: absolute;
-		}
-
-		.favorite-star {
-			position: absolute;
-			bottom: 0;
-			right: 0;
 		}
 	}
 

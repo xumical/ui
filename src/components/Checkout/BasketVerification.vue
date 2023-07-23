@@ -10,26 +10,37 @@
 		<kv-lightbox
 			:visible="visible && verificationState === 'required'"
 			class="verification-required"
+			data-testid="basket-verification-lightbox"
 			title="Verify your email"
 			@lightbox-closed="close"
 		>
-			<p>To ensure your safety, we added an extra layer of security.</p>
-			<p>Once we verify your account, you can continue checking out!</p>
-			<kv-button v-if="!sending" @click.native="send">
+			<p class="tw-mb-4">
+				To ensure your safety, we added an extra layer of security.
+			</p>
+			<p class="tw-mb-4">
+				Once we verify your account, you can continue checking out!
+			</p>
+			<kv-button v-if="!sending" @click.native="send" data-testid="basket-verification-send-button">
 				Send verification link
 			</kv-button>
 			<kv-loading-spinner class="sending-spinner" v-else />
 		</kv-lightbox>
 
 		<kv-lightbox
+			data-testid="basket-verification-pending-lightbox"
 			:visible="visible && verificationState === 'pending'"
 			class="verification-pending"
 			title="Verification link sent"
 			@lightbox-closed="close"
 		>
-			<p>We sent a validation link <span v-if="email" class="email fs-exclude">to {{ email }}</span>.</p>
-			<p>After receiving the email, follow the link provided to continue checking out with your Kiva Credit.</p>
-			<kv-button v-if="!sending" @click.native="send">
+			<p class="tw-mb-4">
+				We sent a validation link
+				<span v-if="email" class="email data-hj-suppress">to {{ email }}</span>.
+			</p>
+			<p class="tw-mb-4">
+				After receiving the email, follow the link provided to continue checking out with your Kiva Credit.
+			</p>
+			<kv-button v-if="!sending" @click.native="send" data-testid="basket-verification-resend-button">
 				Resend email
 			</kv-button>
 			<kv-loading-spinner class="sending-spinner" v-else />
@@ -43,7 +54,7 @@
 </template>
 
 <script>
-import * as Sentry from '@sentry/browser';
+import * as Sentry from '@sentry/vue';
 import KvButton from '@/components/Kv/KvButton';
 import KvLightbox from '@/components/Kv/KvLightbox';
 import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
@@ -52,6 +63,7 @@ import startBasketVerificationMutation from '@/graphql/mutation/checkout/startBa
 import closeVerificationLightboxMutation from '@/graphql/mutation/checkout/closeVerificationLightbox.graphql';
 
 export default {
+	name: 'BasketVerification',
 	components: {
 		KvButton,
 		KvLightbox,

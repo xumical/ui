@@ -2,7 +2,9 @@ const cookie = require('cookie');
 const express = require('express');
 const passport = require('passport');
 const Auth0Strategy = require('passport-auth0');
+const { usingFakeAuth } = require('./util/fakeAuthentication');
 const { isExpired } = require('./util/jwt');
+const { info, warn } = require('./util/log');
 const {
 	clearNotedLoginState,
 	getSyncCookie,
@@ -18,6 +20,7 @@ module.exports = function authRouter(config = {}) {
 
 	// Helper function to start slient authentication process
 	function attemptSilentAuth(req, res, next) {
+		res.set('Cache-Control', 'no-cache, no-store, max-age=0, no-transform, private');
 		// Store current url to redirect to after auth
 		req.session.doneUrl = req.originalUrl;
 		req.session.silentAuth = true;
@@ -31,11 +34,7 @@ module.exports = function authRouter(config = {}) {
 
 	// If no server-side auth0 secret is provided, skip setting up auth routes
 	if (!process.env.UI_AUTH0_CLIENT_SECRET) {
-		console.warn(JSON.stringify({
-			meta: {},
-			level: 'warn',
-			message: 'UI server-side authentication setup skipped because UI_AUTH0_CLIENT_SECRET is not defined!'
-		}));
+		warn('UI server-side authentication setup skipped because UI_AUTH0_CLIENT_SECRET is not defined!');
 		return router;
 	}
 
@@ -57,16 +56,28 @@ module.exports = function authRouter(config = {}) {
 
 	// Handle recoverable Auth0 errors
 	router.use('/error', (req, res, next) => {
-		if (req.query.error_description && req.query.error_description.indexOf('OIDC-conformant') > -1) {
-			const loginRedirectUrl = config.auth0.loginRedirectUrls[req.query.client_id];
-			res.redirect(loginRedirectUrl);
-		} else {
-			next();
+		res.set('Cache-Control', 'no-cache, no-store, max-age=0, no-transform, private');
+		if (req.query.error_description) {
+			if (req.query.error_description.indexOf('OIDC-conformant') > -1) {
+				const loginRedirectUrl = config.auth0.loginRedirectUrls[req.query.client_id];
+				return res.redirect(loginRedirectUrl);
+			}
+			if (req.query.error_description.indexOf('Registration captcha not valid') > -1) {
+				const loginRedirectUrl = config.auth0.loginRedirectUrls[config.auth0.serverClientID];
+				const loginHint = encodeURIComponent(
+					`login|${JSON.stringify({
+						msg: 'invalid-reg-captcha',
+					})}`
+				);
+				return res.redirect(`${loginRedirectUrl}&loginHint=${loginHint}`);
+			}
 		}
+		next();
 	});
 
 	// Handle login request
 	router.get('/ui-login', (req, res, next) => {
+		res.set('Cache-Control', 'no-cache, no-store, max-age=0, no-transform, private');
 		const cookies = cookie.parse(req.headers.cookie || '');
 		const options = {
 			audience: config.auth0.apiAudience,
@@ -76,15 +87,17 @@ module.exports = function authRouter(config = {}) {
 			options.prompt = 'login';
 		}
 		// Go to register instead of login if the user has not logged in before
-		if (!cookies.kvu) {
+		if (req.query.autoPage === 'true' && !cookies.kvu) {
 			options.login_hint = 'signUp';
 		}
+		// Used by guest checkout to start account claiming process (password reset)
 		if (req.query.forgot === 'true') {
 			options.prompt = 'login';
 			options.login_hint = `forgotPassword|${JSON.stringify({
 				guest: true,
 			})}`;
 		}
+		// Override the login hint with whatever hint is set in the request
 		if (req.query.loginHint) {
 			options.login_hint = req.query.loginHint;
 		}
@@ -92,21 +105,15 @@ module.exports = function authRouter(config = {}) {
 		if (req.query.doneUrl) {
 			req.session.doneUrl = req.query.doneUrl;
 		}
-		console.log(JSON.stringify({
-			meta: {},
-			level: 'log',
-			message: `LoginUI: attempt login, session id:${req.sessionID}, cookie:${getSyncCookie(req)}, done url:${req.query.doneUrl}` // eslint-disable-line max-len
-		}));
+
+		info(`LoginUI: attempt login, session id:${req.sessionID}, cookie:${getSyncCookie(req)}, done url:${req.query.doneUrl}`); // eslint-disable-line max-len
 		passport.authenticate('auth0', options)(req, res, next);
 	});
 
 	// Handle logout request
 	router.get('/ui-logout', (req, res) => {
-		console.log(JSON.stringify({
-			meta: {},
-			level: 'log',
-			message: `LoginUI: execute logout, session id:${req.sessionID}, cookie:${getSyncCookie(req)}, user id:${req.user && req.user.id}` // eslint-disable-line max-len
-		}));
+		res.set('Cache-Control', 'no-cache, no-store, max-age=0, no-transform, private');
+		info(`LoginUI: execute logout, session id:${req.sessionID}, cookie:${getSyncCookie(req)}, user id:${req.user && req.user.id}`); // eslint-disable-line max-len
 		const returnUrl = encodeURIComponent(`https://${config.host}`);
 		const logoutUrl = `https://${config.auth0.domain}/v2/logout?returnTo=${returnUrl}`;
 		req.logout(); // removes req.user
@@ -116,13 +123,10 @@ module.exports = function authRouter(config = {}) {
 
 	// Callback redirected to after Auth0 authentication
 	router.get('/process-ssr-auth', (req, res, next) => {
-		passport.authenticate('auth0', (authErr, user, info) => {
+		passport.authenticate('auth0', (authErr, user, authInfo) => {
+			res.set('Cache-Control', 'no-cache, no-store, max-age=0, no-transform, private');
 			if (authErr) {
-				console.log(JSON.stringify({
-					meta: {},
-					level: 'log',
-					message: `LoginUI: auth error, session id:${req.sessionID}, error: ${authErr}`,
-				}));
+				info(`LoginUI: auth error, session id:${req.sessionID}, error: ${authErr}`, { error: authErr });
 
 				const { profileRetried } = req.session;
 				delete req.session.profileRetried;
@@ -162,28 +166,16 @@ module.exports = function authRouter(config = {}) {
 
 			if (!user) {
 				if (req.user) {
-					console.warn(JSON.stringify({
-						meta: {},
-						level: 'warn',
-						message: `LoginSyncUI: login was attempted despite already having user, user id:${req.user.id}, session id:${req.sessionID}, state:${req.query.state}, last state:${req.session.lastUsedState}` // eslint-disable-line max-len
-					}));
+					warn(`LoginSyncUI: login was attempted despite already having user, user id:${req.user.id}, session id:${req.sessionID}, state:${req.query.state}, last state:${req.session.lastUsedState}`); // eslint-disable-line max-len
 					doneUrl = req.session.lastUsedDoneUrl;
 				} else {
 					clearNotedLoginState(res);
 				}
-				console.log(JSON.stringify({
-					meta: {},
-					level: 'log',
-					message: `LoginSyncUI: user failed to login, session id:${req.sessionID}, previous cookie:${getSyncCookie(req)}, info:${JSON.stringify(info)}` // eslint-disable-line max-len
-				}));
+				info(`LoginSyncUI: user failed to login, session id:${req.sessionID}, previous cookie:${getSyncCookie(req)}, info:${JSON.stringify(authInfo)}`); // eslint-disable-line max-len
 				return res.redirect(doneUrl || '/');
 			}
 
-			console.log(JSON.stringify({
-				meta: {},
-				level: 'log',
-				message: `LoginSyncUI: user logged in, session id:${req.sessionID}, previous cookie:${getSyncCookie(req)}, user id:${user.id}` // eslint-disable-line max-len
-			}));
+			info(`LoginSyncUI: user logged in, session id:${req.sessionID}, previous cookie:${getSyncCookie(req)}, user id:${user.id}`); // eslint-disable-line max-len
 			noteLoggedIn(res, user);
 			req.session.lastUsedDoneUrl = doneUrl;
 			req.session.lastUsedState = req.query && req.query.state;
@@ -193,7 +185,11 @@ module.exports = function authRouter(config = {}) {
 			req.login(user, serializeError => {
 				if (serializeError) return next(serializeError);
 				// Redirect for post-authenticate actions
-				res.redirect(`/authenticate/ui?doneUrl=${doneUrl ? encodeURIComponent(doneUrl) : '/portfolio'}`);
+				if (doneUrl) {
+					res.redirect(`/authenticate/ui?doneUrl=${encodeURIComponent(doneUrl)}`);
+				} else {
+					res.redirect('/authenticate/ui');
+				}
 			});
 		})(req, res, next);
 	});
@@ -210,28 +206,20 @@ module.exports = function authRouter(config = {}) {
 		];
 		if (bypassPaths.includes(req.path)) {
 			next();
+		} else if (usingFakeAuth(config, req)) {
+			// Skip login sync check if a fake authentication cookie is set
+			info(`LoginSyncUI: FakeAuthentication cookie present, skipping sync, session id:${req.sessionID}`);
+			next();
 		} else if (isNotedLoggedIn(req) && !req.user) {
-			console.log(JSON.stringify({
-				meta: {},
-				level: 'log',
-				message: `LoginSyncUI: attempt silent login, session id:${req.sessionID}, uri:${req.originalUrl}, cookie:${getSyncCookie(req)}, user:${req.user}` // eslint-disable-line max-len
-			}));
+			info(`LoginSyncUI: attempt silent login, session id:${req.sessionID}, uri:${req.originalUrl}, cookie:${getSyncCookie(req)}, user:${req.user}`); // eslint-disable-line max-len
 			attemptSilentAuth(req, res, next);
 		} else if (isNotedLoggedIn(req) && !isNotedUserRequestUser(req)) {
-			console.log(JSON.stringify({
-				meta: {},
-				level: 'log',
-				message: `LoginSyncUI: user id mismatch, session id:${req.sessionID}, uri:${req.originalUrl}, cookie:${getSyncCookie(req)}, user:${req.user.id}` // eslint-disable-line max-len
-			}));
+			info(`LoginSyncUI: user id mismatch, session id:${req.sessionID}, uri:${req.originalUrl}, cookie:${getSyncCookie(req)}, user:${req.user.id}`); // eslint-disable-line max-len
 			req.logout(); // removes req.user
 			attemptSilentAuth(req, res, next);
 		} else {
 			if (isNotedLoggedOut(req) && req.user) {
-				console.log(JSON.stringify({
-					meta: {},
-					level: 'log',
-					message: `LoginSyncUI: execute logout, session id:${req.sessionID}, uri:${req.originalUrl}, cookie:${getSyncCookie(req)}, user id:${req.user.id}` // eslint-disable-line max-len
-				}));
+				info(`LoginSyncUI: execute logout, session id:${req.sessionID}, uri:${req.originalUrl}, cookie:${getSyncCookie(req)}, user id:${req.user.id}`); // eslint-disable-line max-len
 				req.logout(); // removes req.user
 			}
 			next();
@@ -240,7 +228,12 @@ module.exports = function authRouter(config = {}) {
 
 	// For all routes, check if the access token is expired and attempt to renew it
 	router.use((req, res, next) => {
-		if (req.user && isExpired(req.user.accessToken)) {
+		if (usingFakeAuth(config, req)) {
+			// Skip expiration check if a fake authentication cookie is set
+			info(`LoginUI: FakeAuthentication cookie present, skipping token expiration check, session id:${req.sessionID}`); // eslint-disable-line max-len
+			next();
+		} else if (req.user && isExpired(req.user.accessToken)) {
+			info(`LoginUI: access token expired, attempting silent authentication to renew, session id:${req.sessionID}`); // eslint-disable-line max-len
 			req.logout(); // Remove expired token from session
 			attemptSilentAuth(req, res, next);
 		} else {

@@ -1,7 +1,7 @@
 <template>
 	<kv-settings-card title="Password">
 		<template #content>
-			<p>
+			<p class="tw-mb-4">
 				Clicking this button will send you a verification email.
 				As a final step in this process, you'll need to click the
 				link in that email to successfully update your account password.
@@ -15,7 +15,7 @@
 			>
 				<b>
 					Email has been sent to
-					<span class="fs-exclude">{{ userEmail ? userEmail : 'the address on file' }}</span>
+					<span class="data-hj-suppress">{{ userEmail ? userEmail : 'the address on file' }}</span>
 				</b>
 			</kv-alert>
 			<kv-alert
@@ -28,9 +28,8 @@
 				There was a problem sending the password reset email
 			</kv-alert>
 			<kv-button
-				class="smallest"
-				@click.native="onClickRequestPassword"
-				:disabled="isPasswordRequestPending"
+				@click="onClickRequestPassword"
+				:state="isPasswordRequestPending ? 'disabled' : ''"
 			>
 				Send change password email
 			</kv-button>
@@ -39,14 +38,15 @@
 </template>
 
 <script>
+/* eslint-disable vue/multi-word-component-names */
+import { gql } from '@apollo/client';
 import KvAlert from '@/components/Kv/KvAlert';
-import KvButton from '@/components/Kv/KvButton';
 import KvSettingsCard from '@/components/Kv/KvSettingsCard';
-
-import gql from 'graphql-tag';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
 
 const userQuery = gql`query getUserEmail {
 	my {
+		id
 		userAccount {
 			id
 			email
@@ -61,6 +61,7 @@ const passwordResetMutation = gql`mutation passwordReset {
 }`;
 
 export default {
+	name: 'Password',
 	components: {
 		KvAlert,
 		KvButton,

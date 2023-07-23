@@ -3,7 +3,7 @@ const path = require('path');
 module.exports = {
 	rootDir: path.resolve(__dirname, '../../'),
 	testMatch: ['**/unit/specs/**/*.spec.js'],
-	moduleFileExtensions: ['js', 'json', 'vue'],
+	moduleFileExtensions: ['js', 'cjs', 'mjs', 'json', 'vue'],
 	moduleNameMapper: {
 		'^~/(.*)$': '<rootDir>/node_modules/$1',
 		'^@/(.*)$': '<rootDir>/src/$1',
@@ -15,6 +15,7 @@ module.exports = {
 		'^.+\\.js$': 'babel-jest',
 		'^.+\\.svg$': '<rootDir>/test/unit/transforms/svgTransform.js',
 	},
+	transformIgnorePatterns: ['/node_modules/(?!@kiva/)'],
 	snapshotSerializers: ['jest-serializer-vue'],
 	coverageDirectory: '<rootDir>/test/unit/coverage',
 	coverageReporters: ['json', 'html'],
@@ -35,5 +36,7 @@ module.exports = {
 		'<rootDir>/src/util/animation',
 		'<rootDir>/node_modules/'
 	],
-	testURL: 'http://localhost'
+	testURL: 'http://localhost',
+	testEnvironment: 'jsdom',
+	setupFiles: ['<rootDir>/test/unit/setupJestMocks.js']
 };

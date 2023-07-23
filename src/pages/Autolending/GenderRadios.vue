@@ -1,6 +1,6 @@
 <template>
-	<div class="gender-radios">
-		<h3 class="filter-title">
+	<div>
+		<h3 class="tw-mb-2">
 			Genders
 		</h3>
 		<kv-radio
@@ -29,10 +29,11 @@
 
 <script>
 import _get from 'lodash/get';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import KvRadio from '@/components/Kv/KvRadio';
 
 export default {
+	name: 'GenderRadios',
 	inject: ['apollo', 'cookieStore'],
 	components: {
 		KvRadio,
@@ -45,6 +46,7 @@ export default {
 	apollo: {
 		query: gql`query autolendProfileGender {
 			autolending @client {
+				id
 				currentProfile {
 					id
 					loanSearchCriteria {
@@ -66,6 +68,7 @@ export default {
 				this.apollo.mutate({
 					mutation: gql`mutation updateGender($gender: GenderEnum) {
 						autolending @client {
+							id
 							editProfile(profile: {
 								loanSearchCriteria: {
 									filters: {
@@ -84,6 +87,3 @@ export default {
 	},
 };
 </script>
-
-<style lang="scss" scoped>
-</style>

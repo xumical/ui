@@ -32,15 +32,16 @@
 </template>
 
 <script>
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import numeral from 'numeral';
-import * as Sentry from '@sentry/browser';
+import * as Sentry from '@sentry/vue';
 import basketItemsQuery from '@/graphql/query/basketItems.graphql';
 import KvButton from '@/components/Kv/KvButton';
 import KvIcon from '@/components/Kv/KvIcon';
 import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
 
 export default {
+	name: 'LendButton2',
 	inject: ['apollo', 'cookieStore'],
 	props: {
 		loanId: {

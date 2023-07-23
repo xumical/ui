@@ -1,32 +1,32 @@
-export default config => {
+export default (config, globalOneTrustEvent) => {
 	// check for opt out of 3rd party scripts + cookies
 	const cookies = typeof document !== 'undefined' ? document.cookie.split(';') : [];
 	let optout = false;
 	for (let i = 0; i < cookies.length; i++) { // eslint-disable-line
-		if (cookies[i].indexOf('kvgdpr') !== -1 && cookies[i].indexOf('opted_out=true') !== -1) {
+		if (cookies[i].indexOf('kvgdpr') > -1 && cookies[i].indexOf('opted_out=true') > -1) {
 			optout = true;
 		}
 	}
+	// scaffold global dataLayer
+	// - ensures data can be pushed hereafter
+	// - if active, gtm is primary consumer
+	window.dataLayer = window.dataLayer || [];
 
 	// Google Analytics snippet
 	const insertGoogleAnalytics = () => {
-		/* eslint-disable */
-		if (config.gaAlternateId) {
-			(function () {
-				const gaALt = document.createElement('script'); gaALt.type = 'text/javascript'; gaALt.async = true;
-				gaALt.src = `${document.location.protocol == 'https:' ? 'https://ssl' : 'http://www'}.google-analytics.com/ga.js`;
-				const s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(gaALt, s);
-			}());
-		}
-
-		(function (i, s, o, g, r, a, m) {
-			i.GoogleAnalyticsObject = r; i[r] = i[r] || function () {
-				(i[r].q = i[r].q || []).push(arguments);
-			}, i[r].l = 1 * new Date(); a = s.createElement(o),
-			m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m);
-		}(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga'));
-		ga('create', config.gaId, 'auto');
-		/* eslint-enable */
+		// Insert + Configure Gtag.js
+		const p = document.getElementsByTagName('script')[0];
+		const s = document.createElement('script');
+		s.src = `https://www.googletagmanager.com/gtag/js?id=${config.gaId}`;
+		p.parentNode.insertBefore(s, p);
+		// Data layer is established globally
+		window.gtag = function gtag() {
+			// eslint-disable-next-line prefer-rest-params
+			window.dataLayer.push(arguments);
+		};
+		window.gtag('js', new Date());
+		// add "debug_mode: true" to the options object for debugging
+		window.gtag('config', config.gaId, { send_page_view: false });
 	};
 
 	// Snowplow snippet
@@ -35,46 +35,23 @@ export default config => {
 		(function(p,l,o,w,i,n,g){if(!p[i]){p.GlobalSnowplowNamespace=p.GlobalSnowplowNamespace||[];
 			p.GlobalSnowplowNamespace.push(i);p[i]=function(){(p[i].q=p[i].q||[]).push(arguments)
 			};p[i].q=p[i].q||[];n=l.createElement(o);g=l.getElementsByTagName(o)[0];n.async=1;
-			n.src=w;g.parentNode.insertBefore(n,g)}}(window,document,'script','//cdn.jsdelivr.net/gh/snowplow/sp-js-assets@2.17.0/sp.js','snowplow'));
+			n.src=w;g.parentNode.insertBefore(n,g)}}(window,document,'script','//cdn.jsdelivr.net/gh/snowplow/sp-js-assets@2.18.2/sp.js','snowplow'));
 			window.snowplow('newTracker', 'cf', config.snowplowUri, { // Initialize a tracker
 				appId: 'kiva' ,
 				cookieDomain: '.kiva.org',
+				contexts: {
+					optimizelyXSummary: true,
+					performanceTiming: true
+				},
 				// uncomment this option to examine context information in your vm
 				// encodeBase64: false,
 			});
 		/* eslint-enable */
 	};
 
-	// FullStory snippet
-	const insertFullStory = () => {
-		/* eslint-disable */
-		window['_fs_debug'] = false;
-		window['_fs_host'] = 'fullstory.com';
-		window['_fs_script'] = 'edge.fullstory.com/s/fs.js';
-		window['_fs_org'] = '10F8DP';
-		window['_fs_namespace'] = 'FS';
-		try {
-			(function(m,n,e,t,l,o,g,y){
-				if (e in m) {if(m.console && m.console.log) { m.console.log('FullStory namespace conflict. Please set window["_fs_namespace"].');} return;}
-				g=m[e]=function(a,b,s){g.q?g.q.push([a,b,s]):g._api(a,b,s);};g.q=[];
-				o=n.createElement(t);o.async=1;o.crossOrigin='anonymous';o.src='https://'+_fs_script;
-				y=n.getElementsByTagName(t)[0];y.parentNode.insertBefore(o,y);
-				g.identify=function(i,v,s){g(l,{uid:i},s);if(v)g(l,v,s)};g.setUserVars=function(v,s){g(l,v,s)};g.event=function(i,v,s){g('event',{n:i,p:v},s)};
-				g.anonymize=function(){g.identify(!!0)};
-				g.shutdown=function(){g("rec",!1)};g.restart=function(){g("rec",!0)};
-				g.log = function(a,b){g("log",[a,b])};
-				g.consent=function(a){g("consent",!arguments.length||a)};
-				g.identifyAccount=function(i,v){o='account';v=v||{};v.acctId=i;g(o,v)};
-				g.clearUserCookie=function(){};
-				g.setVars=function(n, p){g('setVars',[n,p]);};
-				g._w={};y='XMLHttpRequest';g._w[y]=m[y];y='fetch';g._w[y]=m[y];
-				if(m[y])m[y]=function(){return g._w[y].apply(this,arguments)};
-				g._v="1.3.0";
-			})(window,document,window['_fs_namespace'],'script','user');
-		} catch (e) {
-			// noop
-		}
-		/* eslint-enable */
+	const activateOptimizely = () => {
+		// eslint-disable-next-line dot-notation
+		window['optimizely'].push({ type: 'sendEvents' });
 	};
 
 	// Google Tag Manager snippet
@@ -88,32 +65,18 @@ export default config => {
 		/* eslint-enable */
 	};
 
-	// Facebook Pixel Code
-	const insertFB = () => {
+	// Hotjar Snippet
+	const insertHotjar = () => {
 		/* eslint-disable */
-		!function(f,b,e,v,n,t,s) {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-			n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-			if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-			n.queue=[];t=b.createElement(e);t.async=!0;
-			t.src=v;s=b.getElementsByTagName(e)[0];
-			s.parentNode.insertBefore(t,s)}(window, document,'script',
-			'https://connect.facebook.net/en_US/fbevents.js');
-		fbq('init', config.fbPixelId);
-		/* eslint-enable */
+		(function(h,o,t,j,a,r){
+			h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+			h._hjSettings={hjid:config.hotjarId,hjsv:6};
+			a=o.getElementsByTagName('head')[0];
+			r=o.createElement('script');r.async=1;
+			r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+			a.appendChild(r);
+		})(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
 	};
-
-	// Algolia Analytics
-	const insertAlgoliaAnalytics = () => {
-		/* eslint-disable */
-		if (typeof String.prototype.startsWith === 'function') {
-			(function(e,a,t,n,s,i,c){e.AlgoliaAnalyticsObject=s,e.aa=e.aa||function(){
-				(e.aa.queue=e.aa.queue||[]).push(arguments)},i=a.createElement(t),c=a.getElementsByTagName(t)
-				[0],i.async=1,i.src="https://cdn.jsdelivr.net/npm/search-insights@1.2.0",
-				c.parentNode.insertBefore(i,c)})(window,document,"script",0,"aa");
-		}
-		/* eslint-enable */
-	};
-
 	// Always load
 	// PerimeterX snippet
 	if (config.enablePerimeterx) {
@@ -128,20 +91,16 @@ export default config => {
 		}());
 		/* eslint-enable */
 	}
+	// Google Recaptcha loaded indicator
+	window.recaptchaLoaded = new Promise(resolve => {
+		window.recaptchaOnloadCallback = () => {
+			resolve(true);
+		};
+	});
 
 	// One Trust Cookie Management
 	if (config.oneTrust && config.oneTrust.enable) {
 		/* eslint-disable */
-		(function () {
-			// Main OneTrust script to display cookie notice and set user preferences
-			const p = document.getElementsByTagName('script')[0];
-			const s = document.createElement('script');
-			s.setAttribute('type', 'text/javascript');
-			s.setAttribute('data-domain-script', `${config.oneTrust.key}${config.oneTrust.domainSuffix}`)
-			s.src = `https://cdn.cookielaw.org/consent/${config.oneTrust.key}${config.oneTrust.domainSuffix}/otSDKStub.js`;
-			p.parentNode.insertBefore(s, p);
-		}());
-
 		// Follow up OneTrust function.
 		// This function is called when cookie preferences are changed on the OneTrust widget
 		window.OptanonWrapper = () => {
@@ -168,18 +127,18 @@ export default config => {
 			* monitor its performance.
 			* */
 			if (config.enableAnalytics) {
+				if (config.enableOptimizely && !optout) {
+					// reactivate optimizely events
+					OneTrust.InsertHtml('', 'head', activateOptimizely, null, 'C0002');
+				}
 				if (config.enableGA && !optout) {
 					OneTrust.InsertHtml('', 'head', insertGoogleAnalytics, null, 'C0002');
 				}
 				if (config.enableSnowplow) {
 					OneTrust.InsertHtml('', 'head', insertSnowplow, null, 'C0002');
 				}
-				if (config.algoliaConfig.enableAA && !optout) {
-					OneTrust.InsertHtml('', 'head', insertAlgoliaAnalytics, null, 'C0002');
-				}
-
-				if (config.enableFullStory && !optout) {
-					OneTrust.InsertHtml('', 'head', insertFullStory, null, 'C0002');
+				if (config.enableHotjar && !optout) {
+					OneTrust.InsertHtml('', 'head', insertHotjar, null, 'C0002');
 				}
 			}
 
@@ -202,9 +161,6 @@ export default config => {
 				if (config.enableGTM && !optout) {
 					OneTrust.InsertHtml('', 'head', insertGTM, null, 'C0004');
 				}
-				if (config.enableFB && !optout) {
-					OneTrust.InsertHtml('', 'head', insertFB, null, 'C0004');
-				}
 			}
 
 			/** Category 'C0005'
@@ -216,6 +172,9 @@ export default config => {
 			* these sharing tools.
 			* */
 			// Currently any social media scripts are loaded via GTM
+
+			/* fire global event with oneTrust settings */
+			globalOneTrustEvent();
 		};
 		/* eslint-enable */
 	}
@@ -223,25 +182,23 @@ export default config => {
 	// Legacy behavior without oneTrust
 	if (!config.oneTrust || !config.oneTrust.enable) {
 		if (config.enableAnalytics) {
+			if (config.enableOptimizely && !optout) {
+				// reactivate optimizely events
+				// eslint-disable-next-line dot-notation
+				window['optimizely'].push({ type: 'sendEvents' });
+			}
 			if (config.enableGA && !optout) {
 				insertGoogleAnalytics();
 			}
 			if (config.enableSnowplow) {
 				insertSnowplow();
 			}
-			if (config.enableGA && !optout) {
-				insertFullStory();
-			}
 			if (config.enableGTM && !optout) {
 				insertGTM();
 			}
-			if (config.algoliaConfig.enableAA && !optout) {
-				insertAlgoliaAnalytics();
+			if (config.enableHotjar && !optout) {
+				insertHotjar();
 			}
-		}
-
-		if (config.enableFB && !optout) {
-			insertFB();
 		}
 	}
 };

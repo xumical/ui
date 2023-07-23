@@ -1,5 +1,5 @@
 <template>
-	<div class="detailed-loan-card row collapse">
+	<div class="detailed-loan-card row collapse tw-bg-primary tw-border tw-border-secondary">
 		<div class="multi-pane columns small-12 xlarge-6 xxlarge-7 small-order-1 xlarge-order-2">
 			<loan-card-image
 				:loan-id="loan.id"
@@ -31,7 +31,13 @@
 					:class="{ active: isTabComponentActive(id) }"
 					@click="setTabComponent(id)"
 				>
-					<span>{{ title }}</span>
+					<span
+						:class="{
+							'tw-text-primary': isTabComponentActive(id),
+							'tw-text-tertiary': !isTabComponentActive(id),
+						}"
+						class="tw-uppercase tw-font-book"
+					>{{ title }}</span>
 				</button>
 			</div>
 			<div class="basic-info-flex-column">
@@ -40,7 +46,7 @@
 						:name="loan.name"
 						:loan-id="loan.id"
 						:disable-link="disableRedirects"
-						class="name"
+						class="tw-text-h2 tw-whitespace-nowrap"
 						@track-loan-card-interaction="trackInteractionBorrowerInfoName"
 					/>
 					<div class="location-sector-row">
@@ -57,12 +63,8 @@
 				</div>
 				<div :class="{collapsed: tabComponent !== null}" class="overview-column show-for-xlarge">
 					<borrower-info-body
-						:amount="loan.loanAmount"
-						:borrower-count="loan.borrowerCount"
-						:name="loan.name"
-						:status="loan.status"
 						:max-use-length="200"
-						:use="loan.use"
+						:use="loan.fullLoanUse"
 						:loan-id="loan.id"
 						:disable-link="disableRedirects"
 						read-more-link-text="Read full details"
@@ -80,10 +82,10 @@
 						:time-left-message="timeLeftMessage"
 					/>
 				</div>
-				<div class="row">
+				<div class="row" v-if="!hideLendCta">
 					<div class="columns small-12 large-expand">
 						<action-button
-							class="expandable-loan-card-action-button"
+							class="tw-mt-2"
 							:loan-id="loan.id"
 							:loan="loan"
 							:items-in-basket="itemsInBasket"
@@ -92,6 +94,10 @@
 							:is-selected-by-another="isSelectedByAnother"
 							:is-simple-lend-button="false"
 							:disable-redirects="disableRedirects"
+							:is-amount-lend-button="lessThan25 && !enableFiveDollarsNotes"
+							:amount-left="amountLeft"
+							:show-now="!enableFiveDollarsNotes"
+							:enable-five-dollars-notes="enableFiveDollarsNotes"
 							@click.native="trackInteraction({
 								interactionType: 'addToBasket',
 								interactionElement: 'Lend25'
@@ -103,6 +109,7 @@
 					<div class="columns medium-12 large-4 matching-text-wrap">
 						<matching-text
 							:matching-text="loan.matchingText"
+							:match-ratio="loan.matchRatio"
 							:is-funded="isFunded"
 							:is-selected-by-another="isSelectedByAnother"
 							:wrap="true"
@@ -123,12 +130,7 @@
 					Overview
 				</template>
 				<borrower-info-body
-					:amount="loan.loanAmount"
-					:borrower-count="loan.borrowerCount"
-					:name="loan.name"
-					:status="loan.status"
-					:use="loan.use"
-					:max-use-length="1000"
+					:use="loan.fullLoanUse"
 					:loan-id="loan.id"
 					:disable-link="true"
 					read-more-link-text=""
@@ -146,7 +148,7 @@
 			<div>
 				<router-link
 					:to="`/lend/${loan.id}`"
-					class="full-details-link"
+					class="tw-text-h3"
 					v-kv-track-event="[
 						'Lending',
 						'click-Read full borrower details',
@@ -185,6 +187,7 @@ import PartnerInfoPanel from './InfoPanels/PartnerInfoPanel';
 import TrusteeInfoPanel from './InfoPanels/TrusteeInfoPanel';
 
 export default {
+	name: 'DetailedLoanCard',
 	props: {
 		loan: {
 			type: Object,
@@ -231,6 +234,14 @@ export default {
 		disableRedirects: {
 			type: Boolean,
 			default: false,
+		},
+		hideLendCta: {
+			type: Boolean,
+			default: false,
+		},
+		enableFiveDollarsNotes: {
+			type: Boolean,
+			default: false
 		}
 	},
 	components: {
@@ -321,6 +332,9 @@ export default {
 		mobileSections() {
 			return this.tabs.filter(({ component }) => component);
 		},
+		lessThan25() {
+			return this.amountLeft < 25 && this.amountLeft !== 0;
+		}
 	},
 	methods: {
 		trackInteraction(args) {
@@ -361,8 +375,6 @@ $row-arrow-width: 2.5rem;
 
 .detailed-loan-card.row {
 	position: relative;
-	background-color: $white;
-	border: 1px solid $kiva-stroke-gray;
 	max-width: rem-calc(414);
 	border-radius: rem-calc(3);
 	overflow: hidden;
@@ -411,14 +423,10 @@ $row-arrow-width: 2.5rem;
 				text-transform: uppercase;
 				transition: border-color $speed-curve, color $speed-curve, text-shadow $speed-curve;
 				border-color: rgba($white, 0);
-				color: $kiva-text-light;
-				font-weight: $global-weight-normal;
 			}
 
 			&.active span {
 				border-bottom: rem-calc(1) solid rgba($kiva-textlink, 1);
-				color: $kiva-text-dark;
-				text-shadow: rem-calc(0.5) 0 $kiva-text-dark;
 			}
 		}
 	}
@@ -440,12 +448,8 @@ $row-arrow-width: 2.5rem;
 
 			.name {
 				display: block;
-				font-size: rem-calc(28);
-				white-space: nowrap;
 				overflow: hidden;
 				text-overflow: ellipsis;
-				font-weight: 500;
-				line-height: rem-calc(51);
 			}
 
 			.location-sector-row {
@@ -522,8 +526,6 @@ $row-arrow-width: 2.5rem;
 	.full-details-link {
 		margin-bottom: 1.25rem;
 		display: inline-block;
-		font-size: rem-calc(20);
-		line-height: 2rem;
 	}
 
 	.close-button-wrapper {

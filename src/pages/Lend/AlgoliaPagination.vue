@@ -23,7 +23,8 @@
 			</a>
 		</li>
 
-		<li v-for="(number, index) in numbers"
+		<li
+			v-for="(number, index) in numbers"
 			:key="number || -index"
 			class="ais-Pagination-item"
 			:class="{ ellipsis: number === 0 }"
@@ -36,7 +37,8 @@
 				{{ number }}
 			</span>
 
-			<a v-else-if="number > 0"
+			<a
+				v-else-if="number > 0"
 				:href="createUrl(number - 1)"
 				@click.prevent="goToPage(number - 1)"
 				class="ais-Pagination-link"
@@ -77,6 +79,7 @@ import smoothScrollMixin from '@/plugins/smooth-scroll-mixin';
 import KvIcon from '@/components/Kv/KvIcon';
 
 export default {
+	name: 'AlgoliaPagination',
 	components: {
 		KvIcon,
 	},
@@ -196,7 +199,7 @@ export default {
 	text-align: center;
 
 	.ais-Pagination-item {
-		color: $kiva-text-light;
+		color: rgb(var(--text-secondary));
 	}
 
 	.ais-Pagination-item--previousPage .icon {
@@ -210,14 +213,14 @@ export default {
 	.ais-Pagination-item--previousPage,
 	.ais-Pagination-item--nextPage {
 		.icon {
-			fill: $kiva-textlink;
+			fill: rgb(var(--text-action));
 			height: 1rem;
 			margin-top: rem-calc(9);
 			width: 1rem;
 
 			&.disabled {
-				color: $kiva-text-light;
-				fill: $kiva-text-light;
+				color: rgb(var(--text-secondary));
+				fill: rgb(var(--text-secondary));
 			}
 		}
 
@@ -227,7 +230,7 @@ export default {
 		}
 
 		a:hover .icon {
-			fill: $kiva-textlink-hover;
+			fill: rgb(var(--text-action-highlight));
 		}
 	}
 

@@ -1,30 +1,34 @@
 <template>
-	<div
-		class="promo-grid-card"
-		:class="compact ? 'compact': ''"
-	>
-		<kv-responsive-image class="promo-background-image" :images="backgroundImage" loading="lazy" alt="" />
-		<div class="promo-content-wrapper">
-			<div class="promo-content">
-				<h3
-					class="promo-content-title"
-					:class="compact ? 'h2' : 'h1'"
-				>
-					Make a<br class="su">monthly impact
-				</h3>
-				<p v-if="categoryLabel">
-					We’ll lend to {{ categoryLabel }} for you every month with a Monthly Good subscription.
-				</p>
-				<p v-else>
-					We’ll make a loan for you every month with a Monthly Good subscription.
-				</p>
-				<kv-button
-					:class="compact ? 'smallest' : 'small'"
-					:href="categoryUrl"
-					v-kv-track-event="['Lending', 'PromoGridCard-click-Learn more', 'CASH-1426 Dec2019']"
-				>
-					Learn more
-				</kv-button>
+	<div class="promo-grid-card-container">
+		<div
+			class="promo-grid-card tw-bg-primary tw-border tw-border-tertiary"
+			:class="compact ? 'compact': ''"
+		>
+			<kv-responsive-image
+				class="promo-background-image"
+				:images="backgroundImage" loading="lazy" alt=""
+			/>
+			<div class="promo-content-wrapper tw-text-white">
+				<div class="promo-content">
+					<h3
+						class="promo-content-title tw-mb-1"
+						:class="compact ? 'tw-text-h3' : 'tw-text-h2'"
+					>
+						Make a<br class="su">monthly impact
+					</h3>
+					<p v-if="categoryLabel">
+						We’ll lend to {{ categoryLabel }} for you every month with a Monthly Good subscription.
+					</p>
+					<p v-else>
+						We’ll make a loan for you every month with a Monthly Good subscription.
+					</p>
+					<kv-button
+						:to="categoryUrl"
+						v-kv-track-event="['Lending', 'PromoGridCard-click-Learn more', 'CASH-1426 Dec2019']"
+					>
+						Learn more
+					</kv-button>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -32,13 +36,15 @@
 
 <script>
 import { paramCase } from 'change-case';
-
-import KvButton from '@/components/Kv/KvButton';
 import KvResponsiveImage from '@/components/Kv/KvResponsiveImage';
+import getCacheKey from '@/util/getCacheKey';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
 
 const promoLoanImageRequire = require.context('@/assets/images/mg-promo-loan-card/', true);
 
 export default {
+	name: 'PromoGridLoanCard',
+	serverCacheKey: props => getCacheKey(`${props.categoryLabel}-${props.categoryUrl}-${props.compact}`),
 	components: {
 		KvButton,
 		KvResponsiveImage
@@ -77,9 +83,21 @@ export default {
 <style lang="scss" scoped>
 @import 'settings';
 
+.promo-grid-card-container {
+	padding-left: 0.625rem;
+	padding-right: 0.625rem;
+	padding-bottom: 1.25rem;
+}
+
+@media (min-width: 30.0625em) {
+	.promo-grid-card-container {
+		padding-left: 0.9375rem;
+		padding-right: 0.9375rem;
+		padding-bottom: 1.875rem;
+	}
+}
+
 .promo-grid-card {
-	background-color: $white;
-	border: 1px solid $kiva-stroke-gray;
 	height: 100%;
 	width: 100%;
 	overflow: hidden;
@@ -123,7 +141,6 @@ export default {
 	padding: 1rem;
 	position: absolute;
 	bottom: 2rem;
-	color: white;
 
 	p {
 		font-size: 1.25rem;

@@ -1,9 +1,10 @@
 <template>
-	<div class="lend-increment-container">
-		<div class="lend-increment-dropdown-container" v-if="!loading">
-			<select
-				class="lend-increment-dropdown"
+	<div class="tw-flex tw-justify-between tw-gap-1">
+		<div class="tw-w-12" v-if="!loading">
+			<kv-select
+				id="lend-increment-amount"
 				v-model="selectedOption"
+				@update:modelValue="trackLendAmountSelection"
 			>
 				<option
 					v-for="price in prices"
@@ -12,25 +13,36 @@
 				>
 					${{ price }}
 				</option>
-			</select>
+			</kv-select>
 		</div>
+
 		<lend-button
-			class="lend-increment-button smaller"
-			:class="{ 'is-loading': loading }"
+			class="tw-grow"
+			:class="{ 'tw-w-full': loading }"
 			:price="selectedOption"
 			:loan-id="loanId"
 			:loading.sync="loading"
 			@add-to-basket="$emit('add-to-basket', $event)"
-		/>
+		>
+			{{ buttonText }}
+		</lend-button>
 	</div>
 </template>
 
 <script>
+/* eslint-disable vue/no-computed-properties-in-data */
 import LendButton from '@/components/LoanCards/Buttons/LendButton';
-import { buildPriceArray } from '@/util/loanUtils';
+import {
+	getDropdownPriceArray,
+	isLessThan25,
+	isBetween25And500
+} from '@/util/loanUtils';
+import KvSelect from '~/@kiva/kv-components/vue/KvSelect';
 
 export default {
+	name: 'LendIncrementButton',
 	components: {
+		KvSelect,
 		LendButton,
 	},
 	data() {
@@ -51,6 +63,14 @@ export default {
 			type: Object,
 			default: () => {}
 		},
+		enableFiveDollarsNotes: {
+			type: Boolean,
+			default: false
+		},
+		showNow: {
+			type: Boolean,
+			default: false
+		},
 	},
 	computed: {
 		amountLeft() {
@@ -68,9 +88,30 @@ export default {
 			return parseInt(remainingAmount, 10);
 		},
 		prices() {
-			const minAmount = parseFloat(this.loan.minNoteSize || 25); // 25_hard_coded
+			// We don't want to open up $5 loan shares for loans with more than $25 at this time
+			// IF we wanted to show this interface on loans with less than 25 remaining they would see the selector
+			const minAmount = parseFloat(this.amountLeft < 25 ? this.loan.minNoteSize : 25); // 25_hard_coded
 			// cap at 20 prices
-			return buildPriceArray(this.amountLeft, minAmount).slice(0, 20);
+			const priceArray = getDropdownPriceArray(this.amountLeft, minAmount, this.enableFiveDollarsNotes);
+			const amountLeftFixed = Number(this.amountLeft).toFixed();
+			if (this.isCompleteLoanActive && !priceArray.includes(amountLeftFixed)) {
+				priceArray.push(amountLeftFixed);
+			}
+			return priceArray;
+		},
+		isCompleteLoanActive() {
+			// eslint-disable-next-line
+			return isLessThan25(this.amountLeft) || isBetween25And500(this.amountLeft);
+		},
+		buttonText() {
+			let str = '';
+
+			str = 'Lend';
+			if (this.showNow) {
+				str += ' now';
+			}
+
+			return str;
 		}
 	},
 	watch: {
@@ -81,48 +122,14 @@ export default {
 			immediate: true,
 		}
 	},
+	methods: {
+		trackLendAmountSelection(selectedDollarAmount) {
+			this.$kvTrackEvent(
+				'Lending',
+				'Modify lend amount',
+				selectedDollarAmount
+			);
+		},
+	}
 };
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.lend-increment-container {
-	display: flex;
-	justify-content: space-between;
-
-	.lend-increment-dropdown-container {
-		width: 6rem;
-
-		.lend-increment-dropdown {
-			margin: 0;
-			height: 54px;
-			box-shadow: 0 2px #333;
-			border: 1px solid #333;
-			border-bottom: none;
-			color: #484848;
-		}
-
-		@include breakpoint(340px down) {
-			width: 4.75rem;
-		}
-
-		@include breakpoint(medium) {
-			width: 5rem;
-		}
-	}
-
-	.lend-increment-button {
-		margin-bottom: 0;
-		flex-grow: 1;
-		margin-left: 0.8rem;
-		// override only left + right padding
-		padding-right: 1rem;
-		padding-left: 1rem;
-
-		&.is-loading {
-			width: 100%;
-		}
-	}
-}
-</style>

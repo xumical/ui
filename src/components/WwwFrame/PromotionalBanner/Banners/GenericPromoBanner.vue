@@ -1,31 +1,50 @@
+<!-- eslint-disable vue/no-v-text-v-html-on-component -->
 <template>
-	<div class="row align-center generic-banner">
-		<component
-			:is="currentWrapperComponent"
-			:to="promoBannerContent.link"
-			:href="promoBannerContent.link"
-			:target="isExternalLink ? '_blank' : '_self'"
-			:class="{ 'banner-link' : promoBannerContent.link, 'banner-wrapper' : !promoBannerContent.link}"
-			v-kv-track-event="handleTracking"
-		>
-			<kv-icon :name="iconKey" :class="`${iconKey}-icon icon`" />
-			<div class="content" v-html="promoBannerContent.richText">
-			</div>
-		</component>
+	<div class="tw-flex tw-items-center tw-justify-center tw-bg-brand tw-py-1 tw-pl-1.5 generic-banner">
+		<kv-icon
+			v-if="iconKey"
+			:name="iconKey"
+			class=" tw-fill-current tw-text-white tw-h-3 tw-w-3 tw-max-w-3 tw-my-0 tw-mr-1.5"
+		/>
+		<span class="text-center">
+			<component
+				:is="currentWrapperComponent"
+				:to="trimmedLink"
+				:href="trimmedLink"
+				:target="isExternalLink ? '_blank' : '_self'"
+				class="tw-text-center tw-text-white tw-text-base hover:tw-text-white hover:tw-no-underline
+				tw-align-bottom"
+				v-kv-track-event="handleTracking"
+				v-html="processedContent"
+			/>
+			<a
+				v-if="hasDisclaimer"
+				@click="scrollToSection('#disclaimers')"
+				class="tw-text-white"
+				v-kv-track-event="['promo', 'click-Contentful-banner', 'disclaimer-superscript', '1']"
+			>
+				<sup>
+					1
+				</sup>
+			</a>
+		</span>
 	</div>
 </template>
 
 <script>
 import KvIcon from '@/components/Kv/KvIcon';
+import smoothScrollMixin from '@/plugins/smooth-scroll-mixin';
 
 export default {
+	name: 'GenericPromoBanner',
 	components: {
 		KvIcon
 	},
+	mixins: [smoothScrollMixin],
 	props: {
 		iconKey: {
 			type: String,
-			default: 'info'
+			default: ''
 		},
 		promoBannerContent: {
 			type: Object,
@@ -34,9 +53,17 @@ export default {
 					kvTrackEvent: [],
 					link: '',
 					richText: '',
+					disclaimer: '',
 				};
 			}
 		},
+	},
+	methods: {
+		scrollToSection(sectionId) {
+			const elementToScrollTo = document.querySelector(sectionId);
+			const topOfSectionToScrollTo = elementToScrollTo?.offsetTop ?? 0;
+			this.smoothScrollTo({ yPosition: topOfSectionToScrollTo, millisecondsToAnimate: 750 });
+		}
 	},
 	computed: {
 		// if the promoBannerContent includes a link, render a router-link element, else render a plain div
@@ -64,77 +91,19 @@ export default {
 				return ['promo', 'click-Contentful-banner', this.promoBannerContent.richText];
 			}
 			return this.promoBannerContent.kvTrackEvent;
+		},
+		processedContent() {
+			// Remove all p tags from contentful rich text
+			const contentfulRichText = this.promoBannerContent?.richText ?? '';
+			return contentfulRichText.replace(/<p>/g, '').replace(/<\/p>/g, '');
+		},
+		trimmedLink() {
+			return this.promoBannerContent?.link?.trim() ?? '';
+		},
+		hasDisclaimer() {
+			const disclaimer = this.promoBannerContent?.disclaimer ?? '';
+			return disclaimer !== '';
 		}
 	},
 };
 </script>
-
-<style  lang="scss" scoped>
-@import 'settings';
-
-.row {
-	margin: 0;
-	max-width: 100%;
-}
-
-.content {
-	text-align: center;
-	display: block;
-	// contentful rich text content is wrapped in a p tag, this removes all styles from it
-	::v-deep p {
-		display: inline;
-		margin: 0;
-		padding: 0;
-	}
-}
-
-.generic-banner {
-	background-image: url('~@/assets/images/backgrounds/tipbar-bg-small.jpg');
-	background-position: bottom;
-
-	.icon {
-		flex-shrink: 0;
-	}
-
-	& [class*="-icon"] {
-		display: block;
-		height: rem-calc(22);
-		width: rem-calc(22);
-		margin-right: rem-calc(10);
-		margin-top: -0.2rem;
-		fill: $kiva-icon-green;
-	}
-
-	.icon-corporate,
-	.icon-iwd {
-		fill: inherit;
-	}
-
-	.banner-link,
-	.banner-wrapper {
-		display: flex;
-		align-items: center;
-		color: $kiva-icon-green;
-		text-decoration: none;
-		text-align: center;
-		padding: 0.365rem;
-		line-height: 1.25;
-	}
-
-	.banner-link {
-		&:hover,
-		&:active {
-			color: $kiva-darkgreen;
-
-			[class*="-icon"] {
-				fill: $kiva-darkgreen;
-			}
-
-			.icon-corporate,
-			.icon-iwd {
-				fill: inherit;
-			}
-		}
-	}
-}
-</style>

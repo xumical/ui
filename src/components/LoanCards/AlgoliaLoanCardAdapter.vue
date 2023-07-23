@@ -25,6 +25,7 @@ import algoliaLoanStatus from '@/graphql/query/algoliaLoanStatus.graphql';
 import LoanCardController from '@/components/LoanCards/LoanCardController';
 
 export default {
+	name: 'AlgoliaLoanCardAdapter',
 	components: {
 		LoanCardController,
 	},
@@ -61,13 +62,14 @@ export default {
 			latestUserProperties: null,
 			latestStatus: null,
 			latestMatchingText: null,
+			matchRatio: 1,
 		};
 	},
 	computed: {
 		adaptedLoan() {
 			// TODO: There must be a better way
-			const defaultImage = `https://www-dev-kiva-org.global.ssl.fastly.net/img/w480h360/${_get(this.loan, 'image.hash')}.jpg`; // eslint-disable-line
-			const retinaImage = `https://www-dev-kiva-org.global.ssl.fastly.net/img/w960h720/${_get(this.loan, 'image.hash')}.jpg`; // eslint-disable-line
+			const defaultImage = `${this.$appConfig.photoPath}w480h360/${_get(this.loan, 'image.hash')}.jpg`; // eslint-disable-line
+			const retinaImage = `${this.$appConfig.photoPath}w960h720/${_get(this.loan, 'image.hash')}.jpg`; // eslint-disable-line
 			const exprirationDate = new Date(_get(this.loan, 'plannedExpirationDate') * 1000);
 
 			return {
@@ -88,6 +90,7 @@ export default {
 				},
 				use: _get(this.loan, 'use'),
 				matchingText: this.latestMatchingText || _get(this.loan, 'matchingText'),
+				matchRatio: this.matchRatio || _get(this.loan, 'matchRatio'),
 				name: _get(this.loan, 'name'),
 				partnerName: _get(this.loan, 'partner.name'),
 				plannedExpirationDate: exprirationDate.toISOString(),
@@ -128,8 +131,9 @@ export default {
 						favorited: _get(data, 'lend.loans.values[0].userProperties.favorited'),
 						lentTo: _get(data, 'lend.loans.values[0].userProperties.lentTo'),
 					};
-					// patch in latest matchingText
+					// patch in latest matchingText & matchRatio
 					this.latestMatchingText = _get(data, 'lend.loans.values[0].matchingText');
+					this.matchRatio = _get(data, 'lend.loans.values[0].matchRatio');
 					// patch in latest status
 					this.latestStatus = _get(data, 'lend.loans.values[0].status');
 				}

@@ -1,31 +1,28 @@
 <template>
 	<div class="www-page">
 		<the-header
-			:theme="headerTheme"
 			:minimal="true"
 		/>
 		<main>
 			<slot></slot>
 		</main>
-		<the-footer
-			:theme="footerTheme"
-		/>
+		<the-footer />
 		<the-basket-bar />
 		<cookie-banner />
 	</div>
 </template>
 
 <script>
-import _get from 'lodash/get';
 import hasEverLoggedInQuery from '@/graphql/query/shared/hasEverLoggedIn.graphql';
-import { fetchAllExpSettings } from '@/util/experimentPreFetch';
 import appInstallMixin from '@/plugins/app-install-mixin';
 import CookieBanner from '@/components/WwwFrame/CookieBanner';
+import { assignAllActiveExperiments } from '@/util/experiment/experimentUtils';
 import TheHeader from './TheHeader';
 import TheFooter from './TheFooter';
 import TheBasketBar from './TheBasketBar';
 
 export default {
+	name: 'WwwPageMinimal',
 	inject: [
 		'apollo',
 		'cookieStore',
@@ -39,24 +36,11 @@ export default {
 	mixins: [
 		appInstallMixin
 	],
-	props: {
-		headerTheme: {
-			type: Object,
-			default() {},
-		},
-		footerTheme: {
-			type: Object,
-			default() {},
-		},
-	},
 	apollo: {
-		preFetch(config, client, args) {
+		preFetch(_, client) {
 			return Promise.all([
 				client.query({ query: hasEverLoggedInQuery }),
-				fetchAllExpSettings(config, client, {
-					query: _get(args, 'route.query'),
-					path: _get(args, 'route.path')
-				}),
+				assignAllActiveExperiments(client)
 			]);
 		}
 	}
@@ -81,10 +65,6 @@ export default {
 
 	main {
 		flex-grow: 1;
-
-		&.gray-background {
-			background: $kiva-bg-lightgray;
-		}
 	}
 }
 </style>

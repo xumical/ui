@@ -1,5 +1,5 @@
 <template>
-	<div class="info-panel">
+	<div class="info-panel tw-bg-primary" style="--tw-bg-opacity: 0.95;">
 		<button
 			@click.prevent="toggle"
 			:aria-controls="id"
@@ -29,6 +29,7 @@ import KvExpandable from '@/components/Kv/KvExpandable';
 import KvIcon from '@/components/Kv/KvIcon';
 
 export default {
+	name: 'InfoPanel',
 	components: {
 		KvExpandable,
 		KvIcon,
@@ -78,8 +79,6 @@ export default {
 @import 'settings';
 
 .info-panel {
-	background: rgba($white, 0.95);
-
 	.title-button {
 		text-align: left;
 		width: 100%;

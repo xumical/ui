@@ -3,17 +3,25 @@
 		<div class="campaign-thanks__container">
 			<template v-if="loans.length > 0">
 				<header class="campaign-thanks__header hide-for-print">
-					<h2>Thanks for supporting {{ borrowerSupport }}!</h2>
-					<p>We've emailed your order confirmation to <span class="fs-exclude">{{ lender.email }}</span></p>
+					<h2 class="tw-mb-4">
+						Thanks for supporting {{ borrowerSupport }}!
+					</h2>
+					<p class="tw-text-subhead">
+						We've emailed your order confirmation to
+						<span class="data-hj-suppress">{{ lender.email }}</span>
+					</p>
 				</header>
 				<section class="campaign-thanks__partner-block">
-					<campaign-partner-thanks :partner-content="partnerContent" />
+					<campaign-partner-thanks
+						:partner-content="partnerContent"
+						:page-setting-data="pageSettingData"
+					/>
 				</section>
 				<kv-accordion-item id="thanks-share">
 					<template #header>
 						<h2>Share the Good</h2>
 					</template>
-					<social-share
+					<social-share-v2
 						class="campaign-thanks__social-share"
 						:lender="lender"
 						:loans="loans"
@@ -52,20 +60,26 @@ import confetti from 'canvas-confetti';
 import KvAccordionItem from '@/components/Kv/KvAccordionItem';
 import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
 import CheckoutReceipt from '@/components/Checkout/CheckoutReceipt';
-import SocialShare from '@/components/Checkout/SocialShare';
+import SocialShareV2 from '@/components/Checkout/SocialShareV2';
 import thanksPageQuery from '@/graphql/query/thanksPage.graphql';
 import { joinArray } from '@/util/joinArray';
+import { userHasLentBefore, userHasDepositBefore } from '@/util/optimizelyUserMetrics';
+import { setHotJarUserAttributes } from '@/util/hotJarUtils';
 import CampaignPartnerThanks from './CampaignPartnerThanks';
 
+const hasLentBeforeCookie = 'kvu_lb';
+const hasDepositBeforeCookie = 'kvu_db';
+
 export default {
+	name: 'CampaignThanks',
 	components: {
 		CampaignPartnerThanks,
 		CheckoutReceipt,
 		KvAccordionItem,
 		KvLoadingSpinner,
-		SocialShare
+		SocialShareV2
 	},
-	inject: ['apollo'],
+	inject: ['apollo', 'cookieStore'],
 	metaInfo() {
 		return {
 			title: 'Thank you!'
@@ -79,6 +93,14 @@ export default {
 		partnerContent: {
 			type: Object,
 			default() { return {}; }
+		},
+		pageSettingData: {
+			type: Object,
+			default: () => {},
+		},
+		promoGuestCheckoutEnabled: {
+			type: Boolean,
+			default: false
 		}
 	},
 	data() {
@@ -105,15 +127,19 @@ export default {
 	},
 	methods: {
 		fetchReceipt() {
-			this.apollo.query({
+			const queryObj = {
 				query: thanksPageQuery,
 				variables: {
 					checkoutId: this.transactionId
 				}
-			}).then(async ({ data }) => {
+			};
+			if (this.promoGuestCheckoutEnabled) {
+				queryObj.variables.visitorId = this.cookieStore.get('uiv') || null;
+			}
+			this.apollo.query(queryObj).then(async ({ data }) => {
 				this.lender = {
-					...data.my.userAccount,
-					teams: data.my.teams.values.map(value => value.team)
+					...data?.my?.userAccount,
+					teams: data?.my?.teams?.values.map(value => value.team)
 				};
 
 				// The default empty object and the v-if will prevent the
@@ -131,6 +157,26 @@ export default {
 				if (!this.receipt) {
 					console.error(`Failed to get receipt for transaction id: ${this.$route.query.kiva_transaction_id}`);
 				}
+
+				// MARS-194-User metrics A/B Optimizely experiment
+				const depositTotal = this.receipt?.totals?.depositTotals?.depositTotal;
+
+				const hasLentBefore = this.loans.length > 0;
+				const hasDepositBefore = parseFloat(depositTotal) > 0;
+
+				this.cookieStore.set(hasLentBeforeCookie, hasLentBefore, { path: '/' });
+				this.cookieStore.set(hasDepositBeforeCookie, hasDepositBefore, { path: '/' });
+
+				userHasLentBefore(hasLentBefore);
+				userHasDepositBefore(hasDepositBefore);
+
+				// MARS-246 Hotjar user attributes
+				setHotJarUserAttributes({
+					userId: this.lender?.id,
+					hasEverLoggedIn: true,
+					hasLentBefore,
+					hasDepositBefore,
+				});
 
 				this.showReceipt = true;
 				await this.$nextTick();

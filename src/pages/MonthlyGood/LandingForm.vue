@@ -1,37 +1,58 @@
 <template>
 	<form @submit.prevent.stop="submit" novalidate>
-		<div class="row">
-			<fieldset class="large-4 medium-5 small-12 columns input-wrapper">
-				<label class="show-for-sr" :class="{ 'error': $v.$invalid }" :for="'amount-' + componentKey">
-					Amount
-				</label>
-				<kv-currency-input :id="'amount-' + componentKey" :value="amount" @input="updateAmount" />
-				<ul class="validation-errors" v-if="$v.$invalid">
-					<li v-if="!$v.amount.required">
-						Field is required
-					</li>
-					<li v-if="!$v.amount.minValue || !$v.amount.maxValue">
-						Enter an amount of $5-$8,500
-					</li>
-				</ul>
-			</fieldset>
-			<fieldset class="large-8 medium-7 small-12 columns">
-				<kv-dropdown-rounded :value="selectedGroup" @input="updateSelected">
+		<div class="tw-flex tw-flex-col tw-gap-2">
+			<fieldset class="tw-basis-full">
+				<p class="tw-text-h4 tw-mb-2">
+					CHOOSE A CATEGORY
+				</p>
+				<label for="borrower-categories" class="tw-sr-only">Lending category to support</label>
+				<kv-select
+					class="tw-w-full" id="borrower-categories"
+					:model-value="selectedGroup"
+					@update:modelValue="updateSelected"
+				>
 					<option v-for="(option, index) in lendingCategories" :value="option.value" :key="index">
 						{{ option.label }}
 					</option>
-				</kv-dropdown-rounded>
+				</kv-select>
 			</fieldset>
+			<div class="tw-flex tw-items-center tw-gap-2">
+				<fieldset class="tw-basis-2/6">
+					<label
+						class="tw-sr-only" :class="{ 'tw-text-danger': $v.$invalid }"
+						:for="'amount-' + componentKey"
+					>
+						Amount
+					</label>
+					<kv-currency-input
+						:id="'amount-' + componentKey"
+						:value="amount"
+						@input="updateAmount"
+					/>
+					<ul class="validation-errors tw-text-danger" v-if="$v.$invalid">
+						<li v-if="!$v.amount.required">
+							Field is required
+						</li>
+						<li v-if="!$v.amount.minValue || !$v.amount.maxValue">
+							Enter an amount of $5-$8,500
+						</li>
+					</ul>
+				</fieldset>
+				<kv-button
+					class="tw-basis-4/6"
+					style="margin-top: 0;"
+					type="submit"
+					:disabled="$v.$invalid"
+					v-kv-track-event="[
+						'MonthlyGood',
+						`click-start-form-${componentKey}`,
+						buttonText
+					]"
+				>
+					{{ buttonText }}
+				</kv-button>
+			</div>
 		</div>
-
-		<kv-button class="smaller" type="submit" :disabled="$v.$invalid" v-kv-track-event="[
-			'MonthlyGood',
-			`click-start-form-${componentKey}`,
-			buttonText
-		]"
-		>
-			{{ buttonText }}
-		</kv-button>
 	</form>
 </template>
 
@@ -39,12 +60,13 @@
 import { validationMixin } from 'vuelidate';
 import { required, minValue, maxValue } from 'vuelidate/lib/validators';
 
-import KvDropdownRounded from '@/components/Kv/KvDropdownRounded';
 import KvCurrencyInput from '@/components/Kv/KvCurrencyInput';
-import KvButton from '@/components/Kv/KvButton';
 import loanGroupCategoriesMixin from '@/plugins/loan-group-categories';
+import KvSelect from '~/@kiva/kv-components/vue/KvSelect';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
 
 export default {
+	name: 'LandingForm',
 	mixins: [
 		validationMixin,
 		loanGroupCategoriesMixin
@@ -52,7 +74,7 @@ export default {
 	components: {
 		KvButton,
 		KvCurrencyInput,
-		KvDropdownRounded,
+		KvSelect,
 	},
 	validations: {
 		amount: {
@@ -107,37 +129,3 @@ export default {
 };
 
 </script>
-<style lang="scss" scoped>
-@import 'settings';
-
-// styles to match KvDropDownRounded
-input[type="text"] {
-	border-radius: $button-radius;
-	color: $charcoal;
-	font-size: $medium-text-font-size;
-	font-weight: $global-weight-highlight;
-	margin: 0;
-}
-
-// When label is error, validation styles overwrite this
-label:not(.error) + input {
-	border: 1px solid $charcoal;
-}
-
-::v-deep .dropdown-wrapper select.dropdown {
-	width: 100%;
-}
-
-.input-wrapper {
-	padding-bottom: 1rem;
-}
-
-.validation-errors {
-	padding: 0.15rem 0 0 0;
-	margin-bottom: 0;
-
-	li {
-		line-height: 1.15rem;
-	}
-}
-</style>

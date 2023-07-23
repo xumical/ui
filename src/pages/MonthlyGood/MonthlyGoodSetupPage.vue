@@ -1,35 +1,65 @@
 <template>
 	<www-page>
-		<div class="monthly-good-setup-page">
-			<div class="row align-center ">
-				<div class="small-12 medium-11 large-10 column"
-					v-if="!isMonthlyGoodSubscriber && !hasLegacySubscription"
+		<kv-default-wrapper class="monthly-good-setup-page">
+			<div
+				class="row align-center tw-text-center auto-lending-notice"
+				v-if="balance > autoDepositNoticeThreshold"
+			>
+				<div class="small-12 medium-11 large-10 column">
+					<h2 class="tw-mb-4">
+						Heads up! You have {{ balance | numeral('$0') }} available to lend.
+					</h2>
+					<p class="tw-mb-2">
+						<!-- eslint-disable-next-line max-len -->
+						If you sign up for Monthly Good, this balance and all future repayments will be automatically lent. If you prefer to keep choosing your own loans, switch to auto-deposit.
+					</p>
+					<kv-button
+						variant="secondary"
+						class="tw-mb-4"
+						to="/auto-deposit"
+						v-kv-track-event="[
+							'MonthlyGood',
+							'click-large-balance-auto-deposit-warning',
+							'Switch to auto-deposit'
+						]"
+					>
+						Switch to auto-deposit
+					</kv-button>
+					<hr>
+				</div>
+			</div>
+			<div class="row align-center">
+				<div
+					class="small-12 medium-11 large-10 column"
+					v-if="!isMonthlyGoodSubscriber && !hasLegacySubscription && !hasModernSub"
 				>
-					<h1 class="text-center impact-text">
+					<h1 class="tw-text-center tw-mb-2">
 						Confirm your Good
 					</h1>
-					<h3 class="text-center featured-text" v-if="!isOnetime">
+					<h2 class="tw-text-center tw-text-subhead tw-mb-4">
 						Review and set up your monthly contribution
-					</h3>
+					</h2>
 					<form
 						class="monthly-good-form"
 						@submit.prevent
 						novalidate
 					>
-						<div class="panel zigzag-bottom">
-							<div class="row align-center text-center">
+						<div class="panel zigzag-bottom tw-bg-secondary">
+							<div class="row align-center tw-text-center">
 								<div class="medium-10 small-12 columns">
-									<div class="row column" v-if="!fromCovidLanding">
+									<div class="row column">
 										<strong>Each month on the</strong>
-										<label class="show-for-sr"
-											:class="{ 'error': $v.dayOfMonth.$invalid }"
+										<label
+											class="tw-sr-only"
+											:class="{ 'tw-text-danger': $v.dayOfMonth.$invalid }"
 											:for="dayOfMonth"
 										>
 											Day of the Month
 										</label>
-										<input v-if="isDayInputShown"
+										<kv-text-input
+											v-if="isDayInputShown"
 											@blur="hideDayInput()"
-											class="text-input__day"
+											class="text-input__day tw-w-9 tw-inline-block tw-ml-1"
 											id="dayOfMonth"
 											type="number"
 											placeholder=""
@@ -37,14 +67,14 @@
 											min="1"
 											max="31"
 											v-model.number="dayOfMonth"
-										>
+										/>
 										<button
-											class="button--ordinal-day"
+											class="tw-text-link"
 											@click="isDayInputShown = true"
 											v-if="!isDayInputShown"
 										>
 											<strong>{{ dayOfMonth | numeral('Oo') }}</strong>
-											<kv-icon class="icon-pencil" name="pencil" title="Edit" />
+											<kv-icon class="tw-w-2 tw-h-2" name="pencil" title="Edit" />
 										</button>
 										<ul class="validation-errors" v-if="$v.dayOfMonth.$invalid">
 											<li v-if="!$v.dayOfMonth.required">
@@ -61,26 +91,30 @@
 										</div>
 									</div>
 
-									<div class="row text-left align-middle">
+									<div class="row tw-text-left align-middle">
 										<div class="columns">
-											<span class="additional-left-pad-spans strong">
+											<span class="tw-font-medium tw-ml-3">
 												Deposit for lending
 											</span>
 										</div>
 
 										<div class="medium-5 small-6 columns">
 											<label
-												class="show-for-sr"
-												:class="{ 'error': $v.mgAmount.$invalid }"
+												class="tw-sr-only"
+												:class="{ 'tw-text-danger': $v.mgAmount.$invalid }"
 												for="amount"
 											>
 												Amount
 											</label>
-											<kv-currency-input class="text-input" id="amount" v-model="mgAmount" />
+											<kv-currency-input
+												class="text-input tw-w-full"
+												id="amount"
+												v-model="mgAmount"
+											/>
 										</div>
 
 										<div class="small-12 columns">
-											<ul class="text-right validation-errors" v-if="$v.mgAmount.$invalid">
+											<ul class="tw-text-right validation-errors" v-if="$v.mgAmount.$invalid">
 												<li v-if="!$v.mgAmount.required">
 													Field is required
 												</li>
@@ -91,34 +125,37 @@
 										</div>
 									</div>
 
-									<div class="row text-left align-middle">
+									<div class="row tw-text-left align-middle">
 										<div class="columns">
 											<kv-checkbox
 												id="donation-checkbox"
+												class="tw--ml-2"
 												v-model="donationCheckbox"
-												@change="donationCheckboxChange()"
-											/>
-											<div class="additional-left-pad-spans display-inline-block">
-												<span class="strong">
+											>
+												<span class="tw-font-medium">
 													Monthly donation to Kiva (optional)
 												</span>
-												<div class="small-text" v-if="isMGTaglineActive">
+												<div class="tw-text-small" v-if="isMGTaglineActive">
 													<!-- eslint-disable-next-line max-len -->
 													Every $25 loan costs more than $3 to facilitate, and our generous supporters are donating $1 for every $3 you donate.
 												</div>
-											</div>
+											</kv-checkbox>
 										</div>
 
 										<div class="medium-5 small-6 columns">
 											<label
-												class="show-for-sr"
-												:class="{ 'error': $v.donation.$invalid }"
-												for="donation"
+												class="tw-sr-only"
+												:class="{ 'tw-text-danger': $v.donation.$invalid }"
+												:for="`
+													${donationOptionSelected !== 'other'
+													? 'donation' : 'donation_other'
+												}`"
 											>
 												Donation
 											</label>
-											<kv-dropdown-rounded
-												class="donation-dropdown"
+											<kv-select
+												class="donation-dropdown tw-w-full"
+												id="donation"
 												v-model="donationOptionSelected"
 												v-if="donationOptionSelected !== 'other'"
 											>
@@ -129,17 +166,17 @@
 												>
 													{{ option.label }}
 												</option>
-											</kv-dropdown-rounded>
+											</kv-select>
 											<kv-currency-input
 												class="text-input"
-												id="donation"
+												id="donation_other"
 												v-model="donation"
 												v-if="donationOptionSelected === 'other'"
 											/>
 										</div>
 
 										<div class="small-12 columns">
-											<ul class="text-right validation-errors" v-if="$v.donation.$invalid">
+											<ul class="tw-text-right validation-errors" v-if="$v.donation.$invalid">
 												<li v-if="!$v.donation.minValue || !$v.donation.maxValue">
 													Enter an amount of $0-$10,000
 												</li>
@@ -147,22 +184,20 @@
 										</div>
 									</div>
 
-									<div class="row text-left">
+									<div class="row tw-text-left">
 										<div class="columns">
-											<strong v-if="!onetime"
-												class="additional-left-pad-spans"
-											>Total/month</strong>
-											<strong v-else class="additional-left-pad-spans">Total</strong>
+											<span class="tw-font-medium tw-ml-3">Total/month</span>
 										</div>
 
 										<div class="medium-5 small-6 columns">
-											<strong
-												class="additional-left-pad-currency"
-											>{{ totalCombinedDeposit | numeral('$0,0.00') }}</strong>
+											<span class="tw-ml-1 tw-font-medium">
+												{{ totalCombinedDeposit | numeral('$0,0.00') }}
+											</span>
 										</div>
 
 										<div class="small-12 columns">
-											<ul class="text-center validation-errors"
+											<ul
+												class="tw-text-center validation-errors"
 												v-if="!$v.mgAmount.maxTotal || !$v.donation.maxTotal"
 											>
 												<li>
@@ -173,11 +208,17 @@
 										</div>
 									</div>
 
-									<div class="row text-left" v-if="!fromCovidLanding">
+									<div class="row tw-text-left">
 										<div class="small-12 columns">
-											<div class="additional-left-pad-spans">
-												Select a category to focus your lending
-												<kv-dropdown-rounded v-model="selectedGroup" class="group-dropdown">
+											<div class="tw-ml-3">
+												<label for="lending-category" class="tw-block tw-mb-2">
+													Select a category to focus your lending
+												</label>
+												<kv-select
+													v-model="selectedGroup"
+													class="group-dropdown tw-mb-2"
+													id="lending-category"
+												>
 													<option
 														v-for="(option, index) in lendingCategories"
 														:value="option.value"
@@ -185,32 +226,30 @@
 													>
 														{{ option.label }}
 													</option>
-												</kv-dropdown-rounded>
+												</kv-select>
 											</div>
 										</div>
 									</div>
 
-									<div class="row small-collapse" v-if="!isOnetime">
+									<div class="row small-collapse">
 										<div class="small-12 columns">
-											<em class="text-center">Rest easy, you can cancel anytime.</em>
+											<em class="tw-text-center">Rest easy, you can cancel anytime.</em>
 										</div>
 									</div>
 								</div>
 							</div>
 						</div>
-						<div class="row align-center text-center">
+						<div class="row align-center tw-text-center">
 							<div class="large-9 medium-10 small-12 columns">
-								<p>
+								<p class="tw-mb-2">
 									<!-- eslint-disable-next-line max-len -->
-									<strong><em>We'll charge your account{{ isOnetime ? '' : ' each month' }}, and any credit in your Kiva account will be automatically re-lent for you.</em></strong>
+									We’ll charge your payment method each month. All credit in your Kiva account, including repayments, will be automatically lent whenever it exceeds $5.
 								</p>
-								<p v-if="hasAutoDeposits">
+								<p class="conditional-messaging">
 									<!-- eslint-disable-next-line max-len -->
-									<em>* Your {{ isOnetime ? '' : 'new Monthly Good ' }}contribution will replace your existing auto deposit.</em>
-								</p>
-								<p v-if="hasAutoLending">
+									<em v-if="hasAutoDeposits">* Your new Monthly Good contribution will replace your existing auto deposit.</em>
 									<!-- eslint-disable-next-line max-len -->
-									<em>* {{ isOnetime ? 'This contribution' : 'Enrolling in Monthly Good' }} will also disable your current auto lending settings.</em>
+									<em v-if="hasAutoLending">* Enrolling in Monthly Good will also disable your current auto lending settings.</em>
 								</p>
 
 								<div class="payment-dropin-wrapper" v-if="hasActiveLogin">
@@ -220,13 +259,11 @@
 										:donate-amount="donation"
 										:day-of-month="dayOfMonth"
 										:category="selectedGroup"
-										:is-one-time="isOnetime"
 										@complete-transaction="completeMGBraintree"
 									/>
 								</div>
 								<div class="payment-dropin-wrapper" v-if="!hasActiveLogin">
 									<kv-button
-										title="Continue"
 										:href="`/ui-login?force=true&doneUrl=${loginRedirectUrl}`"
 										v-kv-track-event="[
 											'MonthlyGood',
@@ -243,8 +280,7 @@
 				</div>
 				<already-subscribed-notice
 					class="small-12 medium-11 large-8 column"
-					v-if="isMonthlyGoodSubscriber"
-					:onetime="isOnetime"
+					v-if="isMonthlyGoodSubscriber || hasModernSub"
 				/>
 				<legacy-subscriber-notice
 					class="small-12 medium-11 large-8 column"
@@ -256,36 +292,37 @@
 			<kv-loading-overlay
 				v-if="showLoadingOverlay"
 			/>
-		</div>
+		</kv-default-wrapper>
 	</www-page>
 </template>
 
 <script>
 import numeral from 'numeral';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import { validationMixin } from 'vuelidate';
 import { required, minValue, maxValue } from 'vuelidate/lib/validators';
 import { subDays } from 'date-fns';
 
 import logReadQueryError from '@/util/logReadQueryError';
 import { checkLastLoginTime } from '@/util/authenticationGuard';
+import { myFTDQuery } from '@/util/checkoutUtils';
 
 import authenticationQuery from '@/graphql/query/authenticationQuery.graphql';
 import hasEverLoggedInQuery from '@/graphql/query/shared/hasEverLoggedIn.graphql';
 
-import KvButton from '@/components/Kv/KvButton';
-import KvCheckbox from '@/components/Kv/KvCheckbox';
+import AlreadySubscribedNotice from '@/components/MonthlyGood/AlreadySubscribedNotice';
 import KvCurrencyInput from '@/components/Kv/KvCurrencyInput';
-import KvDropdownRounded from '@/components/Kv/KvDropdownRounded';
+import KvDefaultWrapper from '@/components/Kv/KvDefaultWrapper';
 import KvIcon from '@/components/Kv/KvIcon';
 import KvLoadingOverlay from '@/components/Kv/KvLoadingOverlay';
+import LegacySubscriberNotice from '@/components/MonthlyGood/LegacySubscriberNotice';
 import MonthlyGoodDropInPaymentWrapper from '@/components/MonthlyGood/MonthlyGoodDropInPaymentWrapper';
 import WwwPage from '@/components/WwwFrame/WwwPage';
-
 import loanGroupCategoriesMixin from '@/plugins/loan-group-categories';
-
-import AlreadySubscribedNotice from './AlreadySubscribedNotice';
-import LegacySubscriberNotice from './LegacySubscriberNotice';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
+import KvCheckbox from '~/@kiva/kv-components/vue/KvCheckbox';
+import KvSelect from '~/@kiva/kv-components/vue/KvSelect';
+import KvTextInput from '~/@kiva/kv-components/vue/KvTextInput';
 
 const pageQuery = gql`query monthlyGoodSetupPageControl {
 	general {
@@ -295,6 +332,7 @@ const pageQuery = gql`query monthlyGoodSetupPageControl {
 		}
 	}
 	my {
+		id
 		subscriptions {
 			values {
 				id
@@ -313,6 +351,16 @@ const pageQuery = gql`query monthlyGoodSetupPageControl {
 			id
 			isEnabled
 		}
+		userAccount {
+			id
+			balance
+		}
+	}
+	mySubscriptions(includeDisabled: false) {
+		values {
+			id
+			enabled
+		}
 	}
 }`;
 
@@ -329,6 +377,7 @@ const startDay = nextmonth => {
 };
 
 export default {
+	name: 'MonthlyGoodSetupPage',
 	props: {
 		amount: {
 			type: Number,
@@ -346,10 +395,6 @@ export default {
 			type: String,
 			default: 'default'
 		},
-		onetime: {
-			type: String,
-			default: 'false'
-		},
 		source: {
 			type: String,
 			default: ''
@@ -364,9 +409,11 @@ export default {
 		KvButton,
 		KvCheckbox,
 		KvCurrencyInput,
-		KvDropdownRounded,
+		KvDefaultWrapper,
+		KvSelect,
 		KvIcon,
 		KvLoadingOverlay,
+		KvTextInput,
 		LegacySubscriberNotice,
 		MonthlyGoodDropInPaymentWrapper,
 		WwwPage,
@@ -389,8 +436,11 @@ export default {
 			hasAutoDeposits: false,
 			hasAutoLending: false,
 			hasLegacySubscription: false,
+			hasModernSub: false,
 			isMGTaglineActive: false,
 			hasActiveLogin: false,
+			balance: 0,
+			autoDepositNoticeThreshold: 150
 		};
 	},
 	mixins: [
@@ -481,6 +531,9 @@ export default {
 			this.legacySubs = pageQueryResult?.my?.subscriptions?.values ?? [];
 			this.hasLegacySubscription = this.legacySubs.length > 0;
 			this.hasActiveLogin = !!pageQueryResult?.my;
+			this.balance = Math.floor(pageQueryResult?.my?.userAccount?.balance ?? 0);
+			const modernSubscriptions = pageQueryResult?.mySubscriptions?.values ?? [];
+			this.hasModernSub = modernSubscriptions.length !== 0;
 		} catch (e) {
 			logReadQueryError(e, 'MonthlyGoodSetupPage pageQuery');
 		}
@@ -517,6 +570,11 @@ export default {
 		if (this.hasLegacySubscription) {
 			this.$kvTrackEvent('Registration', 'unsuccessful-monthly-good-reg', 'has-legacy-subscription');
 		}
+
+		// Fire event if user sees auto-deposit warning
+		if (this.balance > this.autoDepositNoticeThreshold) {
+			this.$kvTrackEvent('MonthlyGood', 'shown-large-balance-auto-deposit-warning');
+		}
 	},
 	watch: {
 		donation(newVal) {
@@ -524,6 +582,12 @@ export default {
 				this.donationCheckbox = true;
 			}
 			if (newVal === 0) {
+				this.donationOptionSelected = '0';
+			}
+		},
+		donationCheckbox(newVal) {
+			if (!newVal) {
+				// when box is unchecked, change donation amount to zero.
 				this.donationOptionSelected = '0';
 			}
 		},
@@ -584,41 +648,46 @@ export default {
 				this.isDayInputShown = false;
 			}
 		},
-		donationCheckboxChange() {
-			if (!this.donationCheckbox) {
-				// when box is unchecked, change donation amount to zero.
-				this.donationOptionSelected = '0';
-			}
-		},
 		completeMGBraintree(paymentType) {
 			this.showLoadingOverlay = true;
 			this.$kvTrackEvent('Registration', 'successful-monthly-good-reg', 'register-monthly-good');
 
-			try {
-				// Track Facebook Event For MG
-				if (typeof window !== 'undefined' && typeof fbq === 'function') {
-					window.fbq('trackCustom', 'MonthlyGoodSignUp', {
-						amount: this.totalCombinedDeposit,
-						donateAmount: this.donation,
-						dayOfMonth: this.dayOfMonth,
-						category: this.selectedGroup,
-						isOneTime: this.isOnetime
+			const mgSignupData = {
+				mgTotalAmount: this.totalCombinedDeposit,
+				mgLendingAmount: this.mgAmount,
+				mgDonationAmount: this.donation,
+				mgDayOfMonth: this.dayOfMonth,
+				mgCategory: this.selectedGroup,
+				isFTD: false,
+				mgIsOneTime: false,
+			};
+
+			// check ftd status
+			const myFtd = myFTDQuery(this.apollo);
+			myFtd.then(({ data }) => {
+				const isFTD = data?.my?.userAccount?.isFirstTimeDepositor;
+				const hasDeposits = data?.my?.userAccount?.hasDeposits;
+				// update transaction data
+				mgSignupData.isFTD = isFTD || !hasDeposits;
+
+				// push to dataLayer
+				if (typeof window.dataLayer === 'object') {
+					window.dataLayer.push({
+						event: 'monthlyGoodSignUp',
+						...mgSignupData
 					});
 				}
-			} catch (e) {
-				console.error(e);
-			}
 
-			// Send to thanks page
-			this.$router.push({
-				path: '/monthlygood/thanks',
-				query: {
-					onetime: this.isOnetime,
-					source: this.source,
-					paymentType: paymentType || 'UnknownBraintree',
-				}
-			}).finally(() => {
-				this.showLoadingOverlay = false;
+				// Send to thanks page
+				this.$router.push({
+					path: '/monthlygood/thanks',
+					query: {
+						source: this.source,
+						paymentType: paymentType || 'UnknownBraintree',
+					}
+				}).finally(() => {
+					this.showLoadingOverlay = false;
+				});
 			});
 		},
 	},
@@ -681,13 +750,6 @@ export default {
 				}
 			];
 		},
-		isOnetime() {
-			// ensure this is cast to a bool for use in Graphql mutation
-			return this.onetime === 'true';
-		},
-		fromCovidLanding() {
-			return this.source === 'covid19response';
-		}
 	},
 };
 
@@ -698,11 +760,6 @@ export default {
 
 .monthly-good-setup-page {
 	position: relative;
-	padding: 2rem 0 2rem;
-
-	h1 { color: $kiva-green; }
-
-	h3 { padding: 0 2rem; }
 
 	form.monthly-good-form {
 		margin-top: 2rem;
@@ -710,7 +767,6 @@ export default {
 		.panel.zigzag-bottom {
 			margin-bottom: 1.5rem;
 			position: relative;
-			background-color: $kiva-bg-darkgray;
 			padding: 1rem;
 
 			& > .row .row {
@@ -724,8 +780,8 @@ export default {
 
 		.panel.zigzag-bottom::after {
 			background:
-				linear-gradient(-45deg, $white 12px, transparent 0),
-				linear-gradient(45deg, $white 12px, transparent 0);
+				linear-gradient(-45deg, rgb(var(--bg-primary)) 12px, transparent 0),
+				linear-gradient(45deg, rgb(var(--bg-primary)) 12px, transparent 0);
 			background-size: 24px 24px;
 			content: " ";
 			position: absolute;
@@ -733,51 +789,6 @@ export default {
 			left: 0;
 			width: 100%;
 			height: 24px;
-		}
-
-		//aligns numbers with input
-		.additional-left-pad-currency {
-			padding-left: 0.55rem;
-		}
-
-		//aligns other rows to make room for checkbox
-		.additional-left-pad-spans {
-			padding-left: 1.55rem;
-			display: inline-block;
-		}
-
-		// styles to match KvDropDownRounded
-		input.text-input {
-			border: 1px solid $charcoal;
-			border-radius: $button-radius;
-			color: $charcoal;
-			font-size: $medium-text-font-size;
-			font-weight: $global-weight-highlight;
-			margin: 0;
-		}
-
-		.button--ordinal-day {
-			color: $kiva-accent-blue;
-			fill: $kiva-accent-blue;
-			cursor: pointer;
-		}
-
-		.icon-pencil {
-			height: 1rem;
-			width: 1rem;
-		}
-
-		.text-input__day {
-			display: inline-block;
-			width: 3.5rem;
-			padding: 0.25rem 0.5rem;
-			margin: 0 0 0 0.25rem;
-			height: 2rem;
-		}
-
-		.text-input,
-		.validation-errors {
-			margin: 0;
 		}
 
 		.additional-day-info {
@@ -788,28 +799,24 @@ export default {
 				display: block;
 			}
 		}
+	}
 
-		.display-inline-block {
-			display: inline-block;
+	.auto-lending-notice {
+		h2 {
+			margin-bottom: 1.5rem;
 		}
 
-		::v-deep .dropdown-wrapper.donation-dropdown .dropdown {
-			margin-bottom: 0;
-			width: 100%;
+		.button {
+			margin-top: 1rem;
 		}
 
-		::v-deep .dropdown-wrapper.group-dropdown .dropdown {
-			margin-top: 0.65rem;
-		}
-
-		::v-deep .kv-checkbox {
-			position: absolute;
-			padding-top: 0.15rem;
-		}
+		margin-bottom: 2.5rem;
 	}
 
 	// cover and disallow clicking if form is invalid
-	.payment-dropin-wrapper { position: relative; }
+	.payment-dropin-wrapper {
+		position: relative;
+	}
 
 	.payment-dropin-invalid-cover {
 		position: absolute;
@@ -819,6 +826,11 @@ export default {
 		left: 0;
 		background: rgba(255, 255, 255, 0.8);
 		z-index: 10000;
+	}
+
+	.conditional-messaging {
+		margin: 1.5rem 0 2rem;
+		em { display: block; }
 	}
 }
 

@@ -1,9 +1,9 @@
 <template>
 	<div>
-		<h3 class="filter-title">
-			Field Partner delinquency rates
+		<h3 class="tw-mb-2">
+			Lending Partner delinquency rates
 		</h3>
-		<kv-dropdown-rounded v-model="delinquencyRate">
+		<kv-select v-model="delinquencyRate">
 			<option value="0">
 				All delinquency rates
 			</option>
@@ -22,19 +22,20 @@
 			<option value="0.25">
 				25% or less
 			</option>
-		</kv-dropdown-rounded>
+		</kv-select>
 	</div>
 </template>
 
 <script>
 import _get from 'lodash/get';
-import gql from 'graphql-tag';
-import KvDropdownRounded from '@/components/Kv/KvDropdownRounded';
+import { gql } from '@apollo/client';
+import KvSelect from '@/components/Kv/KvSelect';
 
 export default {
+	name: 'PartnerDelRateDropdown',
 	inject: ['apollo', 'cookieStore'],
 	components: {
-		KvDropdownRounded,
+		KvSelect,
 	},
 	data() {
 		return {
@@ -44,6 +45,7 @@ export default {
 	apollo: {
 		query: gql`query autolendProfileArrearsRate {
 			autolending @client {
+				id
 				currentProfile {
 					id
 					loanSearchCriteria {
@@ -68,6 +70,7 @@ export default {
 				this.apollo.mutate({
 					mutation: gql`mutation updateArrearsRate($max: Float) {
 						autolending @client {
+							id
 							editProfile(profile: {
 								loanSearchCriteria: {
 									filters: {
@@ -89,6 +92,3 @@ export default {
 	},
 };
 </script>
-
-<style lang="scss">
-</style>

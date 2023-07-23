@@ -64,7 +64,7 @@
 					</div>
 				</div>
 			</div>
-			<div class="lightbox-lyml-wrapper" v-if="loan.loan">
+			<div class="lightbox-lyml-wrapper" v-if="loan.loan && showLoansYouMightLike">
 				<div class="additional-loans">
 					<h2>Support more loans like {{ loan.loan.name }}</h2>
 					<l-y-m-l
@@ -74,6 +74,7 @@
 						:visible="showInterstitial"
 						@add-to-basket="handleAddToBasket"
 						@processing-add-to-basket="processingAddToBasket"
+						@no-rec-loans-found="showLoansYouMightLike = false"
 					/>
 				</div>
 			</div>
@@ -104,9 +105,12 @@ import KvCheckbox from '@/components/Kv/KvCheckbox';
 import KvLightbox from '@/components/Kv/KvLightbox';
 import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
 import LoanReservation from '@/components/Checkout/LoanReservation';
-import LYML from '@/components/LoansYouMightLike/lymlContainer';
+import LYML from '@/components/LoansYouMightLike/LymlContainer';
+import getCacheKey from '@/util/getCacheKey';
 
 export default {
+	name: 'AddToBasketInterstitial',
+	serverCacheKey: () => getCacheKey('AddToBasketInterstitial'),
 	components: {
 		KvButton,
 		KvCheckbox,
@@ -125,6 +129,7 @@ export default {
 			loanTotals: '0.00',
 			loading: true,
 			showInterstitial: false,
+			showLoansYouMightLike: true,
 			userPrefHideInterstitial: false,
 		};
 	},

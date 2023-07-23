@@ -21,10 +21,11 @@
 
 <script>
 import _get from 'lodash/get';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import KvRadio from '@/components/Kv/KvRadio';
 
 export default {
+	name: 'KivaChoosesRadios',
 	inject: ['apollo', 'cookieStore'],
 	components: {
 		KvRadio,
@@ -37,6 +38,7 @@ export default {
 	apollo: {
 		query: gql`query autolendProfileKivaChooses {
 			autolending @client {
+				id
 				currentProfile {
 					id
 					kivaChooses
@@ -54,6 +56,7 @@ export default {
 				this.apollo.mutate({
 					mutation: gql`mutation updateKivaChooses($kivaChooses: Boolean!) {
 						autolending @client {
+							id
 							editProfile(profile: {
 								kivaChooses: $kivaChooses
 							})
@@ -68,11 +71,3 @@ export default {
 	},
 };
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.kiva-chooses-radios {
-	margin-bottom: 0.5rem;
-}
-</style>

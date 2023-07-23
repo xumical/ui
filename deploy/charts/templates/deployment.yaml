@@ -9,6 +9,9 @@ metadata:
     helm.sh/chart: {{ include "ui-helm.chart" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+  annotations:
+    meta.helm.sh/release-name: {{ .Release.Name }}
+    meta.helm.sh/release-namespace: {{ .Release.Namespace }}
 spec:
   selector:
     matchLabels:
@@ -28,13 +31,16 @@ spec:
       restartPolicy: Always
       containers:
       - name: {{ .Chart.Name }}
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}" # In Jenkins, need to call helm with --set image.tag=master-XY
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}" # In Jenkins, need to call helm with --set image.tag=vX.Y.Z
         command: ["tini"]
         args: ["--", "node", "server/index.js", "--port={{ .Values.service.port }}", "--config={{ .Values.deployenv.environment }}"]
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
           - name: {{ .Values.service.portName }}
             containerPort: {{ .Values.service.port }}
+        env:
+          - name: DD_VERSION
+            value: {{ .Values.image.tag }}
         envFrom:
           - secretRef:
               name: {{ .Values.secretName }}

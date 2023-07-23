@@ -3,7 +3,8 @@
 		<kv-settings-card class="column large-8" title="Global COVID-19 Response Lending">
 			<template #content>
 				<p>
-					Thank you for supporting those affected by COVID-19. Your deposit of <kv-button class="text-link"
+					Thank you for supporting those affected by COVID-19. Your deposit of <kv-button
+						class="text-link"
 						@click.native.prevent="showLightbox = true;"
 					>
 						{{ totalCombinedDeposit | numeral('$0,0.00') }}
@@ -11,7 +12,8 @@
 					after which you will be unable to cancel.
 				</p>
 				<p>
-					<kv-button class="text-link"
+					<kv-button
+						class="text-link"
 						@click.native.prevent="$emit('cancel-subscription')"
 					>
 						Cancel Contribution
@@ -27,7 +29,7 @@
 						@submit.prevent
 						novalidate
 					>
-						<div class="row align-center text-left">
+						<div class="row align-center tw-text-left">
 							<div class="small-12 columns">
 								<div class="row align-middle">
 									<div class="columns">
@@ -38,7 +40,7 @@
 
 									<div class="small-6 medium-4 columns">
 										<label
-											class="show-for-sr"
+											class="tw-sr-only"
 											:class="{ 'error': $v.mgAmount.$invalid }"
 											for="amount"
 										>
@@ -52,7 +54,7 @@
 									</div>
 								</div>
 								<div class="row columns align-middle">
-									<ul class="text-right validation-errors" v-if="$v.mgAmount.$invalid">
+									<ul class="tw-text-right validation-errors" v-if="$v.mgAmount.$invalid">
 										<li v-if="!$v.mgAmount.required">
 											Field is required
 										</li>
@@ -71,7 +73,7 @@
 
 									<div class="small-6 medium-4 columns">
 										<label
-											class="show-for-sr"
+											class="tw-sr-only"
 											:class="{ 'error': $v.donation.$invalid }"
 											for="amount"
 										>
@@ -85,7 +87,7 @@
 									</div>
 								</div>
 								<div class="row column align-middle">
-									<ul class="text-right validation-errors" v-if="$v.donation.$invalid">
+									<ul class="tw-text-right validation-errors" v-if="$v.donation.$invalid">
 										<li v-if="!$v.donation.minValue || !$v.donation.maxValue">
 											Enter an amount of $0-$10,000
 										</li>
@@ -104,7 +106,8 @@
 									</div>
 								</div>
 								<div class="row column">
-									<ul class="text-center validation-errors"
+									<ul
+										class="tw-text-center validation-errors"
 										v-if="!$v.mgAmount.maxTotal || !$v.donation.maxTotal"
 									>
 										<li>
@@ -138,7 +141,7 @@
 
 <script>
 import _get from 'lodash/get';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import { validationMixin } from 'vuelidate';
 import { required, minValue, maxValue } from 'vuelidate/lib/validators';
 
@@ -150,6 +153,7 @@ import KvSettingsCard from '@/components/Kv/KvSettingsCard';
 
 const pageQuery = gql`query oneTimeSubscription {
 	my {
+		id
 		autoDeposit {
 			id
 			amount
@@ -159,6 +163,7 @@ const pageQuery = gql`query oneTimeSubscription {
 }`;
 
 export default {
+	name: 'SubscriptionsOneTime',
 	inject: ['apollo', 'cookieStore'],
 	components: {
 		KvButton,
@@ -273,7 +278,7 @@ form {
 		margin-bottom: 0.25em;
 	}
 
-	// styles to match KvDropDownRounded
+	// styles to match KvSelect
 	input.text-input {
 		border: 1px solid $charcoal;
 		border-radius: $button-radius;

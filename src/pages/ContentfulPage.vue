@@ -1,29 +1,16 @@
 <template>
-	<component :is="pageFrame"
-		:header-theme="headerTheme"
-		:footer-theme="footerTheme"
+	<component
+		:is="pageFrame"
+		:main-class="pageBackgroundColor"
 	>
-		<template v-if="!pageError">
-			<component
-				v-for="({ component, content }) in contentGroups"
-				:key="content.key"
-				:is="component"
-				:content="content"
-				v-bind="getComponentOptions(content.key)"
-			/>
-		</template>
-		<template v-else>
-			<div class="row">
-				<div class="small-12 columns">
-					<h1>
-						We're sorry, something went wrong
-					</h1>
-					<p>
-						There was an unknown problem with trying to load the content for this page.
-					</p>
-				</div>
-			</div>
-		</template>
+		<component
+			v-for="({ component, content }) in contentGroups"
+			:key="content.key"
+			:id="content.key"
+			:is="component"
+			:content="content"
+			data-section-type="contentful-section"
+		/>
 	</component>
 </template>
 
@@ -48,45 +35,40 @@ To use, simply create a route that defines contentfulPage in the meta data, e.g.
 },
 */
 
-import gql from 'graphql-tag';
 import { preFetchAll } from '@/util/apolloPreFetch';
 import { processPageContent } from '@/util/contentfulUtils';
-import * as siteThemes from '@/util/siteThemes';
+import logFormatter from '@/util/logFormatter';
+import contentfulEntries from '@/graphql/query/contentfulEntries.graphql';
+import experimentVersionFragment from '@/graphql/fragments/experimentVersion.graphql';
 
 // Page frames
 const WwwPage = () => import('@/components/WwwFrame/WwwPage');
 const WwwPageCorporate = () => import('@/components/WwwFrame/WwwPageCorporate');
+const WwwPageDesign = () => import('@/components/WwwFrame/WwwPageDesign');
 
-// Content Group components
+// Error page
+const ErrorPage = () => import('@/pages/Error');
+
+// Content Group Types
 // TODO: update the campaign components to accept "content" prop
 const CampaignHero = () => import('@/components/CorporateCampaign/CampaignHero');
 const CampaignLogoGroup = () => import('@/components/CorporateCampaign/CampaignLogoGroup');
 const CampaignPartner = () => import('@/components/CorporateCampaign/CampaignPartner');
 const CampaignThanks = () => import('@/components/CorporateCampaign/CampaignThanks');
 
-const HomepageBottomCTA = () => import('@/components/Homepage/HomepageBottomCTA');
-const HomepageCorporateSponsors = () => import('@/components/Homepage/HomepageCorporateSponsors');
-// const HomepageGeneralStats = () => import('@/components/Homepage/HomepageGeneralStats');
-const DynamicHero = () => import('@/components/Contentful/DynamicHero');
-
-const HomepageHowItWorks = () => import('@/components/Homepage/HomepageHowItWorks');
-const HomepageLenderQuotes = () => import('@/components/Homepage/HomepageLenderQuotes');
-const HomepageLoanCategories = () => import('@/components/Homepage/HomepageLoanCategories');
-const HomepageMidrollCTA = () => import('@/components/Homepage/HomepageMidrollCTA');
-const HomepageStatistics = () => import('@/components/Homepage/HomepageStatistics');
-const HomepageTestimonials = () => import('@/components/Homepage/HomepageTestimonials');
-const HomepageVerticalCTA = () => import('@/components/Homepage/HomepageVerticalCTA');
-const HomepageMonthlyGoodInfo = () => import('@/components/Homepage/HomepageMonthlyGoodInfo');
-
+const CardRow = () => import('@/components/Contentful/CardRow');
+const CenteredRichText = () => import('@/components/Contentful/CenteredRichText');
+const DynamicHeroClassic = () => import('@/components/Contentful/DynamicHeroClassic');
+const HeroWithCarousel = () => import('@/components/Contentful/HeroWithCarousel');
+const LoansByCategoryCarousel = () => import('@/components/Contentful/LoansByCategoryCarousel');
+const LoansByCategoryGrid = () => import('@/components/Contentful/HomePage/NewHomeLoansByCategoryGrid');
+const NewHomeLoansCardsCarousel = () => import('@/components/Contentful/HomePage/NewHomeLoansCardCarousel');
 const MonthlyGoodSelectorWrapper = () => import('@/components/MonthlyGood/MonthlyGoodSelectorWrapper');
-const MonthlyGoodFrequentlyAskedQuestions = () => import('@/components/MonthlyGood/FrequentlyAskedQuestions');
-
-// Query for getting contentful page data
-const pageQuery = gql`query contentfulPage($key: String) {
-	contentful {
-		entries(contentType: "page", contentKey: $key)
-	}
-}`;
+const FrequentlyAskedQuestions = () => import('@/components/Contentful/FrequentlyAskedQuestions');
+const TestimonialCards = () => import('@/components/Contentful/TestimonialCards');
+const RichTextItemsCentered = () => import('@/components/Contentful/RichTextItemsCentered');
+const MediaItemsCentered = () => import('@/components/Contentful/MediaItemsCentered');
+const StoryCardCarousel = () => import('@/components/Contentful/StoryCardCarousel');
 
 // Get the Contentful Page data from the data of an Apollo query result
 const getPageData = data => {
@@ -103,8 +85,10 @@ const getPageFrameFromType = type => {
 			return WwwPage;
 		case 'lender-campaign':
 			return WwwPage;
+		case 'design':
+			return WwwPageDesign;
 		default:
-			console.error(`Unknown page type "${type}"`);
+			logFormatter(`ContentfulPage: Unknown page type "${type}"`, 'error');
 			return WwwPage;
 	}
 };
@@ -112,32 +96,6 @@ const getPageFrameFromType = type => {
 // Return a component importer function based on content group type from Contentful
 const getComponentFromType = type => {
 	switch (type) {
-		case 'homepageBottomCTA':
-			return HomepageBottomCTA;
-		case 'homepageHero':
-			// TODO - deprecate homepageHero type on contentful then remove this
-			return DynamicHero;
-		case 'dynamicHero':
-			return DynamicHero;
-		case 'homepageHowItWorks':
-			return HomepageHowItWorks;
-		case 'homepageLenderQuotes':
-			return HomepageLenderQuotes;
-		case 'homepageLoanCategories':
-			return HomepageLoanCategories;
-		case 'homepageMidrollCta':
-			return HomepageMidrollCTA;
-		case 'homepageStatistics':
-			// return HomepageGeneralStats;
-			return HomepageStatistics;
-		case 'homepageStrategicPartners':
-			return HomepageCorporateSponsors;
-		case 'homepageTestimonials':
-			return HomepageTestimonials;
-		case 'homepageVerticalCTA':
-			return HomepageVerticalCTA;
-		case 'homepageMonthlyGoodInfo':
-			return HomepageMonthlyGoodInfo;
 		case 'mlCampaignHero':
 			return CampaignHero;
 		case 'mlCampaignLogo':
@@ -146,14 +104,34 @@ const getComponentFromType = type => {
 			return CampaignPartner;
 		case 'mlCampaignThanks':
 			return CampaignThanks;
-		case 'frequentlyAskedQuestions':
-			// TODO change this to generic FAQ Component
-			return MonthlyGoodFrequentlyAskedQuestions;
 		case 'monthlyGoodSelector':
 			return MonthlyGoodSelectorWrapper;
-
+		case 'frequentlyAskedQuestions':
+			return FrequentlyAskedQuestions;
+		case 'testimonialCards':
+			return TestimonialCards;
+		case 'cardRow':
+			return CardRow;
+		case 'centeredRichText':
+			return CenteredRichText;
+		case 'dynamicHeroClassic':
+			return DynamicHeroClassic;
+		case 'heroWithCarousel':
+			return HeroWithCarousel;
+		case 'loansByCategoryCarousel':
+			return LoansByCategoryCarousel;
+		case 'loansByCategoryGrid':
+			return LoansByCategoryGrid;
+		case 'newHomeLoansCardCarousel':
+			return NewHomeLoansCardsCarousel;
+		case 'richTextItemsCentered':
+			return RichTextItemsCentered;
+		case 'mediaItemsCentered':
+			return MediaItemsCentered;
+		case 'storyCardCarousel':
+			return StoryCardCarousel;
 		default:
-			console.error(`Unknown content group type "${type}"`);
+			logFormatter(`ContentfulPage: Unknown content group type "${type}"`, 'error');
 			return null;
 	}
 };
@@ -169,106 +147,124 @@ const getContentGroups = pageData => {
 	})).filter(group => typeof group.component === 'function');
 };
 
-const componentOptions = {
-	'homepage-hero-monthly-good': {
-		/**
-		 * Open monthly good interactive selector
-		 * in MonthlyGoodSelector.vue
-		 */
-		customCtaFunction(event) {
-			// prevents event from bubbling up to v-click-outside listener in MonthlyGoodSelector
-			event.stopPropagation();
-			this.$root.$emit('openMonthlyGoodSelector');
-		},
-		customCtaButtonClass: 'classic hollow'
-	},
-	'homepage-bottom-cta-monthly-good': {
-		/**
-		 * Open monthly good interactive selector
-		 * in MonthlyGoodSelector.vue
-		 */
-		customCtaFunction(event) {
-			// prevents event from bubbling up to v-click-outside listener in MonthlyGoodSelector
-			event.stopPropagation();
-			this.$root.$emit('openMonthlyGoodSelector');
-		},
-		customCtaButtonClass: 'classic hollow'
-	},
-};
-
 export default {
+	name: 'ContentfulPage',
 	inject: ['apollo', 'cookieStore'],
 	data() {
 		return {
+			pageBackgroundColor: '',
 			contentGroups: [],
-			footerTheme: {},
-			headerTheme: {},
 			pageError: false,
 			pageFrame: WwwPage,
 			title: undefined,
+			description: undefined,
+			canonicalUrl: undefined,
 		};
 	},
 	metaInfo() {
 		return {
-			title: this.title,
+			title: this.title ? this.title?.replace('| Kiva', '') : 'Make a loan, change a life',
+			meta: [].concat(this.title ? [
+				{
+					property: 'og:title',
+					vmid: 'og:title',
+					content: this.title?.replace('| Kiva', ''),
+				},
+				{
+					name: 'twitter:title',
+					vmid: 'twitter:title',
+					content: this.title?.replace('| Kiva', ''),
+				},
+			] : []).concat(this.description ? [
+				{
+					vmid: 'description',
+					name: 'description',
+					content: this.description,
+				},
+				{
+					property: 'og:description',
+					vmid: 'og:description',
+					content: this.description
+				},
+				{
+					name: 'twitter:description',
+					vmid: 'twitter:description',
+					content: this.description
+				},
+			] : []),
+			link: [].concat(this.canonicalUrl ? [
+				{
+					vmid: 'canonical',
+					rel: 'canonical',
+					href: this.canonicalUrl,
+				}
+			] : [])
 		};
 	},
 	apollo: {
-		query: pageQuery,
-		preFetchVariables({ route }) {
+		query: contentfulEntries,
+		preFetchVariables({ route, client }) {
 			return {
-				key: route?.meta?.contentfulPage(route),
+				contentType: 'page',
+				contentKey: route?.meta?.contentfulPage(route, client, experimentVersionFragment)?.trim(),
 			};
 		},
 		variables() {
 			return {
-				key: this.$route?.meta?.contentfulPage(this.$route),
+				contentType: 'page',
+				contentKey: this.$route?.meta?.contentfulPage(
+					this.$route, this.apollo, experimentVersionFragment
+				)?.trim(),
 			};
 		},
-		preFetch(config, client, args) {
-			return client.query({
-				query: pageQuery,
+		async preFetch(config, client, args) {
+			const { data } = await client.query({
+				query: contentfulEntries,
 				variables: {
-					key: args?.route?.meta?.contentfulPage(args?.route),
-				},
-			}).then(({ data }) => {
-				// Get Contentful page data
-				const pageData = getPageData(data);
-				if (pageData.error) {
-					// Only import the default page frame if there is a contentful error
-					return Promise.all([WwwPage()]);
+					contentType: 'page',
+					contentKey: args?.route?.meta?.contentfulPage(
+						args?.route, client, experimentVersionFragment
+					)?.trim(),
 				}
-				// Get page frame component
-				const pageFrame = getPageFrameFromType(pageData?.page?.pageType);
-				// Get components for content groups
-				const contentGroups = getContentGroups(pageData);
-				// Start importing all components
-				return Promise.all([
-					pageFrame(),
-					...contentGroups.map(g => g.component()),
-				]);
-			}).then(resolvedImports => {
-				// Call preFetch for page frame and content group components
-				const components = resolvedImports.map(resolvedImport => resolvedImport.default);
-				return preFetchAll(components, client, args);
 			});
+			// Get Contentful page data
+			const pageData = getPageData(data);
+			if (pageData.error) {
+				// Only prefetch the error page if there is a contentful error
+				return preFetchAll([ErrorPage], client, args);
+			}
+			// Get page frame component
+			const pageFrame = getPageFrameFromType(pageData?.page?.pageType);
+			// Get components for content groups
+			const contentGroups = getContentGroups(pageData);
+			// Call preFetch for page frame and content group components
+			return Promise.all([
+				preFetchAll([pageFrame], client, args),
+				...contentGroups.map(group => preFetchAll(
+					[group.component],
+					client,
+					{
+						...args,
+						content: group.content,
+					}
+				))
+			]);
 		},
 		result({ data }) {
 			const pageData = getPageData(data);
 			if (pageData.error) {
 				this.pageError = true;
+				this.pageFrame = ErrorPage;
 			} else {
-				this.title = (pageData?.page?.pageLayout?.pageTitle || pageData?.page?.pageTitle) ?? undefined;
-				this.headerTheme = siteThemes[pageData?.page?.pageLayout?.headerTheme] || {};
-				this.footerTheme = siteThemes[pageData?.page?.pageLayout?.footerTheme] || {};
-				this.pageFrame = getPageFrameFromType(pageData?.page?.pageType);
+				const page = pageData?.page ?? {};
+				const pageLayout = page.pageLayout ?? {};
+				this.title = (pageLayout.pageTitle || page.pageTitle) ?? undefined;
+				this.description = (pageLayout.pageDescription || page.pageDescription) ?? undefined;
+				this.canonicalUrl = page.canonicalUrl ?? undefined;
+				this.pageBackgroundColor = pageLayout.pageBackgroundColor ?? '';
+				this.pageFrame = getPageFrameFromType(page.pageType);
 				this.contentGroups = getContentGroups(pageData);
 			}
-		}
-	},
-	methods: {
-		getComponentOptions(key) {
-			return componentOptions[key] || {};
 		}
 	},
 };

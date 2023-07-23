@@ -1,7 +1,8 @@
 <template>
-	<div class="row align-right">
-		<div class="dropin-payment-holder small-12 columns">
+	<div class="tw-flex tw-justify-center md:tw-justify-end">
+		<div class="dropin-payment-holder" style="padding: 0; max-width: 20rem;">
 			<braintree-drop-in-interface
+				v-if="isClientReady"
 				ref="braintreeDropInInterface"
 				:amount="amount"
 				flow="checkout"
@@ -11,34 +12,59 @@
 				@transactions-enabled="enableCheckoutButton = $event"
 			/>
 			<div v-if="isGuestCheckout" id="guest-checkout">
-				<label class="input-label" for="email">
+				<label
+					class="input-label tw-font-medium tw-block tw-my-2"
+					for="email"
+					v-if="!promoGuestCheckoutEnabled"
+				>
 					Where should we email your receipt?
-					<input
-						type="email"
-						name="email"
-						v-model="email"
-						id="email"
-						class="fs-exclude"
-						@focus="$kvTrackEvent(
-							'basket',
-							'click-email-receipt-field',
-							'Where should we email your receipt?'
-						)"
-					>
-					<p v-if="$v.email.$error" class="input-error">
-						Valid email required.
-					</p>
 				</label>
+				<label
+					class="input-label tw-font-medium tw-block tw-my-2"
+					for="email"
+					v-else
+				>
+					What is your email?
+				</label>
+				<div
+					class="input-label tw-text-small tw-text-secondary tw-block tw-my-2"
+					for="email"
+					v-if="promoGuestCheckoutEnabled"
+				>
+					Kiva will share your information with {{ promoName ? promoName : 'your company' }}
+					to let them know you’ve redeemed your credits
+				</div>
+				<kv-text-input
+					type="email"
+					name="email"
+					v-model="email"
+					ref="email"
+					data-testid="basket-guest-email-input"
+					id="email"
+					class="data-hj-suppress tw-mb-2 tw-w-full"
+					@focus="$kvTrackEvent(
+						'basket',
+						'click-email-receipt-field',
+						'Where should we email your receipt?'
+					)"
+				/>
+				<p v-if="promoGuestCheckoutEnabled && $v.email.error">
+					Valid campaign email required
+				</p>
+				<p v-else-if="$v.email.$error" class="input-error tw-text-danger tw-text-base tw-mb-2">
+					Valid email required.
+				</p>
 				<kv-checkbox
+					data-testid="basket-guest-terms-agreement"
 					id="termsAgreement"
 					name="termsAgreement"
-					class="checkbox"
+					class="checkbox tw-text-small tw-mb-2"
 					v-model="termsAgreement"
-					@change="$kvTrackEvent(
+					@update:modelValue="$kvTrackEvent(
 						'basket',
 						'click-terms-of-use',
 						'I have read and agree to the Terms of Use and Privacy Policy.',
-						termsAgreement ? 1 : 0
+						$event ? 1 : 0
 					)"
 				>
 					I have read and agree to the
@@ -53,23 +79,23 @@
 						target="_blank"
 						title="Open Privacy Policy in a new window"
 					>Privacy Policy</a>.
-					<p v-if="$v.termsAgreement.$error" class="input-error">
+					<p v-if="$v.termsAgreement.$error" class="input-error tw-text-danger tw-text-base">
 						You must agree to the Kiva Terms of service & Privacy
 						policy.
 					</p>
 				</kv-checkbox>
 				<kv-checkbox
+					data-testid="basket-guest-email-updates"
 					id="emailUpdates"
-					class="checkbox"
+					class="checkbox tw-text-small tw-mb-2"
 					name="emailUpdates"
 					v-model="emailUpdates"
-					@change="$kvTrackEvent(
+					@update:modelValue="$kvTrackEvent(
 						'basket',
 						'click-marketing-updates',
 						'Receive email updates from Kiva (including borrower updates and promos). You can unsubscribe anytime.', // eslint-disable-line
-						emailUpdates ? 1 : 0
+						$event ? 1 : 0
 					)"
-					:checked="true"
 				>
 					Receive email updates from Kiva (including borrower updates
 					and promos). You can unsubscribe anytime.
@@ -79,12 +105,12 @@
 				<kv-button
 					value="submit"
 					id="dropin-submit"
-					class="button"
-					:disabled="!enableCheckoutButton"
-					@click.native="submit"
+					data-testid="basket-dropin-submit"
+					class="tw-mb-2"
+					:state="`${!enableCheckoutButton ? 'disabled' : ''}`"
+					@click="submit"
 				>
-					<kv-icon name="lock" />
-					Checkout
+					Complete order
 				</kv-button>
 			</div>
 			<p class="dropin-wrapper-attribution-text">
@@ -100,24 +126,24 @@ import _get from 'lodash/get';
 import numeral from 'numeral';
 import { validationMixin } from 'vuelidate';
 import { required, email } from 'vuelidate/lib/validators';
-import * as Sentry from '@sentry/browser';
+import * as Sentry from '@sentry/vue';
 
 import checkoutUtils from '@/plugins/checkout-utils-mixin';
 import braintreeDropInError from '@/plugins/braintree-dropin-error-mixin';
 
 import braintreeDepositAndCheckout from '@/graphql/mutation/braintreeDepositAndCheckout.graphql';
 
-import KvButton from '@/components/Kv/KvButton';
-import KvIcon from '@/components/Kv/KvIcon';
-import BraintreeDropInInterface from '@/components/Payment/BraintreeDropInInterface';
-import KvCheckbox from '@/components/Kv/KvCheckbox';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
+import KvCheckbox from '~/@kiva/kv-components/vue/KvCheckbox';
+import KvTextInput from '~/@kiva/kv-components/vue/KvTextInput';
 
 export default {
+	name: 'CheckoutDropInPaymentWrapper',
 	components: {
 		KvButton,
-		KvIcon,
-		BraintreeDropInInterface,
+		BraintreeDropInInterface: () => import('@/components/Payment/BraintreeDropInInterface'),
 		KvCheckbox,
+		KvTextInput,
 	},
 	inject: ['apollo', 'cookieStore'],
 	mixins: [checkoutUtils, validationMixin, braintreeDropInError],
@@ -130,6 +156,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		promoGuestCheckoutEnabled: {
+			type: Boolean,
+			default: false,
+		}
 	},
 	data() {
 		return {
@@ -137,6 +167,7 @@ export default {
 			termsAgreement: false,
 			emailUpdates: false,
 			enableCheckoutButton: false,
+			isClientReady: false,
 			paymentTypes: ['paypal', 'card', 'applePay', 'googlePay'],
 		};
 	},
@@ -147,8 +178,12 @@ export default {
 		},
 		termsAgreement: { required: value => value === true },
 	},
+	mounted() {
+		this.isClientReady = !this.$isServer;
+	},
 	methods: {
 		submit() {
+			this.$kvTrackEvent('basket', 'click', 'braintree-checkout-button');
 			if (this.isGuestCheckout) {
 				this.$v.$touch();
 				if (!this.$v.$invalid) {
@@ -160,7 +195,22 @@ export default {
 		},
 		validateGuestBasketAndCheckout() {
 			this.$emit('updating-totals', true);
-			this.validateGuestBasket(this.email, this.emailUpdates)
+			// Set the default checkout validation method
+			let validationMethod = this.validateGuestBasket;
+			const validationPayload = {
+				email: this.email,
+				emailUpdates: this.emailUpdates,
+			};
+			// If promo guest checkout is enabled, use the promo guest checkout validation method.
+			// This method validates the lender email for promo first before running the guest checkout method
+			// in checkout utils.
+			if (this.promoGuestCheckoutEnabled) {
+				validationMethod = this.validateGuestPromoBasket;
+				validationPayload.promoFundId = this.promoFundId;
+				validationPayload.managedAccountId = this.managedAccountId;
+			}
+
+			validationMethod(this.email, this.emailUpdates)
 				.then(validationStatus => {
 					if (validationStatus === true) {
 						this.submitDropInPayment();
@@ -254,6 +304,7 @@ export default {
 					}
 				})
 				.catch(btSubmitError => {
+					this.$emit('updating-totals', false);
 					console.error(btSubmitError);
 					// Fire specific exception to Sentry/Raven
 					Sentry.withScope(scope => {
@@ -289,6 +340,8 @@ export default {
 						this.processBraintreeDropInError('basket', kivaBraintreeResponse);
 						// Payment method failed, unselect attempted payment method
 						this.$refs.braintreeDropInInterface.btDropinInstance.clearSelectedPaymentMethod();
+						// Initialize a refresh of basket state
+						this.$emit('refreshtotals');
 						// exit
 						return kivaBraintreeResponse;
 					}
@@ -317,55 +370,3 @@ export default {
 	},
 };
 </script>
-
-<style lang="scss">
-@import "settings";
-
-#guest-checkout {
-	.kv-checkbox {
-		.input {
-			&:checked + .label,
-			&:active + .label {
-				.square {
-					background-color: $blue;
-					border-color: $blue;
-				}
-			}
-		}
-	}
-}
-
-</style>
-
-<style lang="scss" scoped>
-@import "settings";
-
-#guest-checkout {
-	.input-label {
-		margin: 1rem 0 1rem;
-		text-align: left;
-		font-weight: normal;
-		font-size: 1rem;
-		line-height: 1.4;
-		color: $charcoal;
-
-		input {
-			color: $charcoal;
-			margin: 0;
-		}
-	}
-
-	.checkbox {
-		@include small-text();
-
-		font-weight: $global-weight-normal;
-		margin: 0 0 1rem;
-	}
-
-	.input-error {
-		color: $kiva-accent-red;
-		font-weight: $global-weight-normal;
-		font-size: 1rem;
-	}
-}
-</style>

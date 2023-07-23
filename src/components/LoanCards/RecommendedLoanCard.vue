@@ -5,15 +5,17 @@
 			v-if="isLoading"
 		/>
 		<div class="rec-loan-card__sector" v-show="!isLoading">
-			A loan for <strong>{{ sectorName }}</strong> in <strong>{{ countryName }}</strong>
+			A loan for <strong class="tw-text-brand tw-font-book">{{ sectorName }}</strong>
+			in <strong class="tw-text-brand tw-font-book">{{ countryName }}</strong>
 		</div>
 		<div class="rec-loan-card__card">
 			<kv-loading-placeholder
-				class="rec-loan-card__image-wrapper rec-loan-card__image-wrapper--loading"
+				class="rec-loan-card__image-wrapper tw-bg-tertiary rec-loan-card__image-wrapper--loading"
 				v-if="isLoading"
 			/>
 			<div class="rec-loan-card__image-wrapper" v-show="!isLoading">
-				<img class="rec-loan-card__image"
+				<img
+					class="rec-loan-card__image"
 					v-if="imageUrl"
 					:srcset="imageRetinaUrl + ' 2x'"
 					:src="imageUrl"
@@ -21,7 +23,8 @@
 					loading="lazy"
 				>
 				<div class="rec-loan-card__image-overlay">
-					<kv-flag class="rec-loan-card__country-flag"
+					<kv-flag
+						class="rec-loan-card__country-flag"
 						v-if="countryISO"
 						:country="countryISO"
 						aspect-ratio="1x1"
@@ -41,19 +44,20 @@
 			/>
 			<div class="rec-loan-card__summary">
 				<kv-loading-placeholder
-					class="rec-loan-card__name rec-loan-card__name--loading"
+					class="rec-loan-card__name tw-text-h3 rec-loan-card__name--loading"
 					v-if="isLoading"
 				/>
-				<h2 class="rec-loan-card__name" v-show="!isLoading">
+				<h2 class="rec-loan-card__name tw-text-h3 tw-mb-1" v-show="!isLoading">
 					{{ borrowerName }}
 				</h2>
 				<kv-loading-paragraph
 					class="rec-loan-card__loan-use rec-loan-card__loan-use--loading"
 					v-if="isLoading"
 				/>
-				<p class="rec-loan-card__loan-use" v-show="!isLoading">
+				<p class="rec-loan-card__loan-use tw-mb-1.5" v-show="!isLoading">
 					{{ loanUse }}
-					<router-link class="rec-loan-card__learn-more"
+					<router-link
+						class="rec-loan-card__learn-more"
 						:to="`/lend/${loanId}`"
 						v-kv-track-event="['Lending', 'click-Read more', 'loan-use-learn-more', loanId, loanId]"
 					>
@@ -69,7 +73,8 @@
 					class="rec-loan-card__button rec-loan-card__button--loading"
 					v-if="isLoading"
 				/>
-				<lend-button class="rec-loan-card__button rounded"
+				<lend-button
+					class="rec-loan-card__button rounded"
 					v-show="!isLoading"
 					:loan-id="loanId"
 					:is-in-basket="isInBasket"
@@ -84,17 +89,16 @@
 </template>
 
 <script>
-import gql from 'graphql-tag';
-import * as Sentry from '@sentry/browser';
-import loanUseMixin from '@/plugins/loan/loan-use-mixin';
+import { gql } from '@apollo/client';
+import * as Sentry from '@sentry/vue';
 import percentRaisedMixin from '@/plugins/loan/percent-raised-mixin';
 import timeLeftMixin from '@/plugins/loan/time-left-mixin';
 import FundraisingStatusMeter from '@/components/LoanCards/FundraisingStatus/FundraisingStatusMeter';
 import KvFlag from '@/components/Kv/KvFlag';
-import KvLoadingPlaceholder from '@/components/Kv/KvLoadingPlaceholder';
 import KvLoadingParagraph from '@/components/Kv/KvLoadingParagraph';
 import LendButton from '@/components/LoanCards/Buttons/LendButton2';
 import WhySpecial from '@/components/LoanCards/WhySpecial';
+import KvLoadingPlaceholder from '~/@kiva/kv-components/vue/KvLoadingPlaceholder';
 
 const loanQuery = gql`query recLoanCard($basketId: String, $loanId: Int!) {
 	shop (basketId: $basketId) {
@@ -135,11 +139,13 @@ const loanQuery = gql`query recLoanCard($basketId: String, $loanId: Int!) {
 				lentTo
 			}
 
-			# for loan-use-mixin
-			use
-			status
-			loanAmount
+			# for fullLoanUse
+			anonymizationLevel
 			borrowerCount
+			loanAmount
+			status
+			use
+			fullLoanUse(maxLength: 100) @client
 
 			# for percent-raised-mixin
 			loanFundraisingInfo {
@@ -154,6 +160,7 @@ const loanQuery = gql`query recLoanCard($basketId: String, $loanId: Int!) {
 }`;
 
 export default {
+	name: 'RecommendedLoanCard',
 	props: {
 		loanId: {
 			type: Number,
@@ -161,7 +168,7 @@ export default {
 		}
 	},
 	inject: ['apollo', 'cookieStore'],
-	mixins: [loanUseMixin, percentRaisedMixin, timeLeftMixin],
+	mixins: [percentRaisedMixin, timeLeftMixin],
 	components: {
 		FundraisingStatusMeter,
 		KvFlag,
@@ -205,6 +212,9 @@ export default {
 		},
 		isLentTo() {
 			return this.loan?.userProperties?.lentTo;
+		},
+		loanUse() {
+			return this.loan?.fullLoanUse ?? '';
 		},
 		sectorName() {
 			return (this.loan?.sector?.name || '').toLowerCase();
@@ -324,23 +334,9 @@ export default {
 	flex-shrink: 0;
 	min-width: rem-calc(246);
 	width: 100%;
-	font-size: rem-calc(12);
-
-	@include breakpoint(medium up) {
-		font-size: rem-calc(14);
-	}
-
-	@include breakpoint(large up) {
-		font-size: 1rem;
-	}
 
 	&__sector {
 		margin-left: 1rem;
-
-		strong {
-			color: $kiva-green;
-			font-weight: $global-weight-normal;
-		}
 
 		&--loading {
 			width: 60%;
@@ -359,7 +355,6 @@ export default {
 
 	&__image-wrapper {
 		position: relative;
-		background-color: $kiva-bg-darkgray;
 		width: 100%;
 		padding-bottom: 200/320 * 100%;
 
@@ -468,29 +463,10 @@ export default {
 	}
 
 	&__name {
-		font-size: rem-calc(16);
-		font-weight: $global-weight-bold;
-
 		&--loading {
-			height: rem-calc(16);
+			height: 1em;
 			width: 60%;
 			margin-bottom: 1rem;
-		}
-
-		@include breakpoint(medium up) {
-			font-size: rem-calc(20);
-
-			&--loading {
-				height: rem-calc(20);
-			}
-		}
-
-		@include breakpoint(large up) {
-			font-size: rem-calc(22);
-
-			&--loading {
-				height: rem-calc(22);
-			}
 		}
 	}
 
@@ -520,11 +496,9 @@ export default {
 	}
 
 	&__button {
-		$font-size: 1.25rem;
 		$padding: 1.25rem;
 
 		&.button {
-			font-size: $font-size;
 			padding: $padding;
 			margin: 0;
 			width: 100%;
@@ -533,7 +507,7 @@ export default {
 		&--loading {
 			border-radius: rem-calc(10);
 			overflow: hidden;
-			height: $font-size + 2 * $padding;
+			height: 1 + 2 * $padding;
 			padding: 0;
 		}
 	}

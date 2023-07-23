@@ -7,7 +7,7 @@
 			<template #action>
 				<kv-button
 					class="cta-button"
-					to="/donate/supportus"
+					href="/donate/supportus"
 					v-kv-track-event="['possibiliy', 'click-hero-link', 'year-end']"
 				>
 					Donate to Kiva
@@ -15,7 +15,7 @@
 			</template>
 		</kv-hero>
 		<div class="row intro">
-			<div class="text-center featured-text columns large-10 large-offset-1">
+			<div class="tw-text-center columns large-10 large-offset-1">
 				<p>
 					Help us turn possibility into reality for borrowers around the world.
 				</p>
@@ -30,7 +30,7 @@
 		</div>
 		-->
 		<div class="row dual-cta">
-			<div class="small-12 large-6 text-center dual-cta-block">
+			<div class="small-12 large-6 tw-text-center dual-cta-block">
 				<router-link class="dual-cta-link" to="/blog/what-your-donations-really-do">
 					<h2 class="dual-cta-header">
 						Already donated?
@@ -41,8 +41,8 @@
 					<sketchy-arrow class="sketchy-arrow" />
 				</router-link>
 			</div>
-			<div class="small-12 large-6 text-center dual-cta-block">
-				<router-link class="dual-cta-link" to="/donate/supportus">
+			<div class="small-12 large-6 tw-text-center dual-cta-block">
+				<a class="dual-cta-link" href="/donate/supportus">
 					<h2 class="dual-cta-header">
 						Haven't donated yet?
 					</h2>
@@ -50,7 +50,7 @@
 						There's still time! Help us<br> empower borrowers.
 					</p>
 					<sketchy-arrow class="sketchy-arrow" />
-				</router-link>
+				</a>
 			</div>
 		</div>
 
@@ -75,6 +75,7 @@ import KivaContentBlock from '@/pages/Possibility/KivaContentBlock';
 const yearEndImagesRequire = require.context('@/assets/images/possibilities-banners/', true);
 
 export default {
+	name: 'YearEnd',
 	components: {
 		KvButton,
 		KvHero,
@@ -159,5 +160,4 @@ $dark_blue: #00244e;
 		}
 	}
 }
-
 </style>

@@ -1,5 +1,5 @@
 <template>
-	<div class="component-wrapper">
+	<div class="component-wrapper tw-mb-2 md:tw-mb-0">
 		<transition name="kvfade">
 			<div
 				v-show="loadingLoans"
@@ -12,50 +12,43 @@
 			v-if="zeroLoans"
 			class="zero-loans-state"
 		>
-			<h3>All borrowers matching this search have been funded.</h3>
+			<h3 class="tw-mb-2">
+				All borrowers matching this search have been funded.
+			</h3>
 			<p>
 				Please adjust your criteria or <a @click.prevent="resetSearchFilters">start a new search.</a>
 			</p>
 		</div>
 		<kv-carousel
-			v-show="!zeroLoans"
+			v-if="!zeroLoans && !loadingLoans"
 			ref="campaignLoanCarousel"
 			slides-to-scroll="visible"
-			:autoplay="false"
-			indicator-style="none"
+			:slide-max-width="singleSlideWidth"
+			@interact-carousel="onInteractCarousel"
 			:embla-options="{
 				loop: false,
 				align: 'start'
 			}"
 		>
-			<kv-carousel-slide
-				v-for="(loan, index) in loans"
-				:key="`loan-${loan.id}-${index}`"
-				class="column cards-wrap"
-			>
-				<loan-card-controller
-					class="cards-loan-card"
-					loan-card-type="LendHomepageLoanCard"
-					:loan="loan"
-					:items-in-basket="itemsInBasket"
-					:category-id="index"
-					category-set-id="campaign-loan-row"
-					:row-number="rowNumber"
-					:card-number="index + 1"
-					:enable-tracking="true"
-					:is-visitor="!isLoggedIn"
-					:show-view-loan-cta="false"
-					:disable-redirects="true"
-					@add-to-basket="addToBasket"
-					@image-click="showLoanDetails"
-					@read-more-link="showLoanDetails"
-					@name-click="showLoanDetails"
-				/>
-			</kv-carousel-slide>
-
-			<kv-carousel-slide
+			<template v-for="(loan, index) in loanIds" #[`slide${index}`]>
+				<div :key="`loan-${loan}-${index}`">
+					<kiva-classic-basic-loan-card
+						:item-index="index"
+						:key="`loan-${loan}`"
+						:loan-id="loan"
+						:show-action-button="true"
+						:checkout-route="checkoutRoute"
+						:custom-loan-details="true"
+						:custom-checkout-button-text="getCheckoutBtnText(loan)"
+						@show-loan-details="showLoanDetails(loans[index])"
+						@add-to-basket="addToBasket"
+						@custom-checkout-button-action="removeLoanFromBasket(loan)"
+					/>
+				</div>
+			</template>
+			<template
+				#[`slide${loanIds.length}`]
 				v-if="hasMoreLoansAvailable"
-				class="column cards-wrap"
 			>
 				<button
 					class="see-all-card"
@@ -69,25 +62,25 @@
 						<h3>Load More</h3>
 					</div>
 				</button>
-			</kv-carousel-slide>
+			</template>
 		</kv-carousel>
 	</div>
 </template>
 
 <script>
 import basicLoanQuery from '@/graphql/query/basicLoanData.graphql';
-import KvCarousel from '@/components/Kv/KvCarousel';
-import KvCarouselSlide from '@/components/Kv/KvCarouselSlide';
 import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
-import LoanCardController from '@/components/LoanCards/LoanCardController';
+import KivaClassicBasicLoanCard from '@/components/LoanCards/KivaClassicBasicLoanCard';
+import numeral from 'numeral';
+import KvCarousel from '~/@kiva/kv-components/vue/KvCarousel';
 
 export default {
+	name: 'CampaignLoanRow',
 	inject: ['apollo'],
 	components: {
 		KvCarousel,
-		KvCarouselSlide,
 		KvLoadingSpinner,
-		LoanCardController,
+		KivaClassicBasicLoanCard
 	},
 	props: {
 		filters: {
@@ -97,6 +90,10 @@ export default {
 		itemsInBasket: {
 			type: Array,
 			default: () => [],
+		},
+		basketLoans: {
+			type: Array,
+			default: () => []
 		},
 		isLoggedIn: {
 			type: Boolean,
@@ -121,6 +118,14 @@ export default {
 		sortBy: {
 			type: String,
 			default: 'popularity'
+		},
+		handleAddToBasket: {
+			type: Function,
+			default: () => {}
+		},
+		checkoutRoute: {
+			type: String,
+			default: ''
 		}
 	},
 	data() {
@@ -135,9 +140,23 @@ export default {
 			offset: 0,
 			totalCount: 0,
 			zeroLoans: false,
+			currentSlide: 0
 		};
 	},
 	computed: {
+		loanIds() {
+			return this.loans?.map(loan => { return loan.id; });
+		},
+		singleSlideWidth() {
+			const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
+			// handle tiny screens
+			if (viewportWidth < 414) {
+				return `${viewportWidth - 80}px`;
+			}
+			if (viewportWidth >= 414 && viewportWidth < 768) return '278px';
+			if (viewportWidth >= 768 && viewportWidth < 1024) return '336px';
+			return '336px';
+		},
 		loanQueryVars() {
 			return {
 				limit: this.limit,
@@ -159,12 +178,13 @@ export default {
 					if (this.$refs.campaignLoanCarousel) {
 						// re-init carousel since the slides changed
 						this.$refs.campaignLoanCarousel.reInit();
+						this.$refs.campaignLoanCarousel.goToSlide(this.currentSlide);
 					}
 				});
 			}
 		},
 		filters(next) {
-			// TODO: Review process for reseting loans after applying filters
+			// TODO: Review process for resetting loans after applying filters
 			// reset offset
 			this.offset = 0;
 			// reset loans
@@ -174,7 +194,9 @@ export default {
 			this.loanQueryFilters = next;
 
 			// Reset carousel position after applying loan filters
-			this.$refs.campaignLoanCarousel.goToSlide(0);
+			if (this.$refs.campaignLoanCarousel) {
+				this.$refs.campaignLoanCarousel.goToSlide(0);
+			}
 		},
 		isVisible(next) {
 			if (next && this.showLoans) {
@@ -198,20 +220,32 @@ export default {
 		}
 	},
 	methods: {
+		getCheckoutBtnText(loan) {
+			const amount = this.getAmountLended(loan);
+			if (amount > 0) {
+				return `Supported for ${numeral(amount).format('$0')}`;
+			}
+			return 'Supported';
+		},
+		showLoanDetails(loan) {
+			this.$emit('show-loan-details', loan);
+		},
+		// TODO: Review all tracking cateogries
+		onInteractCarousel(interaction) {
+			this.$kvTrackEvent('carousel', 'click-carousel-horizontal-scroll', interaction);
+		},
 		addToBasket(payload) {
 			this.loanAdded = true;
 			this.$emit('add-to-basket', payload);
 		},
-		showLoanDetails(payload) {
-			const selectedLoan = this.loans.find(loan => loan.id === payload.loanId);
-			this.$emit('show-loan-details', selectedLoan);
+		removeLoanFromBasket(loanId) {
+			this.$emit('remove-loan-from-basket', loanId);
 		},
 		fetchLoans() {
 			if (this.isVisible) {
 				this.loadingLoans = true;
 			}
 			this.zeroLoans = false;
-
 			this.apollo.query({
 				query: basicLoanQuery,
 				variables: this.loanQueryVars,
@@ -231,6 +265,7 @@ export default {
 				if (this.isVisible) {
 					this.totalCount = data.lend?.loans?.totalCount ?? 0;
 					this.$emit('update-total-count', this.totalCount);
+					this.$emit('update-available-loans', data.lend?.loans);
 					this.loadingLoans = false;
 				}
 
@@ -245,10 +280,16 @@ export default {
 			}
 		},
 		loadMoreLoans() {
+			this.currentSlide = this.$refs.campaignLoanCarousel.currentIndex;
 			this.offset += this.limit;
 		},
 		resetSearchFilters() {
 			this.$emit('reset-loan-filters');
+		},
+		getAmountLended(loanId) {
+			if (this.basketLoans.length > 0) {
+				return this.basketLoans?.find(loan => String(loan.id) === String(loanId))?.price;
+			}
 		}
 	},
 };
@@ -259,17 +300,15 @@ export default {
 @import 'foundation';
 
 .component-wrapper {
-	text-align: center;
+	text-align: left;
 	min-height: rem-calc(500); // prevents layout shift as loans load in
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	position: relative;
 
-	// extra specificity to ensure width: auto is respected when bundling css
-	.cards-wrap {
-		display: flex;
-		width: auto;
+	.loan-row-slide {
+		width: rem-calc(328);
 	}
 }
 
@@ -283,7 +322,6 @@ $card-half-space: rem-calc(14/2);
 	box-shadow: 0 0.65rem $card-margin $card-half-space rgb(153, 153, 153, 0.1);
 	width: $card-width;
 	max-width: calc(100vw - 4rem); // ensure some extra card is shown on mobile
-	margin: 1rem 0 2rem 0;
 }
 
 @media (hover: none) {
@@ -293,6 +331,7 @@ $card-half-space: rem-calc(14/2);
 }
 
 .see-all-card {
+	min-height: rem-calc(475);
 	display: block;
 
 	&:hover {

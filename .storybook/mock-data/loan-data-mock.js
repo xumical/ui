@@ -31,10 +31,11 @@ export default [
 			},
 			"whySpecial": "It supports organic farming and includes a lower interest rate.",
 			"lenderRepaymentTerm": 26,
-			"loanAmount": "2675.00",
+			"loanAmount": "600.00",
+			"unreservedAmount": "75.00",
 			"loanFundraisingInfo": {
-				"fundedAmount": "900.00",
-				"reservedAmount": "0.00",
+				"fundedAmount": '525.00',
+				"reservedAmount": '0.00',
 				"isExpiringSoon": false,
 				"__typename": "LoanFundraisingInfo"
 			},
@@ -57,7 +58,15 @@ export default [
 				"retina": "https://www-dev-kiva-org.freetls.fastly.net/img/w960h600/9673d0722a7675b9b8d11f90849d9b44.jpg",
 				"hash": "9673d0722a7675b9b8d11f90849d9b44",
 				"__typename": "Image"
-			}
+			},
+			"anonymizationLevel": "none",
+			"fullLoanUse": "A loan of $600 helps to purchase heifers  to increase headcount of cattle and sales of organic milk.",
+			"fundraisingTimeLeft": "0 days",
+			"fundraisingPercent": .875,
+			"fundraisingTimeLeftMilliseconds": 123456789,
+			"tags": [
+				"user_favorite"
+			],
 		},
 		{
 			"id": 1976581,
@@ -114,7 +123,12 @@ export default [
 				"retina": "https://www-dev-kiva-org.freetls.fastly.net/img/w960h600/6638894152e5ea6f0e65423b7b6cd9bb.jpg",
 				"hash": "6638894152e5ea6f0e65423b7b6cd9bb",
 				"__typename": "Image"
-			}
+			},
+			"anonymizationLevel": "none",
+			"fullLoanUse": "A loan of $1,350 helps to buy cattle for fattening to increase sales and generate income.",
+			"fundraisingTimeLeft": "0 days",
+			"fundraisingPercent": 40,
+			"fundraisingTimeLeftMilliseconds": 123456789,
 		},
 		{
 			"id": 1977174,
@@ -171,6 +185,11 @@ export default [
 				"retina": "https://www-dev-kiva-org.freetls.fastly.net/img/w960h600/131e7cc9d0de32daad20d90b3a39c8a8.jpg",
 				"hash": "131e7cc9d0de32daad20d90b3a39c8a8",
 				"__typename": "Image"
-			}
+			},
+			"anonymizationLevel": "none",
+			"fullLoanUse": "A loan of $2,725 helps to add another cow to her two existing ones and to repair the livestock's stable so they will be secure.",
+			"fundraisingTimeLeft": "0 days",
+			"fundraisingPercent": 40,
+			"fundraisingTimeLeftMilliseconds": 123456789,
 		}
 ]

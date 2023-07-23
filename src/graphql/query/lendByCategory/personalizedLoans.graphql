@@ -1,0 +1,8 @@
+
+query getPersonalizedLoans($limit: Int!, $filters: [FundraisingLoanSearchFilterInput!], $origin: String) {
+	fundraisingLoans(limit: $limit, sortBy: personalized, filters: $filters, origin: $origin) {
+		values {
+			id
+		}
+	}
+}

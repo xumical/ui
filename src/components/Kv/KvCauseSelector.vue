@@ -1,7 +1,7 @@
 <template>
 	<div class="kv-cause-selector">
 		<template v-if="asIcon">
-			<div class="kv-cause-selector__circle">
+			<div class="kv-cause-selector__circle tw-bg-primary">
 				<img
 					class="kv-cause-selector__img"
 					:srcset="`${causeImage2xSrc} 2x`"
@@ -25,7 +25,7 @@
 				@change="onChange($event)"
 			>
 			<label
-				class="kv-cause-selector__label"
+				class="kv-cause-selector__label hover:tw-text-action-highlight tw-text-center"
 				:for="`cause-selector-${cause}-${asRadio ? 'radio' : 'checkbox'}`"
 			>
 				<div class="kv-cause-selector__circle">
@@ -58,6 +58,7 @@ import KvIcon from '@/components/Kv/KvIcon';
 const imageRequire = require.context('@/assets/images/cause-selector/', true);
 
 export default {
+	name: 'KvCauseSelector',
 	components: {
 		KvIcon
 	},
@@ -145,7 +146,6 @@ $box-shadow-hover: 0 rem-calc(2) rem-calc(10) 0 rgba(0, 0, 0, 0.35);
 		justify-content: center;
 		overflow: hidden;
 		border-radius: 50%;
-		background: #fff;
 		box-shadow: $box-shadow;
 		margin-bottom: 1rem;
 		user-select: none;
@@ -186,9 +186,6 @@ $box-shadow-hover: 0 rem-calc(2) rem-calc(10) 0 rgba(0, 0, 0, 0.35);
 	&__label {
 		width: 100%;
 		margin: 0;
-		line-height: 1;
-		color: $kiva-text-dark;
-		text-align: center;
 
 		&:hover {
 			color: $kiva-textlink-hover;

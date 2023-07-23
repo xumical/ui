@@ -12,18 +12,18 @@
 		</template>
 		<template #overlayContent>
 			<div class="row">
-				<div class="
+				<div
+					class="
 						overlay-column columns
 						medium-10 medium-offset-1 large-8 large-offset-0 xlarge-7 xxlarge-6"
 				>
-					<h1 class="donate-headline" v-html="headlineCopy"></h1>
-					<p class="donate-subhead" v-html="subheadCopy"></p>
+					<h1 class="tw-text-h2" v-html="headlineCopy"></h1>
+					<p class="tw-my-2" v-html="subheadCopy"></p>
 					<donate-form
 						:key="1"
 						:button-text="buttonCopy"
 						:data="donationValues"
 						:form-disclaimer="formDisclaimer"
-						:form-submit-analytics="formSubmitAnalytics"
 					/>
 				</div>
 			</div>
@@ -39,14 +39,25 @@ import { documentToHtmlString } from '~/@contentful/rich-text-html-renderer';
 import DonateForm from './DonateForm';
 
 export default {
+	name: 'DonateFromMacroHero',
 	props: {
 		data: {
 			type: Object,
 			default: null,
 		},
 	},
-	metaInfo: {
-		title: 'Donate to Kiva today!'
+	metaInfo() {
+		return 	{
+			title: 'Donate to Kiva and support our mission!',
+			meta: [
+				{
+					vmid: 'description',
+					name: 'description',
+					content: 'Your generous donations help Kiva continue and grow our mission of financial inclusivity.'
+						+ ' Click here to learn more and make a difference.'
+				}
+			]
+		};
 	},
 	components: {
 		DonateForm,
@@ -55,10 +66,6 @@ export default {
 	},
 	data() {
 		return {
-			formSubmitAnalytics: {
-				category: '/support-kiva',
-				action: 'Donate from Macro',
-			},
 			sourceSizes: [
 				{
 					width: 1920,
@@ -200,16 +207,4 @@ export default {
 	}
 }
 
-.donation-headline {
-	@include large-text();
-
-	margin-bottom: 0.25rem;
-}
-
-.donation-subhead {
-	@include medium-text();
-
-	padding: 0;
-	margin-bottom: 1.5rem;
-}
 </style>

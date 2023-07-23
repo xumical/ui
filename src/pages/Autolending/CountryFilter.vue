@@ -1,14 +1,18 @@
 <template>
 	<div>
-		<h3 class="specific-filter-title">
+		<h4 class="tw-mb-2">
 			Countries
-		</h3>
+		</h4>
 		<div class="row collapse">
 			<div class="small-6 columns region-list">
 				<ul>
 					<li v-for="(region, name) in regions" :key="name">
 						<button
-							class="region-button"
+							class="tw-p-1"
+							:class="{
+								'tw-text-tertiary' : openRegion === name,
+								'tw-text-link' : openRegion !== name
+							}"
 							@click="openRegion = name"
 							:aria-pressed="openRegion === name ? 'true' : 'false'"
 						>
@@ -24,7 +28,7 @@
 					:items="currentRegion"
 					@change="onChange"
 				/>
-				<p v-else key="none" class="region-message">
+				<p v-else key="none" class="tw-text-tertiary tw-p-1">
 					Pick a region
 				</p>
 			</div>
@@ -37,12 +41,13 @@ import _get from 'lodash/get';
 import _groupBy from 'lodash/groupBy';
 import _map from 'lodash/map';
 import _sortBy from 'lodash/sortBy';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import countryListQuery from '@/graphql/query/autolending/countryList.graphql';
 import anyOrSelectedAutolendingFilter from '@/plugins/any-or-selected-autolending-filter-mixin';
 import CheckList from './CheckList';
 
 export default {
+	name: 'CountryFilter',
 	inject: ['apollo', 'cookieStore'],
 	components: {
 		CheckList,
@@ -92,6 +97,7 @@ export default {
 			this.apollo.mutate({
 				mutation: gql`mutation updateCountries($countries: [String]) {
 					autolending @client {
+						id
 						editProfile(profile: {
 							loanSearchCriteria: {
 								filters: {
@@ -109,44 +115,3 @@ export default {
 	},
 };
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-$section-padding: 0.4rem 0.5rem;
-
-.specific-filter-title {
-	font-size: 1rem;
-	margin: 0 auto 0.5rem;
-	font-weight: $global-weight-highlight;
-}
-
-.region-list {
-	ul {
-		list-style: none;
-		margin: 0;
-	}
-}
-
-p.region-message {
-	color: $kiva-text-light;
-}
-
-.region-button {
-	padding: $section-padding;
-	color: $kiva-textlink;
-	line-height: 1.8;
-	font-size: 1rem;
-	text-align: left;
-
-	&:hover {
-		color: $kiva-textlink-hover;
-		text-decoration: underline;
-	}
-
-	&[aria-pressed="true"] {
-		color: $kiva-text-light;
-		text-decoration: none;
-	}
-}
-</style>

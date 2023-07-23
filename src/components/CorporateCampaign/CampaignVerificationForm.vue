@@ -13,7 +13,7 @@
 				frameborder="0"
 			></iframe>
 
-			<div class="text-center">
+			<div class="tw-text-center">
 				<kv-button
 					class="text-link"
 					@click.native="optOut"
@@ -26,13 +26,15 @@
 </template>
 
 <script>
+import { gql } from '@apollo/client';
+import logFormatter from '@/util/logFormatter';
 import parseSPCookie from '@/util/parseSPCookie';
-import { addDays } from 'date-fns';
 import KvButton from '@/components/Kv/KvButton';
 import KvLightbox from '@/components/Kv/KvLightbox';
 
 export default {
-	inject: ['cookieStore'],
+	name: 'CampaignVerificationForm',
+	inject: ['apollo', 'cookieStore'],
 	metaInfo: {
 		// script: [
 		// 	{ src: '//kiva.tfaforms.net/js/iframe_resize_helper.js', async: true }
@@ -64,25 +66,66 @@ export default {
 		return {
 			iFrameSrc: null,
 			iFrameVisible: false,
-			iFrameWidth: 600,
-			iFrameHeight: 800,
+			iFrameWidth: 500,
+			iFrameHeight: 500,
 			spId: '',
 			spUserId: '',
 		};
 	},
 	mounted() {
-		// initiate form if it has not been recently submitted
-		if (!this.cookieStore.get('kvma-verified')) {
-			this.initVerificationForm();
+		// make sure we have a form id to fetch
+		if (this.formId) {
+			// check the db to see if this user has already submitted to this form id
+			this.checkFormSubmissionComplete();
 		}
 	},
 	methods: {
+		checkFormSubmissionComplete() {
+			this.apollo.query({
+				query: gql`query employeeVerificationFormQuery($formId: String!) {
+					getForm(formId: $formId) {
+						formId
+						submittedTime
+						userId
+					}
+				}`,
+				variables: {
+					formId: this.formId
+				},
+			}).then(({ data, errors }) => {
+				if (errors && errors.length) {
+					errors.forEach(error => {
+						logFormatter(error, 'error');
+					});
+					return false;
+				}
+				// Check for record of form submission
+				const formSubmittedTime = data?.getForm?.submittedTime ?? null;
+				if (formSubmittedTime) {
+					// close form and emit completion event if done
+					this.iFrameVisible = false;
+					this.$kvTrackEvent(
+						'ManagedLendingCampaign',
+						'modal-campaign-verification-closed',
+						'Form Submission Exists in FormAssembly Service'
+					);
+					this.$emit('verification-complete');
+				} else {
+					// reinitialize the form
+					this.initVerificationForm();
+				}
+			});
+		},
 		initVerificationForm() {
 			this.getSnowplowSession().then(() => {
 				this.setFrameSrc();
 				this.setIFrameDimensions();
 				if (this.formId) {
 					this.iFrameVisible = true;
+					this.$kvTrackEvent(
+						'ManagedLendingCampaign',
+						'modal-campaign-verification-shown'
+					);
 				}
 				window.addEventListener('message', message => {
 					this.handleIFrameMessage(message);
@@ -96,37 +139,27 @@ export default {
 			}
 		},
 		setIFrameDimensions() {
-			const maxFormWidth = 700;
+			const maxFormWidth = 500;
 			this.iFrameWidth = this.$el.clientWidth < maxFormWidth ? this.$el.clientWidth - 90 : maxFormWidth;
-			this.iFrameHeight = this.$el.clientHeight > 300 ? this.$el.clientHeight : 500;
+			this.iFrameHeight = 500;
 		},
 		handleIFrameMessage(message) {
 			const messageDataType = message?.data?.type;
 			// Events emitted via 'postMessage'
-
 			// 'fa_form_submitted' form submitted (may or may not be valid)
-			if (messageDataType && messageDataType === 'fa_form_submitted') {
-				// Update timestamp for submitted form
-				this.formSubmittedTimestamp = Date.now();
-			}
-
 			// 'fa_form_closed' form completed and transitioned to thanks view
 			if (messageDataType && messageDataType === 'fa_form_closed') {
 				// compare the time closed with time submitted
 				this.$nextTick(() => {
-					const timeDifference = Date.now() - this.formSubmittedTimestamp;
-					// set cookie and close lightbox if within recent 1 second threshold
-					// > upon succesful submission the form is quickly unloaded
-					if (timeDifference <= 1000) {
-						// store cookie verification state for 24 hours
-						this.cookieStore.set('kvma-verified', true, {
-							expires: addDays(new Date(), 1)
-						});
-					}
 					// handle closing lightbox
 					window.setTimeout(
 						() => {
 							this.iFrameVisible = false;
+							this.$kvTrackEvent(
+								'ManagedLendingCampaign',
+								'modal-campaign-verification-closed',
+								'Form Complete Signal from iframe'
+							);
 							this.$emit('verification-complete');
 						},
 						1000
@@ -141,7 +174,16 @@ export default {
 			this.spUserId = snowplowUserId;
 		},
 		optOut() {
-			this.$emit('opt-out');
+			// hide verification form
+			this.iFrameVisible = false;
+			// track opt-out
+			this.$kvTrackEvent(
+				'ManagedLendingCampaign',
+				'click-campaign-verification-optout',
+				'No thanks, I\'ll opt out'
+			);
+			// initialize opt-out lightbox
+			this.$emit('campaign-verification-opt-out');
 		}
 	}
 };

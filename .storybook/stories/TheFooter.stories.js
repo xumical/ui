@@ -5,14 +5,13 @@ import {
 	fifteenYearFooterTheme,
 	blueFooter
 } from '@/util/siteThemes';
-import StoryRouter from 'storybook-vue-router';
-
+import apolloStoryMixin from '../mixins/apollo-story-mixin';
+import cookieStoreStoryMixin from '../mixins/cookie-store-story-mixin';
 import TheFooter from '@/components/WwwFrame/TheFooter';
 
 export default {
 	title: 'WwwFrame/TheFooter',
 	component: TheFooter,
-	decorators: [StoryRouter()],
 	args: {
 		theme: null,
 	},
@@ -35,6 +34,7 @@ export default {
 
 export const Default = (args, { argTypes }) => ({
 	props: Object.keys(argTypes),
+	mixins: [apolloStoryMixin(), cookieStoreStoryMixin()],
 	components: {
 		TheFooter
 	},

@@ -39,13 +39,9 @@
 					:single-line="true"
 				/>
 				<borrower-info-body
-					:amount="loan.loanAmount"
-					:borrower-count="loan.borrowerCount"
-					:name="loan.name"
-					:status="loan.status"
-					:use="loan.use"
+					:use="loan.fullLoanUse"
 					:loan-id="loan.id"
-					:max-use-length="145"
+					:max-use-length="170"
 					@track-loan-card-interaction="trackInteraction"
 				/>
 				<action-button
@@ -57,6 +53,7 @@
 					:is-funded="isFunded"
 					:is-selected-by-another="isSelectedByAnother"
 					:is-simple-lend-button="true"
+					:enable-five-dollars-notes="enableFiveDollarsNotes"
 
 					@click.native="trackInteraction({
 						interactionType: 'addToBasket',
@@ -66,7 +63,9 @@
 					@add-to-basket="$emit('add-to-basket', $event)"
 				/>
 				<matching-text
+					v-if="!isMatchAtRisk"
 					:matching-text="loan.matchingText"
+					:match-ratio="loan.matchRatio"
 					:is-funded="isFunded"
 					:is-selected-by-another="isSelectedByAnother"
 				/>
@@ -88,6 +87,13 @@ import categoryRowArrowsVisibleMixin from '@/plugins/category-row-arrows-visible
 import KvIcon from '@/components/Kv/KvIcon';
 
 export default {
+	name: 'ExpandableLoanCard',
+	props: {
+		enableFiveDollarsNotes: {
+			type: Boolean,
+			default: false
+		}
+	},
 	components: {
 		ActionButton,
 		BorrowerInfoHeaderExpandable,

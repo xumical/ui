@@ -1,8 +1,10 @@
 query ftdQuery {
 	my {
+		id
 		userAccount {
 			id
 			isFirstTimeDepositor
+			hasDeposits
 		}
 	}
 }

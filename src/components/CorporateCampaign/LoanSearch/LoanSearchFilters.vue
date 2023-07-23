@@ -1,86 +1,94 @@
 <template>
 	<div class="loan-filters">
 		<div class="loan-filters__top-row">
-			<div class="loan-filters__controls">
-				<kv-button
-					class="loan-filters__toggle rounded smallest secondary"
-					@click.native.prevent="showFilters()"
+			<span class="tw-mb-2 md:tw-mb-0">
+				<div class="tw-inline-flex tw-items-center">
+					<h2>
+						Support causes you care about.
+					</h2>
+				</div>
+			</span>
+
+			<div v-if="showLoanDisplayToggle" class="loan-filters__loan-display">
+				<div
+					class="tw-flex tw-cursor-pointer tw-items-center"
+					id="view-toggle"
 				>
-					Filter loans
+					<span class=" tw-inline-block tw-border-r tw-border-tertiary tw-px-1.5">
+						{{ totalCount }} loans
+					</span>
+					<span
+						class="tw-inline-flex"
+						@click="showFilters()"
+					>
+						<h4 class="tw-text-h4 tw-font-medium tw-text-action tw-border-r tw-border-tertiary tw-px-1.5">
+							Filter loans
+						</h4>
+					</span>
+					<span
+						class="tw-flex tw-items-center tw-flex-wrap"
+					>
+						<span
+							class="tw-inline-flex"
+							v-show="activeLoanDisplay === 'grid'"
+							@click="setLoanDisplayMode('rows')"
+						>
+							<h4 class="tw-text-h4 tw-font-medium tw-text-action tw-px-1">
+								Row View
+							</h4>
+							<kv-material-icon
+								class="tw-mr-1 tw-w-2 tw-text-action tw-inline-block"
+								name="list-green"
+								:icon="mdiLandRowsHorizontal"
+							/>
+						</span>
+					</span>
 
-					<kv-icon
-						class="loan-filters__toggle-icon"
-						name="small-chevron"
-						:from-sprite="true"
-						aria-hidden="true"
-					/>
-				</kv-button>
-				<span class="loan-filters__total-count">{{ totalCount }} loans</span>
-			</div>
-
-			<div class="loan-filters__loan-display">
-				<kv-pill-toggle
-					id="pill"
-					:options="[
-						{
-							title: 'Rows',
-							key: 'rows',
-						},
-						{
-							title: 'Grid',
-							key: 'grid',
-						},
-					]"
-					selected="rows"
-					@pill-toggled="(val) => { $emit('set-loan-display', val === 'rows') }"
-				/>
+					<span
+						class="tw-flex tw-items-center tw-flex-wrap"
+					>
+						<span
+							class="tw-inline-flex"
+							v-show="activeLoanDisplay === 'rows'"
+							@click="setLoanDisplayMode('grid')"
+						>
+							<h4 class="tw-text-h4 tw-font-medium tw-text-action tw-px-1">
+								Grid View
+							</h4>
+							<kv-material-icon
+								class="tw-mr-1 tw-w-2 tw-text-action tw-inline-block"
+								name="grid-green"
+								:icon="mdiGridLarge"
+							/>
+						</span>
+					</span>
+				</div>
 			</div>
 		</div>
-
 		<div
 			v-if="filterChips.length"
-			class="loan-filters__chips chips"
+			class="tw-flex tw-items-start tw-flex-col lg:tw-flex-row"
 		>
-			<div class="row">
+			<div
+				class="chips__container tw-overflow-hidden"
+			>
 				<div
-					class="chips__container small-12 large-8 xxlarge-9 columns"
-					:class="{'chips--collapsed' : isChipsCollapsed}"
-					ref="chipsContainer"
+					class="tw-flex tw-flex-wrap tw-gap-1.5"
 				>
-					<div
-						ref="chipsInnerContainer"
+					<kv-chip-classic
+						v-for="(filter, index) in filterChips"
+						:key="`chip-${index}`"
+						:title="cleanChipName(filter.name)"
+						@click="handleRemoveFilter(filter)"
 					>
-						<kv-chip
-							v-for="(filter, index) in filterChips"
-							:key="`chip-${index}`"
-							:title="cleanChipName(filter.name)"
-							@click-chip="handleRemoveFilter(filter)"
-						/>
-					</div>
-				</div>
-				<div class="small-12 large-4 xxlarge-3 columns">
-					<div class="chips__toggle-container">
-						<kv-button
-							v-if="isChipsCollapsable"
-							class="chips__toggle text-link"
-							@click.native="isChipsCollapsed = !isChipsCollapsed"
-						>
-							{{ isChipsCollapsed ? `Show all ${filterChips.length} filters` : 'Hide filters' }}
-						</kv-button>
-						<span v-if="!isInitialFilters && isChipsCollapsable">|</span>
-						<kv-button
-							v-if="!isInitialFilters"
-							class="chips__toggle text-link"
-							@click.native="handleResetFilters"
-						>
-							Reset all
-						</kv-button>
-					</div>
+						{{ filter.name }}
+					</kv-chip-classic>
 				</div>
 			</div>
 		</div>
 
 		<kv-lightbox
+			v-if="filtersVisible"
 			class="loan-filters__lightbox"
 			id="filterControlsLightbox"
 			title="Filter Loans"
@@ -88,33 +96,54 @@
 			@lightbox-closed="filtersVisible = false"
 		>
 			<div class="loan-filter-controls">
-				<gender-filter
-					:initial-gender="initialGender"
-					:selected-gender="selectedGender"
-					@updated-filters="handleUpdatedFilters"
-				/>
+				<span class="tw-flex-col">
+					<span class="tw-flex">
+						<div
+							class="loan-filters__lightbox tw-mb-0.5"
+							id="gender-filter-container"
+						>
+							<h3 class="tw-py-1 tw-p-2 tw-inline-block">
+								Gender
+							</h3>
 
-				<kv-accordion-item
-					class="loan-filters__lightbox-accordian"
-					id="sort-order-accordian"
-				>
-					<template #header>
-						<h3>Sort By</h3>
-					</template>
-					<sort-order
-						class="loan-filter-controls__filter-type"
-						:initial-sort="initialSortBy"
-						:selected-sort="selectedSort"
-						@sort-order-updated="handleSortByUpdated"
-					/>
-				</kv-accordion-item>
+							<fieldset class="tw-flex tw-flex-col tw-gap-4 tw-my-2 tw-p-1">
+								<gender-filter
+									class="loan-filter-controls__filter-type"
+									:initial-gender="initialGender"
+									:selected-gender="selectedGender"
+									@gender-updated="handleUpdatedFilters"
+								/>
+							</fieldset>
+						</div>
+
+						<div
+							class="loan-filters__lightbox tw-flex-grow"
+							id="sort-filter-container"
+						>
+							<h3 class="tw-py-1 tw-p-2 tw-inline-block">
+								Sort By
+							</h3>
+							<fieldset class="tw-flex tw-flex-col tw-gap-2 tw-my-2 tw-p-1">
+								<sort-order
+									class="loan-filter-controls__filter-type"
+									:initial-sort="initialSortBy"
+									:selected-sort="selectedSort"
+									@sort-order-updated="handleSortByUpdated"
+								/>
+							</fieldset>
+						</div>
+					</span>
+					<hr class="tw-border-tertiary tw-my-1">
+				</span>
 
 				<kv-accordion-item
 					class="loan-filters__lightbox-accordian"
 					id="region-accordian"
 				>
 					<template #header>
-						<h3>Countries</h3>
+						<h3 class="tw-py-1">
+							Countries
+						</h3>
 					</template>
 					<location-filter
 						class="loan-filter-controls__filter-type"
@@ -130,7 +159,9 @@
 					id="sectors-accordian"
 				>
 					<template #header>
-						<h3>Sectors</h3>
+						<h3 class="tw-py-1">
+							Sectors
+						</h3>
 					</template>
 					<sector-filter
 						class="loan-filter-controls__filter-type"
@@ -146,7 +177,9 @@
 					id="attributes-accordian"
 				>
 					<template #header>
-						<h3>Attributes</h3>
+						<h3 class="tw-py-1">
+							Attributes
+						</h3>
 					</template>
 					<attribute-filter
 						class="loan-filter-controls__filter-type"
@@ -162,7 +195,9 @@
 					id="tags-accordian"
 				>
 					<template #header>
-						<h3>Tags</h3>
+						<h3 class="tw-py-1">
+							Tags
+						</h3>
 					</template>
 					<tag-filter
 						class="loan-filter-controls__filter-type"
@@ -176,7 +211,7 @@
 
 			<template #controls>
 				<kv-button
-					class="button smallest"
+					variant="primary"
 					@click.native.prevent="applyFilters"
 				>
 					Apply Filters
@@ -189,19 +224,19 @@
 <script>
 import _isEqual from 'lodash/isEqual';
 import _sortBy from 'lodash/sortBy';
-import gql from 'graphql-tag';
-import KvButton from '@/components/Kv/KvButton';
-import KvChip from '@/components/Kv/KvChip';
-import KvLightbox from '@/components/Kv/KvLightbox';
+import { gql } from '@apollo/client';
+import { mdiChevronDown, mdiGridLarge, mdiLandRowsHorizontal } from '@mdi/js';
 import AttributeFilter from '@/components/CorporateCampaign/LoanSearch/AttributeFilter';
 import GenderFilter from '@/components/CorporateCampaign/LoanSearch/GenderFilter';
-import KvAccordionItem from '@/components/Kv/KvAccordionItem';
-import KvIcon from '@/components/Kv/KvIcon';
-import KvPillToggle from '@/components/Kv/KvPillToggle';
 import LocationFilter from '@/components/CorporateCampaign/LoanSearch/LocationFilter';
 import SectorFilter from '@/components/CorporateCampaign/LoanSearch/SectorFilter';
 import SortOrder from '@/components/CorporateCampaign/LoanSearch/SortOrder';
 import TagFilter from '@/components/CorporateCampaign/LoanSearch/TagFilter';
+import KvChipClassic from '@/components/Kv/KvChipClassic';
+import KvMaterialIcon from '~/@kiva/kv-components/vue/KvMaterialIcon';
+import KvAccordionItem from '~/@kiva/kv-components/vue/KvAccordionItem';
+import KvLightbox from '~/@kiva/kv-components/vue/KvLightbox';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
 
 const filterOptionsQuery = gql`
 	query filterOptionsQuery {
@@ -225,28 +260,32 @@ const filterOptionsQuery = gql`
 			tag {
 				id
 				name
+				vocabularyId
 			}
 		}
 	}
 `;
-
 export default {
+	name: 'LoanSearchFilters',
 	inject: ['apollo'],
 	components: {
 		KvButton,
-		KvChip,
+		KvChipClassic,
 		KvLightbox,
-		KvPillToggle,
 		AttributeFilter,
 		GenderFilter,
 		KvAccordionItem,
-		KvIcon,
+		KvMaterialIcon,
 		LocationFilter,
 		SectorFilter,
 		SortOrder,
 		TagFilter
 	},
 	props: {
+		activeLoanDisplay: {
+			type: String,
+			default: 'rows'
+		},
 		appliedFilters: {
 			type: Object,
 			default: () => {}
@@ -267,6 +306,10 @@ export default {
 			type: String,
 			default: 'popularity',
 		},
+		showLoanDisplayToggle: {
+			type: Boolean,
+			default: true
+		},
 		totalCount: {
 			type: Number,
 			default: 0
@@ -284,6 +327,9 @@ export default {
 			selectedSort: null,
 			isChipsCollapsable: true,
 			isChipsCollapsed: true,
+			mdiChevronDown,
+			mdiGridLarge,
+			mdiLandRowsHorizontal
 		};
 	},
 	mounted() {
@@ -355,7 +401,6 @@ export default {
 				}
 				return false;
 			});
-
 			// gather selected Countries
 			const selectedCountriesRaw = this.allCountries.filter(country => {
 				const appliedCountries = this.appliedFilters?.country ?? [];
@@ -364,7 +409,6 @@ export default {
 				}
 				return false;
 			});
-
 			// gather selected Sectors
 			const selectedSectorsRaw = this.allSectors.filter(sector => {
 				const appliedSectors = this.appliedFilters?.sector ?? [];
@@ -373,7 +417,6 @@ export default {
 				}
 				return false;
 			});
-
 			// gather selected Themes
 			const selectedAttributesRaw = this.allAttributes.filter(attribute => {
 				const appliedAttributes = this.appliedFilters?.theme ?? [];
@@ -382,16 +425,16 @@ export default {
 				}
 				return false;
 			});
-
 			// gather selected tags
 			const selectedTagsRaw = this.allTags.filter(tag => {
-				const appliedTags = this.appliedFilters?.loanTags ?? [];
-				if (appliedTags.length) {
-					return appliedTags.includes(tag.id);
+				if (tag.name?.charAt(0) === '#') { // kludge to only include public tags
+					const appliedTags = this.appliedFilters?.loanTags ?? [];
+					if (appliedTags.length) {
+						return appliedTags.includes(tag.id);
+					}
 				}
 				return false;
 			});
-
 			return [
 				...selectedGenderRaw,
 				...selectedCountriesRaw,
@@ -423,6 +466,18 @@ export default {
 		},
 	},
 	methods: {
+		setLoanDisplayMode(mode) {
+			switch (mode) {
+				case 'rows':
+					this.$emit('set-loan-display', true);
+					break;
+				case 'grid':
+					this.$emit('set-loan-display', false);
+					break;
+				default:
+					break;
+			}
+		},
 		showFilters() {
 			this.filtersVisible = true;
 		},
@@ -433,14 +488,17 @@ export default {
 			});
 		},
 		applyFilters() {
-			this.$emit('updated-filters', this.modifiedFilters);
+			const gqlFilters = this.modifiedFilters;
+			if (gqlFilters.gender === 'both') {
+				gqlFilters.gender = null;
+			}
+			this.$emit('updated-filters', gqlFilters);
 			this.$emit('updated-sort-by', this.selectedSort);
 			this.filtersVisible = false;
 		},
 		// TODO: Move to Util file
 		copyFilters(initialFilters) {
 			const filtersCopy = {};
-
 			const initialFilterKeys = Object.keys(initialFilters);
 			initialFilterKeys.forEach(key => {
 				// copy an object
@@ -450,7 +508,6 @@ export default {
 					&& initialFilters[key] === 'undefined'
 				) {
 					filtersCopy[key] = { ...initialFilters[key] };
-
 				// copy an array
 				} else if (
 					typeof initialFilters[key] === 'object'
@@ -458,25 +515,20 @@ export default {
 					&& initialFilters[key].length
 				) {
 					filtersCopy[key] = initialFilters[key].slice();
-
 				// copy a string
 				} else if (typeof initialFilters[key] === 'string') {
 					filtersCopy[key] = initialFilters[key].toString();
-
 				// copy a boolean
 				} else if (typeof initialFilters[key] === 'boolean') {
 					filtersCopy[key] = Boolean(initialFilters[key]);
-
 				// handle undefined defaults
 				} else if (typeof initialFilters[key] === 'undefined') {
 					filtersCopy[key] = undefined;
-
 				// handle null defaults and all others
 				} else {
 					filtersCopy[key] = null;
 				}
 			});
-
 			return filtersCopy;
 		},
 		cleanChipName(name) {
@@ -541,13 +593,10 @@ export default {
 		},
 		async determineIsChipsCollapsable() {
 			const { chipsContainer, chipsInnerContainer } = this.$refs;
-
 			if (chipsContainer && chipsInnerContainer) {
 				const isCollapsed = this.isChipsCollapsed.valueOf(); // get the initial collapsed state
-
 				this.isChipsCollapsed = true; // collapse the container.
 				await this.$nextTick(); // let that render
-
 				// is the inner container bigger than the outer?
 				this.isChipsCollapsable = chipsInnerContainer.clientHeight > chipsContainer.clientHeight;
 				this.isChipsCollapsed = isCollapsed; // go back to the initial state
@@ -556,7 +605,6 @@ export default {
 	},
 };
 </script>
-
 <style lang="scss" scoped>
 @import 'settings';
 
@@ -566,49 +614,29 @@ export default {
 		align-items: center;
 		justify-content: space-between;
 		flex-direction: column;
-		margin: 0 1rem 1rem;
-
+		margin: 0 0 1rem;
 		@include breakpoint(medium) {
 			flex-direction: row;
-			margin: 0 3.5rem 1rem;
 		}
 	}
 
 	&__controls {
 		margin-bottom: 1rem;
-
 		@include breakpoint(medium) {
 			margin-bottom: 0;
 		}
 	}
 
-	&__toggle {
-		margin: 0 1rem 0 0;
+	&__toggle-text {
+		margin: 0 0.2rem 0 0;
 	}
 
 	&__toggle-icon {
-		width: 1.2rem;
-		height: 0.75rem;
-		margin: 0 0 0 0.5rem;
-	}
-
-	&__total-count {
-		font-weight: 700;
-		white-space: nowrap;
-	}
-
-	&__chips {
-		display: block;
-		margin: 1.5rem 1rem 0.5rem;
-
-		@include breakpoint(medium) {
-			margin: 1.5rem 3.5rem 0.5rem;
-		}
-	}
-
-	h3 {
-		display: block;
-		padding: 0.5rem 0;
+		width: 2.2rem;
+		height: 1.75rem;
+		margin: 0 0 0 0;
+		display: inline-block;
+		vertical-align: top;
 	}
 
 	&__lightbox {
@@ -622,22 +650,15 @@ export default {
 	&__toggle-container {
 		display: block;
 		margin: 1rem auto 0 0;
-
 		@include breakpoint(large) {
 			margin: 0 0 0 auto;
 			text-align: right;
 		}
 	}
 
-	&__toggle {
-		font-size: $small-text-font-size;
-		white-space: nowrap;
-	}
-
 	&--collapsed {
 		overflow: hidden;
 		max-height: 7rem;
-
 		@include breakpoint(large) {
 			max-height: rem-calc(38);
 		}

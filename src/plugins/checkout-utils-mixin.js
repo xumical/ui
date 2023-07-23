@@ -1,7 +1,8 @@
 import _get from 'lodash/get';
-import * as Sentry from '@sentry/browser';
+import * as Sentry from '@sentry/vue';
 import shopValidateBasket from '@/graphql/mutation/shopValidatePreCheckout.graphql';
 import shopValidateGuestBasket from '@/graphql/mutation/shopValidateGuestPreCheckout.graphql';
+import validateLenderEmailForPromo from '@/graphql/mutation/checkout/validateLenderEmailForPromo.graphql';
 import shopCheckout from '@/graphql/mutation/shopCheckout.graphql';
 import showVerificationLightbox from '@/graphql/mutation/checkout/showVerificationLightbox.graphql';
 import logFormatter from '@/util/logFormatter';
@@ -82,20 +83,55 @@ export default {
 				});
 			});
 		},
+		/**
+		 * Call the shop validateCheckout graphql query, using a guest email, a promo fund id and managed account id
+		 * - This validates the current basket for a promo basket guest checkout,
+		 * returning any errors that need to be addressed
+		 *
+		 * @returns {Promise}
+		 */
+		validateGuestPromoBasket(guestEmail, emailUpdates, promoFundId, managedAccountId) {
+			checkInjections(this, injections);
 
+			return new Promise((resolve, reject) => {
+				this.apollo.mutate({
+					mutation: validateLenderEmailForPromo,
+					variables: {
+						lenderEmailAddress: guestEmail,
+						promoFundId: Number(promoFundId),
+						managedAccountId: Number(managedAccountId),
+					}
+				}).then(() => {
+					resolve(this.validateGuestBasket(guestEmail, emailUpdates));
+				}).catch(errorResponse => {
+					logFormatter(errorResponse, 'error');
+					Sentry.captureException(errorResponse);
+					reject(errorResponse);
+				});
+			});
+		},
 		/**
 		 * Call the shop checkout graphql mutation
 		 * - This checks out the basket using Kiva credit
 		 *
 		 * @returns {Promise}
 		 */
-		checkoutBasket() {
+		checkoutBasket(promoGuestBasketEnabled = false) {
 			checkInjections(this, injections);
-
+			let mutObj = {
+				mutation: shopCheckout
+			};
+			// Promo guest basket call to checkout graphql endpoint requires a visitor id.
+			if (promoGuestBasketEnabled) {
+				mutObj = {
+					mutation: shopCheckout,
+					variables: {
+						visitorId: this.cookieStore.get('uiv') || null
+					}
+				};
+			}
 			return new Promise((resolve, reject) => {
-				this.apollo.mutate({
-					mutation: shopCheckout
-				}).then(data => {
+				this.apollo.mutate(mutObj).then(data => {
 					const transactionId = _get(data, 'data.shop.checkout');
 					if (transactionId !== null) {
 						// succesful transaction;
@@ -114,36 +150,42 @@ export default {
 		/* Handle Various errors from GraphQL
 		 * @param {Object} errorResponse contains errors node with array of errors
 		 */
-		showCheckoutError(errorResponse, ignoreAuth = false) {
+		showCheckoutError(errorResponse = [], ignoreAuth = false) {
 			checkInjections(this, injections);
 
 			// const errors = _get(errorResponse, 'errors');
 			let errorMessages = '';
 			// When validation or checkout fails and errors object is returned along with the data
-			errorResponse.forEach(({ error, value }) => {
-				let errorMessage = value;
+			errorResponse.forEach(({
+				error,
+				value,
+				extension,
+				message
+			}) => {
+				let errorMessage = value || message;
+				const errorType = error || extension?.code;
 
 				/* eslint-disable max-len */
 				// update error messages for new checkout context (Original messages reference a different user flow)
-				if (error === 'ERROR_OWN_LOAN') {
+				if (errorType === 'ERROR_OWN_LOAN') {
 					// Original Message: As a Kiva borrower, you cannot support your own fundraising loan on Kiva.  Please go back to the basket to remove your loan.
 					errorMessage = 'As a Kiva borrower, you cannot support your own fundraising loan on Kiva. Please remove your loan before completing checkout.';
 				}
-				if (error === 'ERROR_OVER_DAILY_LIMIT') {
+				if (errorType === 'ERROR_OVER_DAILY_LIMIT') {
 					// Original Message: You can not purchase more than $2,000 of Kiva Codes per day. Please click the back button amd remove Kiva Card(s)
 					errorMessage = 'You can not purchase more than $2,000 of Kiva Codes per day. Please remove the Kiva Card(s) from your basket.';
 				}
 				/* eslint-enable max-len */
 
-				if (error === 'api.authenticationRequired' && ignoreAuth) {
+				if (errorType === 'api.authenticationRequired' && ignoreAuth) {
 					return;
 				}
 
 				// Log validation errors
-				Sentry.captureException(`${error}:${value}`);
+				Sentry.captureException(`${errorType}:${errorMessage}`);
 
 				// Show the verification lightbox if basket is not verified, and don't show a tip message
-				if (error === 'basket_requires_verification') {
+				if (errorType === 'basket_requires_verification') {
 					this.apollo.mutate({ mutation: showVerificationLightbox });
 					return;
 				}
@@ -165,12 +207,12 @@ export default {
 		/* Redirect to the thanks
 		 * @param transactionId
 		 */
-		redirectToThanks(transactionId) {
+		redirectToThanks(transactionId, additionalQueryParams) {
 			checkInjections(this, injections);
-
 			if (transactionId) {
 				this.cookieStore.remove('kvbskt', { path: '/', secure: true });
-				window.location = `/checkout/post-purchase?kiva_transaction_id=${transactionId}`;
+				// eslint-disable-next-line max-len
+				window.location = `/checkout/post-purchase?kiva_transaction_id=${transactionId}${additionalQueryParams}`;
 			}
 		}
 	}

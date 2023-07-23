@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<h3 class="filter-title">
+		<h3 class="tw-mb-2">
 			Individuals or groups
 		</h3>
 		<kv-radio
@@ -29,10 +29,11 @@
 
 <script>
 import _get from 'lodash/get';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import KvRadio from '@/components/Kv/KvRadio';
 
 export default {
+	name: 'GroupRadios',
 	inject: ['apollo', 'cookieStore'],
 	components: {
 		KvRadio,
@@ -45,6 +46,7 @@ export default {
 	apollo: {
 		query: gql`query autolendProfileIsGroup {
 			autolending @client {
+				id
 				currentProfile {
 					id
 					loanSearchCriteria {
@@ -79,6 +81,7 @@ export default {
 				this.apollo.mutate({
 					mutation: gql`mutation updateIsGroup($isGroup: Boolean) {
 						autolending @client {
+							id
 							editProfile(profile: {
 								loanSearchCriteria: {
 									filters: {
@@ -97,6 +100,3 @@ export default {
 	},
 };
 </script>
-
-<style lang="scss" scoped>
-</style>

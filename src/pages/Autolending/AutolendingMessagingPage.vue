@@ -1,5 +1,5 @@
 <template>
-	<div class="row autolending-messaging-content">
+	<div class="row autolending-messaging-content tw-prose">
 		<template v-if="action == 'opt-out'">
 			<div data-test="opt-out-success" class="small-12 medium-10 columns" v-if="success">
 				<!-- Success -->
@@ -61,6 +61,7 @@
 <script>
 
 export default {
+	name: 'AutolendingMessagingPage',
 	props: {
 		success: {
 			type: Boolean,
@@ -82,6 +83,3 @@ export default {
 	},
 };
 </script>
-
-<style lang="scss" scoped>
-</style>

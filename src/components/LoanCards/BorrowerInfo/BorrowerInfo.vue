@@ -10,11 +10,7 @@
 			@track-loan-card-interaction="trackInteraction"
 		/>
 		<borrower-info-body
-			:amount="amount"
-			:status="status"
-			:borrower-count="borrowerCount"
 			:use="use"
-			:name="name"
 			:loan-id="loanId"
 			@track-loan-card-interaction="trackInteraction"
 		/>
@@ -26,6 +22,7 @@ import BorrowerInfoHeader from '@/components/LoanCards/BorrowerInfo/BorrowerInfo
 import BorrowerInfoBody from '@/components/LoanCards/BorrowerInfo/BorrowerInfoBody';
 
 export default {
+	name: 'BorrowerInfo',
 	props: {
 		use: {
 			type: String,
@@ -55,28 +52,6 @@ export default {
 			type: String,
 			default: ''
 		},
-		amount: {
-			type: String,
-			default: ''
-		},
-		status: {
-			type: String,
-			default: ''
-		},
-		borrowerCount: {
-			type: Number,
-			default: 1
-		},
-		loanLength: {
-			type: Number,
-			default: null
-		},
-		/*
-		activeSort: {
-			type: String,
-			default: 'Popularity'
-		},
-		*/
 	},
 	components: {
 		BorrowerInfoBody,

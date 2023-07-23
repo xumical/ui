@@ -37,6 +37,7 @@ import KvDropdown from '@/components/Kv/KvDropdown';
 import TheLendMenu from '@/components/WwwFrame/LendMenu/TheLendMenu';
 
 export default {
+	name: 'MonthlyGoodExpMenuWrapper',
 	components: {
 		KvDropdown,
 		KvIcon,
@@ -50,7 +51,6 @@ export default {
 	},
 	methods: {
 		onBorrowerMenuShow() {
-			this.$refs.lendMenuDesktop.onOpen();
 			this.$kvTrackEvent('TopNav', 'hover-Borrower-menu', 'Find a borrower');
 		},
 		onBorrowerMenuHide() {
@@ -76,13 +76,13 @@ export default {
 
 		.header-button {
 			flex: 1;
-			color: $kiva-accent-blue;
+			color: rgb(var(--text-action));
 			border-right: 0;
 
 			&:hover {
 				background-color: $kiva-bg-darkgray;
 				text-decoration: none;
-				color: $kiva-accent-blue;
+				color: rgb(var(--text-action-highlight));
 			}
 		}
 
@@ -91,7 +91,7 @@ export default {
 		}
 
 		.triangle-icon {
-			fill: $kiva-accent-blue;
+			fill: rgb(var(--text-action));
 		}
 
 		::v-deep {

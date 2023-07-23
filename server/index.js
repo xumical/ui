@@ -1,14 +1,13 @@
 require('dotenv').config({ path: '/etc/kiva-ui-server/config.env' });
 const cluster = require('cluster');
 const http = require('http');
-const ddTrace = require('dd-trace');
 const express = require('express');
 const compression = require('compression');
 const helmet = require('helmet');
 const locale = require('locale');
 const serverRoutes = require('./available-routes-middleware');
+const sitemapMiddleware = require('./sitemap/middleware');
 const authRouter = require('./auth-router');
-const mockGraphQLRouter = require('./mock-graphql-router');
 const sessionRouter = require('./session-router');
 const timesyncRouter = require('./timesync-router');
 const liveLoanRouter = require('./live-loan-router');
@@ -22,11 +21,7 @@ const logger = require('./util/errorLogger');
 const initializeTerminus = require('./util/terminusConfig');
 
 // Initialize tracing
-if (config.server.enableDDTrace) {
-	// TODO: consider where it's useful to active plugins and do so via env configs
-	// REF: https://docs.datadoghq.com/tracing/runtime_metrics/nodejs/
-	ddTrace.init({ runtimeMetrics: true });
-}
+require('./util/ddTrace');
 
 // Initialize a Cache instance, Should Only be called once!
 const cache = initCache(config.server);
@@ -41,7 +36,9 @@ if (config.server.gzipEnabled) {
 }
 
 // Set sensible security headers for express
-app.use(helmet());
+app.use(helmet({
+	contentSecurityPolicy: false,
+}));
 
 // Set headers for static files
 function setHeaders(res, path) {
@@ -55,7 +52,7 @@ function setHeaders(res, path) {
 	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 }
 
-app.use(express.static('dist', {
+app.use('/static', express.static('dist/static', {
 	setHeaders,
 	maxAge: '1y'
 }));
@@ -64,18 +61,14 @@ app.use(express.static('dist', {
 // -> placed here to exclude static
 app.use(logger.requestLogger);
 
-// Setup optional mock graphql server
-if (argv.mock) {
-	app.use('/', mockGraphQLRouter(config.app.graphqlUri));
-	config.app.graphqlUri = `http://localhost:${port}/graphql`;
-	config.app.auth0.enable = false;
-}
-
 // Read locale from request
 app.use(locale(config.app.locale.supported, config.app.locale.default));
 
 // Apply serverRoutes middleware to expose available routes
 app.use('/ui-routes', serverRoutes);
+
+// Apply sitemap middleware to expose routes we want search engine crawlers to see
+app.use('/sitemaps/ui.xml', sitemapMiddleware(config.app, cache));
 
 // Handle time sychronization requests
 app.use('/', timesyncRouter());
@@ -137,6 +130,7 @@ if (config.server.disableCluster) {
 		}
 
 		// Check if work id is died
+		// eslint-disable-next-line no-unused-vars
 		cluster.on('exit', (worker, code, signal) => {
 			console.info(JSON.stringify({
 				meta: {},

@@ -3,6 +3,7 @@ require('../build/check-versions')();
 
 // dependencies
 require('dotenv').config({ path: '/etc/kiva-ui-server/config.env' });
+require('dotenv').config({ path: './.config.env' });
 const chokidar = require('chokidar');
 const express = require('express');
 const helmet = require('helmet');
@@ -16,8 +17,8 @@ const threadLoader = require('thread-loader');
 
 // Import Middleware for Exposing server routes
 const serverRoutes = require('./available-routes-middleware');
+const sitemapMiddleware = require('./sitemap/middleware');
 const authRouter = require('./auth-router');
-const mockGraphQLRouter = require('./mock-graphql-router');
 const sessionRouter = require('./session-router');
 const timesyncRouter = require('./timesync-router');
 const liveLoanRouter = require('./live-loan-router');
@@ -37,17 +38,12 @@ const port = argv.port || config.server.port;
 const app = express();
 
 // Set sensible security headers for express
-app.use(helmet());
+app.use(helmet({
+	contentSecurityPolicy: false,
+}));
 
 // Setup Request Logger
 app.use(logger.requestLogger);
-
-// Setup optional mock graphql server
-if (argv.mock) {
-	app.use('/', mockGraphQLRouter(config.app.graphqlUri));
-	config.app.graphqlUri = `http://localhost:${port}/graphql`;
-	config.app.auth0.enable = false;
-}
 
 // Setup thread loader for use in webpack build
 threadLoader.warmup({
@@ -123,7 +119,7 @@ chokidar.watch(path.resolve(__dirname, 'index.template.html')).on('change', () =
 });
 
 // update when the client manifest changes
-clientCompiler.plugin('done', rawStats => {
+clientCompiler.hooks.done.tap('done', rawStats => {
 	// abort if there were errors
 	const stats = rawStats.toJson();
 	if (stats.errors.length) return;
@@ -154,6 +150,9 @@ app.use(locale(config.app.locale.supported, config.app.locale.default));
 
 // Apply serverRoutes middleware to expose available routes
 app.use('/ui-routes', serverRoutes);
+
+// Apply sitemap middleware to expose routes we want search engine crawlers to see
+app.use('/sitemaps/ui.xml', sitemapMiddleware(config.app, cache));
 
 // Handle time sychronization requests
 app.use('/', timesyncRouter());

@@ -2,32 +2,76 @@
 	<div>
 		<!-- MG Selector Desktop -->
 		<section
-			class="monthly-good-selector show-for-medium"
-			:class="{ 'sticky': isSticky}"
-			:style="{bottom: mgStickBarOffset + 'px'}"
+			:class="[
+				'monthly-good-selector',
+				'tw-invisible md:tw-visible',
+				'tw-bg-brand-50',
+				'tw-px-3 tw-py-0',
+				'tw-rounded-t',
+				{
+					'sticky': isSticky,
+					'tw-fixed tw-bottom-0 tw-w-full tw-z-sticky': isSticky,
+					'tw-relative': !isSticky
+				}
+			]"
+			:style="{ bottom: mgStickBarOffset + 'px' }"
 		>
-			<monthly-good-selector />
+			<monthly-good-selector-desktop :pre-selected-category="preSelectedCategory" />
 		</section>
 
-		<!-- MG Selector Mobile -->
-		<section
-			class="monthly-good-selector section show-for-small-only"
-			v-if="isMobile"
+		<!-- MG Selector Mobile show-for-small-only, show only after scrolling initially  -->
+		<transition
+			enter-active-class="tw-transition-all tw-duration-1000 tw-delay-300 tw-ease-in-out"
+			enter-class="tw-translate-y-full tw-opacity-0"
+			enter-to-class="tw-translate-y-0 tw-opacity-100"
 		>
-			<monthly-good-selector-mobile />
-		</section>
+			<section
+				:class="[
+					'monthly-good-selector',
+					'tw-visible md:tw-invisible',
+					'tw-bg-primary',
+					'tw-border-t tw-border-b tw-border-tertiary',
+					'tw-px-3 tw-pt-2.5 tw-pb-3',
+					'tw-text-center',
+					{
+						'sticky': isSticky,
+						'tw-fixed tw-bottom-0 tw-w-full tw-z-sticky': isSticky,
+						'tw-relative': !isSticky
+					}
+				]"
+				:style="{ bottom: mgStickBarOffset + 'px' }"
+				v-show="hasScrolled"
+				v-if="isMobile"
+			>
+				<monthly-good-selector-mobile
+					:pre-selected-category="preSelectedCategory"
+					:rich-text-content="mgMobileRichText"
+				/>
+			</section>
+		</transition>
 	</div>
 </template>
 
 <script>
 import _throttle from 'lodash/throttle';
 
-import MonthlyGoodSelector from '@/components/MonthlyGood/MonthlyGoodSelector';
+import MonthlyGoodSelectorDesktop from '@/components/MonthlyGood/MonthlyGoodSelectorDesktop';
 import MonthlyGoodSelectorMobile from '@/components/MonthlyGood/MonthlyGoodSelectorMobile';
+import loanGroupCategoriesMixin from '@/plugins/loan-group-categories';
 
 export default {
+	name: 'MonthlyGoodSelectorWrapper',
+	props: {
+		/**
+		 * Content group content from Contentful
+		* */
+		content: {
+			type: Object,
+			default: () => {},
+		},
+	},
 	components: {
-		MonthlyGoodSelector,
+		MonthlyGoodSelectorDesktop,
 		MonthlyGoodSelectorMobile,
 	},
 	data() {
@@ -35,16 +79,48 @@ export default {
 			isSticky: false,
 			initialBottomPosition: 0,
 			mgStickBarOffset: 0,
+			hasScrolled: false,
 			isMobile: false
 		};
 	},
+	mixins: [
+		loanGroupCategoriesMixin,
+	],
 	computed: {
 		throttledScroll() {
 			// prevent onScroll from being called more than once every 100ms
 			return _throttle(this.onScroll, 100);
-		}
+		},
+		mgSelectorSetting() {
+			return this.content?.contents?.find(
+				({ contentType }) => contentType === 'uiSetting'
+			) ?? {};
+		},
+		mgMobileRichText() {
+			return this.content?.contents?.find(
+				({ contentType }) => contentType === 'richTextContent'
+			) ?? {};
+		},
+		alwaysSticky() {
+			return this.mgSelectorSetting?.dataObject?.alwaysSticky ?? false;
+		},
+		preSelectedCategorySetting() {
+			return this.mgSelectorSetting?.dataObject?.preSelectedCategory ?? null;
+		},
+		preSelectedCategory() {
+			// Validated Category Setting
+			// Check setting to make sure it is an actual category or return null
+			// Must return null (no preselected category) or a valid category object
+			return this.lendingCategories.find(({ value }) => value === this.preSelectedCategorySetting) ?? null;
+		},
 	},
 	methods: {
+		// this is required to prevent global events which may trigger
+		// opening the invisible lightbox in the mobile MG selector.
+		// which may have unwanted consequences with the page scroll
+		determineIfMobile() {
+			this.isMobile = document.documentElement.clientWidth < 735;
+		},
 		// Determine if MG desktop selector should be sticky or not
 		onScroll() {
 			if ((document.documentElement.scrollTop + window.innerHeight) <= this.initialBottomPosition) {
@@ -64,44 +140,54 @@ export default {
 			const heightOfMgSelector = this.$el.getElementsByClassName('monthly-good-selector')[0].offsetHeight;
 			const scrollPositionOfPage = window.scrollY;
 
-			this.initialBottomPosition = top + scrollPositionOfPage + heightOfMgSelector;
+			// override for always sticky behavior
+			if (this.alwaysSticky) {
+				this.initialBottomPosition = 0;
+			} else {
+				this.initialBottomPosition = top + scrollPositionOfPage + heightOfMgSelector;
+			}
+
 			this.onScroll();
 		},
 		setMgStickyBarOffset() {
 			let offsetHeight = 0;
 			const basketBar = document.getElementsByClassName('basket-bar')[0];
-			const cookieBanner = document.getElementsByClassName('cookie-banner-container')[0];
+			const cookieBanner = document.getElementById('onetrust-banner-sdk');
 			// Height of basket bar if present
 			if (typeof basketBar !== 'undefined' && basketBar.clientHeight > 0) {
 				offsetHeight = basketBar.clientHeight;
 			}
 			// Height of Cookie banner if present (overrides basket bar if present)
-			if (typeof cookieBanner !== 'undefined' && cookieBanner.clientHeight > 0) {
+			if (cookieBanner && cookieBanner.clientHeight > 0) {
 				offsetHeight = cookieBanner.clientHeight;
 			}
 			// set offset
 			this.mgStickBarOffset = offsetHeight;
-		},
-		determineIfMobile() {
-			this.isMobile = document.documentElement.clientWidth < 480;
 		}
 	},
 	beforeDestroy() {
 		window.removeEventListener('scroll', this.throttledScroll);
+		window.removeEventListener('scroll', () => {
+			this.hasScrolled = true;
+		});
 		window.removeEventListener('resize', _throttle(() => {
 			this.initStickyBehavior();
 			this.determineIfMobile();
 		}, 200));
 	},
 	mounted() {
+		this.determineIfMobile();
+
 		window.addEventListener('scroll', this.throttledScroll);
+		window.addEventListener('scroll', () => {
+			this.hasScrolled = true;
+		});
 		window.addEventListener('resize', _throttle(() => {
 			this.initStickyBehavior();
 			this.determineIfMobile();
 		}, 200));
 
 		this.initStickyBehavior();
-		this.determineIfMobile();
 	},
 };
 </script>
@@ -127,27 +213,12 @@ footer.www-footer {
 <style lang="scss" scoped>
 @import "settings";
 
-// utils
-.section {
-	position: relative;
-	padding: 2rem 0;
-
-	@include breakpoint(large) {
-		padding: 2rem 0;
-	}
-}
-
 .monthly-good-selector {
-	border-radius: rem-calc(20) rem-calc(20) 0 0;
-	background-color: $white;
-
 	&.sticky {
-		position: fixed;
-		bottom: 0;
-		transition: bottom 0.4s;
-		z-index: 1000;
-		width: 100%;
+		// probably doable with tw, will revisit later
 		box-shadow: 0 -5px 80px rgba(0, 0, 0, 0.1);
+		// Temporary scss override to ensure layering over header in mobile
+		z-index: 1000;
 	}
 }
 </style>

@@ -18,6 +18,7 @@ import anyOrSelectedAutolendingFilter from '@/plugins/any-or-selected-autolendin
 import CheckList from '@/pages/Autolending/CheckList';
 
 export default {
+	name: 'AttributeFilter',
 	components: {
 		CheckList,
 	},
@@ -61,7 +62,7 @@ export default {
 			const eligibleAttributes = this.allAttributes.filter(attribute => {
 				// TODO: potentially exclude some attributes simimlar to lend/filter
 				if (this.initialAttributes.length) {
-					return this.initialAttributes.includes(attribute.id) || false;
+					return this.initialAttributes.includes(attribute.name) || false;
 				}
 				return true;
 			});

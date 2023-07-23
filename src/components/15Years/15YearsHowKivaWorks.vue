@@ -1,5 +1,5 @@
 <template>
-	<div class="works section">
+	<div class="section tw-bg-primary tw-text-primary">
 		<div class="row">
 			<div class="columns">
 				<fifteen-years-section-header class="works__header">
@@ -11,7 +11,7 @@
 					</template>
 				</fifteen-years-section-header>
 
-				<p class="works__subhead">
+				<p class="works__subhead tw-text-h2">
 					By lending as little as $25 on Kiva, you can support the causes you care
 					about and make a real personal impact.
 				</p>
@@ -33,6 +33,7 @@ const step3Video = require('@/assets/media/15-years/step3.mp4');
 const step4Video = require('@/assets/media/15-years/step4.mp4');
 
 export default {
+	name: '15YearsHowKivaWorks',
 	components: {
 		FifteenYearsSectionHeader,
 		FifteenYearsHowKivaWorksCarousel
@@ -83,16 +84,11 @@ export default {
 /* stylelint-disable no-descending-specificity */
 
 .works {
-	background: #fff;
-	color: $twilight;
-
 	/* hides the horizontal scrollbar created by hacking the carousel below */
 	width: 100%;
 	overflow-x: hidden;
 
 	&__subhead {
-		@include h4();
-
 		max-width: rem-calc(913);
 	}
 

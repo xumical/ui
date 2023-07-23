@@ -12,6 +12,7 @@ import { AisSearchBox } from 'vue-instantsearch';
 import KvIcon from '@/components/Kv/KvIcon';
 
 export default {
+	name: 'AlgoliaSearchBox',
 	components: {
 		KvIcon,
 		AisSearchBox,
@@ -34,8 +35,14 @@ export default {
 
 	.ais-SearchBox-form {
 		.ais-SearchBox-input {
+			width: 100%;
 			border-radius: rem-calc(2);
+			padding: 0.5rem;
 			padding-left: 3rem;
+			font-size: 1rem;
+			height: 2.6875rem;
+			margin: 0 0 1rem;
+			border: 1px solid rgb(var(--border-tertiary));
 
 			&::placeholder {
 				font-style: normal;
@@ -58,7 +65,7 @@ export default {
 			height: 2.6875rem;
 
 			.ais-SearchBox-resetIcon {
-				fill: #9d9c9e;
+				fill: rgb(var(--text-tertiary));
 			}
 		}
 

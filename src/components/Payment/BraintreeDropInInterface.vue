@@ -1,6 +1,6 @@
 <template>
 	<div class="drop-in-wrapper">
-		<div id="dropin-container" class="fs-exclude"></div>
+		<div id="dropin-container" class="data-hj-suppress"></div>
 		<kv-loading-spinner v-if="updatingPaymentWrapper" />
 	</div>
 </template>
@@ -8,8 +8,7 @@
 <script>
 import _get from 'lodash/get';
 import numeral from 'numeral';
-import * as Sentry from '@sentry/browser';
-import Dropin from 'braintree-web-drop-in';
+import * as Sentry from '@sentry/vue';
 import getClientToken from '@/graphql/query/checkout/getClientToken.graphql';
 import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
 
@@ -19,6 +18,7 @@ import KvLoadingSpinner from '@/components/Kv/KvLoadingSpinner';
 * https://braintree.github.io/braintree-web-drop-in/docs/current/module-braintree-web-drop-in.html
 * */
 export default {
+	name: 'BraintreeDropInInterface',
 	components: {
 		KvLoadingSpinner,
 	},
@@ -82,6 +82,40 @@ export default {
 			updatingPaymentWrapper: false,
 		};
 	},
+	computed: {
+		formattedAmount() {
+			return numeral(this.amount).format('0.00');
+		},
+		applePaymentRequest() {
+			return {
+				total: {
+					label: 'Kiva',
+					amount: this.formattedAmount,
+				},
+				requiredBillingContactFields: ['postalAddress']
+			};
+		},
+		googleTransactionInfo() {
+			return {
+				totalPriceStatus: 'FINAL',
+				totalPrice: this.formattedAmount,
+				currencyCode: 'USD',
+			};
+		}
+	},
+	watch: {
+		amount(next, prev) {
+			if (next !== prev) {
+				this.btDropinInstance?.updateConfiguration?.('paypal', 'amount', this.formattedAmount);
+				this.btDropinInstance?.updateConfiguration?.(
+					'googlePay',
+					'transactionInfo',
+					this.googleTransactionInfo
+				);
+				this.btDropinInstance?.updateConfiguration?.('applePay', 'paymentRequest', this.applePaymentRequest);
+			}
+		}
+	},
 	methods: {
 		setUpdatingPaymentWrapper(state) {
 			this.updatingPaymentWrapper = state;
@@ -93,7 +127,7 @@ export default {
 				this.apollo.query({
 					query: getClientToken,
 					variables: {
-						amount: numeral(this.amount).format('0.00'),
+						amount: this.formattedAmount,
 						useCustomerId: true
 					}
 				}).then(response => {
@@ -108,11 +142,10 @@ export default {
 							scope.setTag('bt_get_client_token_error', errorMessage);
 							Sentry.captureException(errorCode);
 						});
+						this.$showTipMsg('An Error has occured. Please refresh the page and try again.', 'error');
 					} else {
 						this.clientToken = _get(response, 'data.shop.getClientToken');
 						this.initializeDropIn(this.clientToken);
-						// Replace our loader with the dropIn loader after a small delay
-						setTimeout(() => this.setUpdatingPaymentWrapper(false), 500);
 					}
 				}).catch(error => {
 					console.error(error);
@@ -123,13 +156,17 @@ export default {
 				this.initializeDropIn(this.$appConfig.btTokenKey);
 			}
 		},
-		initializeDropIn(authToken) {
+		async initializeDropIn(authToken) {
+			const { default: Dropin } = await import('braintree-web-drop-in');
+			// Replace our loader with the dropIn loader after a small delay
+			setTimeout(() => this.setUpdatingPaymentWrapper(false), 500);
 			Dropin.create({
 				authorization: authToken,
 				container: '#dropin-container',
 				dataCollector: {
 					kount: true // Required if Kount fraud data collection is enabled
 				},
+				// vaultManager: true, - Useful for testing and removing payment methods easily.
 				paymentOptionPriority: this.paymentTypes,
 				preselectVaultedPaymentMethod: this.preselectVaultedPaymentMethod,
 				card: {
@@ -139,7 +176,7 @@ export default {
 				},
 				paypal: {
 					flow: this.flow,
-					amount: numeral(this.amount).format('0.00'),
+					amount: this.formattedAmount,
 					currency: 'USD',
 					buttonStyle: {
 						color: 'gold',
@@ -150,11 +187,7 @@ export default {
 				googlePay: {
 					googlePayVersion: 2,
 					merchantId: this.$appConfig.googlePay.merchantId,
-					transactionInfo: {
-						totalPriceStatus: 'FINAL',
-						totalPrice: numeral(this.amount).format('0.00'),
-						currencyCode: 'USD'
-					},
+					transactionInfo: this.googleTransactionInfo,
 					allowedPaymentMethods: [{
 						type: 'CARD',
 						parameters: {
@@ -167,13 +200,7 @@ export default {
 				},
 				applePay: {
 					displayName: 'Kiva',
-					paymentRequest: {
-						total: {
-							label: 'Kiva',
-							amount: numeral(this.amount).format('0.00'),
-						},
-						requiredBillingContactFields: ['postalAddress']
-					}
+					paymentRequest: this.applePaymentRequest
 				}
 			}).then(btCreateInstance => {
 				this.btDropinInstance = btCreateInstance;
@@ -224,8 +251,12 @@ export default {
 		},
 	},
 	mounted() {
-		this.getDropInAuthToken();
-	}
+		// Prevents BT error in the case this component gets initialized multiple times
+		const isElementEmpty = document?.getElementById('dropin-container')?.innerHTML === '';
+		if (isElementEmpty) {
+			this.getDropInAuthToken();
+		}
+	},
 };
 </script>
 
@@ -252,15 +283,6 @@ $border-width: 1px;
 			background-color: $white;
 		}
 
-		// Initial Payment Selection labels
-		[data-braintree-id="choose-a-way-to-pay"],
-		[data-braintree-id="methods-label"],
-		[data-braintree-id="other-ways-to-pay"] {
-			color: $kiva-text-light;
-			width: 100%;
-			text-align: center;
-		}
-
 		// Various text styles
 		.braintree-method__label,
 		.braintree-option__label,
@@ -271,36 +293,9 @@ $border-width: 1px;
 			text-align: left;
 		}
 
-		// Payment Option buttons on initial UI
-		[data-braintree-id="payment-options-container"] {
-			.braintree-option {
-				padding: 12px 16px;
-
-				&:first-child {
-					border-radius: $form-border-radius $form-border-radius 0 0;
-				}
-
-				&:last-child {
-					border-radius: 0 0 $form-border-radius $form-border-radius;
-				}
-			}
-		}
-
 		// Saved payment methods container
 		// List of vaulted cards
 		[data-braintree-id="methods-container"] {
-			.braintree-method {
-				width: 100%;
-
-				&:first-child {
-					border-radius: $form-border-radius $form-border-radius 0 0;
-				}
-
-				&:last-child {
-					border-radius: 0 0 $form-border-radius $form-border-radius;
-				}
-			}
-
 			.braintree-method--active {
 				border-color: $active-border-color;
 				border-width: $border-width;
@@ -313,68 +308,6 @@ $border-width: 1px;
 				height: 1.95rem;
 				width: 1.95rem;
 				margin-right: rem-calc(4);
-			}
-		}
-
-		// 'Choose another way to pay' text
-		[data-braintree-id="toggle"] {
-			font-weight: $global-weight-highlight;
-			color: $kiva-accent-blue;
-			background: none;
-			font-size: 1rem;
-			padding: 0 rem-calc(18) rem-calc(2) rem-calc(18);
-
-			&:hover {
-				background: none;
-				font-weight: $global-weight-highlight;
-			}
-
-			& span {
-				border: none;
-
-				&:focus,
-				&:hover {
-					text-decoration: underline;
-					color: $highlight-blue;
-				}
-			}
-		}
-
-		// Braintree section headings
-		// 'Choose a way to pay'
-		// 'Paying with Card'
-		// 'Other ways to pay'
-		.braintree-heading {
-			font-size: $small-text-font-size;
-		}
-
-		// Payment method form headers
-		[data-braintree-id="paypal-sheet-header"],
-		[data-braintree-id="apple-pay-sheet-header"],
-		[data-braintree-id="google-pay-sheet-header"],
-		[data-braintree-id="card-sheet-header"] {
-			padding: 0 0 1rem 0;
-			border: 0;
-			background-color: transparent;
-
-			// Payment Method logo in header
-			.braintree-sheet__logo--header {
-				display: none;
-				visibility: hidden;
-			}
-
-			// Form header text
-			.braintree-sheet__text,
-			.braintree-sheet__label {
-				margin-left: 0;
-				font-weight: $global-weight-highlight;
-				color: $kiva-glyph-primary-black;
-				font-size: $medium-text-font-size;
-			}
-
-			// Moves credit card icons to new line.
-			.braintree-sheet__header-label {
-				width: 100%;
 			}
 		}
 
@@ -428,13 +361,6 @@ $border-width: 1px;
 							}
 						}
 					}
-				}
-
-				// Form field labels
-				.braintree-form__label {
-					color: $kiva-glyph-primary-black;
-					font-weight: $global-weight-highlight;
-					font-size: $normal-text-font-size;
 				}
 
 				// Help text next to form label.
@@ -496,4 +422,119 @@ $border-width: 1px;
 .drop-in-wrapper {
 	text-align: center;
 }
+</style>
+<style lang="postcss">
+	/* New Tailwind Styles */
+
+	/* Small margin for loader */
+	.loading-spinner {
+		@apply tw-mb-2;
+	}
+
+	/* Braintree section headings
+	'Choose a way to pay'
+	'Paying with Card'
+	'Other ways to pay' */
+	#dropin-container [data-braintree-id="choose-a-way-to-pay"],
+	#dropin-container [data-braintree-id="methods-label"],
+	#dropin-container [data-braintree-id="other-ways-to-pay"] {
+		@apply tw-text-small tw-text-primary tw-text-tertiary tw-w-full;
+	}
+
+	/* Payment method container */
+	#dropin-container [data-braintree-id="sheet-container"] {
+		@apply tw-bg-white;
+	}
+
+	/* Payment method form headers */
+	#dropin-container [data-braintree-id="paypal-sheet-header"],
+	#dropin-container [data-braintree-id="apple-pay-sheet-header"],
+	#dropin-container [data-braintree-id="google-pay-sheet-header"],
+	#dropin-container [data-braintree-id="card-sheet-header"] {
+		/* bottom padding and bottom margin creates spacing around the BT loading indicator */
+		@apply tw-bg-transparent tw-border-0 tw-p-0 tw-pb-1 tw-mb-1;
+	}
+
+	/* Payment Method logo in header */
+	#dropin-container [data-braintree-id="paypal-sheet-header"] .braintree-sheet__logo--header,
+	#dropin-container [data-braintree-id="apple-pay-sheet-header"] .braintree-sheet__logo--header,
+	#dropin-container [data-braintree-id="google-pay-sheet-header"] .braintree-sheet__logo--header,
+	#dropin-container [data-braintree-id="card-sheet-header"] .braintree-sheet__logo--header {
+		@apply tw-hidden;
+	}
+
+	/* Moves credit card icons to new line. */
+	#dropin-container [data-braintree-id="paypal-sheet-header"] .braintree-sheet__header-label,
+	#dropin-container [data-braintree-id="apple-pay-sheet-header"] .braintree-sheet__header-label,
+	#dropin-container [data-braintree-id="google-pay-sheet-header"] .braintree-sheet__header-label,
+	#dropin-container [data-braintree-id="card-sheet-header"] .braintree-sheet__header-label {
+		@apply tw-w-full;
+	}
+
+	/* Payment method form headers text
+	'Pay with card'
+	'Paypal'
+	'GooglePay'
+	'ApplePay' */
+	#dropin-container [data-braintree-id="paypal-sheet-header"] .braintree-sheet__text,
+	#dropin-container [data-braintree-id="apple-pay-sheet-header"] .braintree-sheet__text,
+	#dropin-container [data-braintree-id="google-pay-sheet-header"] .braintree-sheet__text,
+	#dropin-container [data-braintree-id="card-sheet-header"] .braintree-sheet__text,
+	#dropin-container [data-braintree-id="paypal-sheet-header"] .braintree-sheet__label,
+	#dropin-container [data-braintree-id="apple-pay-sheet-header"] .braintree-sheet__label,
+	#dropin-container [data-braintree-id="google-pay-sheet-header"] .braintree-sheet__label,
+	#dropin-container [data-braintree-id="card-sheet-header"] .braintree-sheet__label {
+		@apply tw-ml-0 tw-text-h4 tw-text-primary tw-text-left;
+	}
+
+	/* Saved payment methods container
+	List of vaulted cards */
+	#dropin-container [data-braintree-id="upper-container"]::before {
+		background-color: transparent;
+	}
+
+	#dropin-container [data-braintree-id="methods-container"] .braintree-method {
+		@apply tw-border-solid tw-border-tertiary tw-w-full tw-border tw-p-2;
+	}
+
+	#dropin-container [data-braintree-id="methods-container"] .braintree-method:first-child {
+		@apply tw-rounded-tr tw-rounded-tl tw-rounded-bl-none tw-rounded-br-none;
+	}
+
+	#dropin-container [data-braintree-id="methods-container"] .braintree-method:last-child {
+		@apply tw-rounded-br tw-rounded-bl;
+	}
+
+	/* Payment Option buttons on initial UI */
+	#dropin-container [data-braintree-id="payment-options-container"] .braintree-option {
+		@apply tw-border-solid tw-border-tertiary tw-w-full tw-border tw-border-b-0 tw-p-2;
+	}
+
+	#dropin-container [data-braintree-id="payment-options-container"] .braintree-option:first-child {
+		@apply tw-rounded-tr tw-rounded-tl tw-rounded-bl-none tw-rounded-br-none;
+	}
+
+	#dropin-container [data-braintree-id="payment-options-container"] .braintree-option:last-child {
+		@apply tw-rounded-br tw-rounded-bl tw-border-b;
+	}
+
+	/* 'Choose another way to pay' text */
+	#dropin-container [data-braintree-id="toggle"],
+	#dropin-container [data-braintree-id="toggle"]:hover {
+		@apply tw-bg-transparent tw-text-h4 tw-text-link;
+	}
+
+	#dropin-container [data-braintree-id="toggle"] span,
+	#dropin-container [data-braintree-id="toggle"] span:focus,
+	#dropin-container [data-braintree-id="toggle"] span:hover {
+		@apply tw-text-base tw-no-underline tw-border-0;
+		@apply tw-font-medium;
+	}
+
+	/* Credit Card Payment Content
+	Form field labels */
+	#dropin-container [data-braintree-id="card"] .braintree-sheet__content .braintree-form__label {
+		@apply tw-text-base;
+		@apply tw-font-medium;
+	}
 </style>

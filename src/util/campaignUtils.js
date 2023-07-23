@@ -1,4 +1,4 @@
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import promoCampaign from '@/graphql/query/promoCampaign.graphql';
 
 /**
@@ -119,7 +119,7 @@ export function getPromoFromBasket(promoFundId = null, apollo) {
 	return apollo.query({
 		query: promoCampaign,
 		variables: {
-			promoFundId: String(promoFundId)
+			promoFundId: promoFundId !== null ? String(promoFundId) : promoFundId
 		},
 		fetchPolicy: 'network-only',
 	});

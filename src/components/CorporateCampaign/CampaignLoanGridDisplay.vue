@@ -3,32 +3,39 @@
 		id="campaign-loans"
 		class="campaign-loans row align-center"
 	>
-		<div class="columns small-12 large-8 align-self-middle" v-if="isVisible && loans.length > 0">
-			<div class="loan-card-group row small-up-1 large-up-2 xxlarge-up-3">
-				<!-- GridLoanCard or LendHomepageLoanCard -->
-				<loan-card-controller
-					v-for="loan in loans"
-					class="cards-loan-card"
-					:items-in-basket="itemsInBasket"
-					:is-visitor="isVisitor"
-					:key="loan.id"
-					:loan="loan"
-					loan-card-type="LendHomepageLoanCard"
-					:disable-redirects="true"
+		<div class="columns align-self-middle" v-if="isVisible && loans.length > 0">
+			<div class="loan-card-group row tw-gap-x-4">
+				<kiva-classic-basic-loan-card
+					class="tw-mb-4"
+					v-for="(loan, index) in loanIds"
+					:item-index="index"
+					:key="`loan-${loan}`"
+					:loan-id="loan"
+					:show-action-button="true"
+					:custom-loan-details="true"
+					:custom-checkout-button-text="getCheckoutBtnText(loan)"
+					:checkout-route="checkoutRoute"
+					@show-loan-details="showLoanDetails(loans[index])"
 					@add-to-basket="addToBasket"
-					@image-click="showLoanDetails"
-					@read-more-link="showLoanDetails"
-					@name-click="showLoanDetails"
+					@custom-checkout-button-action="removeLoanFromBasket(loan)"
 				/>
 			</div>
-			<kv-pagination v-if="totalCount > 0" :total="totalCount" :limit="limit" @page-change="pageChange" />
+			<kv-pagination
+				v-if="totalCount > 0"
+				:total="totalCount"
+				:limit="limit"
+				:offset="offset"
+				@page-changed="pageChange"
+			/>
 			<div v-if="totalCount > 0" class="loan-count">
 				{{ totalCount }} loans
 			</div>
 		</div>
 
 		<div v-if="zeroLoans" class="zero-loans-state">
-			<h3>All borrowers matching this search have been funded.</h3>
+			<h3 class="tw-mb-2">
+				All borrowers matching this search have been funded.
+			</h3>
 			<p>
 				Please adjust your criteria or <a @click.prevent="resetSearchFilters">start a new search.</a>
 			</p>
@@ -49,11 +56,13 @@
 <script>
 import _invokeMap from 'lodash/invokeMap';
 import _mapValues from 'lodash/mapValues';
+import _map from 'lodash/map';
 import _merge from 'lodash/merge';
 import basicLoanQuery from '@/graphql/query/basicLoanData.graphql';
 import KvLoadingOverlay from '@/components/Kv/KvLoadingOverlay';
 import KvPagination from '@/components/Kv/KvPagination';
-import LoanCardController from '@/components/LoanCards/LoanCardController';
+import KivaClassicBasicLoanCard from '@/components/LoanCards/KivaClassicBasicLoanCard';
+import numeral from 'numeral';
 
 const loansPerPage = 9;
 
@@ -85,13 +94,14 @@ function fromUrlParams(params) {
 }
 
 export default {
+	name: 'CampaignLoanGridDisplay',
 	inject: ['apollo'],
 	components: {
 		// KvIcon,
 		// KvButton,
 		KvLoadingOverlay,
 		KvPagination,
-		LoanCardController,
+		KivaClassicBasicLoanCard,
 	},
 	props: {
 		checkoutVisible: {
@@ -118,6 +128,10 @@ export default {
 			type: Array,
 			default: () => [],
 		},
+		basketLoans: {
+			type: Array,
+			default: () => []
+		},
 		promoOnly: {
 			type: Object,
 			default: null
@@ -125,6 +139,10 @@ export default {
 		sortBy: {
 			type: String,
 			default: 'popularity'
+		},
+		checkoutRoute: {
+			type: String,
+			default: ''
 		}
 	},
 	data() {
@@ -142,6 +160,9 @@ export default {
 		};
 	},
 	computed: {
+		loanIds() {
+			return _map(this.loans, 'id');
+		},
 		urlParams() {
 			return toUrlParams({
 				offset: this.offset,
@@ -193,23 +214,31 @@ export default {
 		this.loanQueryFilters = this.filters;
 	},
 	methods: {
+		getCheckoutBtnText(loan) {
+			const amount = this.getAmountLended(loan);
+			if (amount > 0) {
+				return `Supported for ${numeral(amount).format('$0')}`;
+			}
+			return 'Supported';
+		},
 		addToBasket(payload) {
 			this.$emit('add-to-basket', payload);
 		},
-		showLoanDetails(payload) {
-			const selectedLoan = this.loans.find(loan => loan.id === payload.loanId);
-			this.$emit('show-loan-details', selectedLoan);
+		removeLoanFromBasket(loanId) {
+			this.$emit('remove-loan-from-basket', loanId);
+		},
+		showLoanDetails(loan) {
+			this.$emit('show-loan-details', loan);
 		},
 		fetchLoans() {
 			if (this.isVisible) {
 				this.loadingLoans = true;
 			}
 			this.zeroLoans = false;
-
 			this.apollo.query({
 				query: basicLoanQuery,
 				variables: this.loanQueryVars,
-				// fetchPolicy: 'network-only'
+				fetchPolicy: 'network-only'
 			}).then(({ data }) => {
 				this.loans = data.lend?.loans?.values ?? [];
 				this.totalCount = data.lend?.loans?.totalCount ?? 0;
@@ -237,13 +266,12 @@ export default {
 			// if it is, changes page to the last page and displays a tip message
 			const loansOutOfRange = loansArrayLength === 0 && pageQueryParam;
 			if (loansOutOfRange) {
-				this.pageChange(this.lastLoanPage);
+				this.pageChange({ pageOffset: loansPerPage * (this.lastLoanPage - 1) });
 			}
 		},
-		pageChange(number) {
-			const offset = loansPerPage * (number - 1);
-			this.offset = offset;
-			this.pageQuery = { page: number };
+		pageChange({ pageOffset }) {
+			this.offset = pageOffset;
+			this.pageQuery = { page: this.offset / loansPerPage };
 			this.pushChangesToUrl();
 		},
 		updateFromParams(query) {
@@ -264,6 +292,11 @@ export default {
 		},
 		resetSearchFilters() {
 			this.$emit('reset-loan-filters');
+		},
+		getAmountLended(loanId) {
+			if (this.basketLoans.length > 0) {
+				return this.basketLoans?.find(loan => String(loan.id) === String(loanId))?.price;
+			}
 		}
 	},
 };
@@ -278,23 +311,8 @@ $card-margin: rem-calc(14);
 $card-half-space: rem-calc(14/2);
 
 .campaign-loans {
-	position: relative;
-	background-color: rgba(0, 0, 0, 0.0125);
-	padding: 3rem 0;
-	max-width: inherit;
-
 	.loan-card-group {
-		display: flex;
 		justify-content: center;
-	}
-
-	.cards-loan-card {
-		border-radius: 0.65rem;
-		box-shadow: 0 0.65rem $card-margin $card-half-space rgb(153, 153, 153, 0.1);
-		width: $card-width;
-		max-width: $max-card-width;
-		flex: 1 0 auto;
-		margin: $card-margin;
 	}
 
 	.loan-count {

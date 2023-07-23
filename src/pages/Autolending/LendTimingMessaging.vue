@@ -1,11 +1,11 @@
 <template>
 	<div class="lend-timing-messaging">
 		<div v-if="legacyAutoLender">
-			<span class="text-notice">{{ autoLendNotice }}</span>
+			<span class="tw-text-tertiary tw-italic">{{ autoLendNotice }}</span>
 		</div>
 		<div
 			data-test="timing-explanation"
-			class="autolend-explanation-text"
+			class="autolend-explanation-text tw-text-brand"
 			v-if="isEnabled && this.cIdleStartTime !== null"
 		>
 			{{ autolendExplanationText }}
@@ -15,11 +15,12 @@
 
 <script>
 import _get from 'lodash/get';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import { differenceInCalendarDays } from 'date-fns';
 import numeral from 'numeral';
 
 export default {
+	name: 'LendTimingMessaging',
 	inject: ['apollo', 'cookieStore'],
 	data() {
 		return {
@@ -120,12 +121,14 @@ export default {
 	apollo: {
 		query: gql`query LendTimingMessaging {
 			my {
+				id
 				userAccount {
 					id
 					balance
 				}
 			}
 			autolending @client {
+				id
 				currentProfile {
 					id
 					isEnabled
@@ -168,13 +171,7 @@ export default {
 	margin-top: 1.5rem;
 }
 
-.text-notice {
-	color: $kiva-text-light;
-	font-style: italic;
-}
-
 .autolend-explanation-text {
-	color: $kiva-green;
 	max-width: 30rem;
 }
 </style>

@@ -3,8 +3,8 @@
 		<h3 v-if="title">
 			{{ title }}
 		</h3>
-
-		<div class="grid-loan-card">
+		<div class="grid-loan-card tw-bg-primary tw-border tw-border-tertiary">
+			<loan-tag v-if="showTags" :loan="loan" :amount-left="amountLeft" />
 			<loan-card-image
 				:loan-id="loan.id"
 				:name="loan.name"
@@ -20,15 +20,12 @@
 			<borrower-info
 				:loan-id="loan.id"
 				:name="loan.name"
-				:amount="loan.loanAmount"
-				:use="loan.use"
+				:use="loan.fullLoanUse"
 				:country="loan.geocode.country.name"
 				:iso-code="loan.geocode.country.isoCode"
 				:state="loan.geocode.state"
 				:city="loan.geocode.city"
 				:status="loan.status"
-				:borrower-count="loan.borrowerCount"
-				:loan-length="loan.lenderRepaymentTerm"
 
 				@track-loan-card-interaction="trackInteraction"
 			/>
@@ -48,7 +45,12 @@
 					:is-lent-to="loan.userProperties.lentTo"
 					:is-funded="isFunded"
 					:is-selected-by-another="isSelectedByAnother"
-
+					:is-amount-lend-button="lessThan25 && !enableFiveDollarsNotes"
+					:amount-left="amountLeft"
+					:show-now="!enableFiveDollarsNotes"
+					:enable-five-dollars-notes="enableFiveDollarsNotes"
+					class="tw-mt-2 tw-w-full"
+					:class="{'tw-mb-2' : !isMatchAtRisk && !isFunded}"
 					@click.native="trackInteraction({
 						interactionType: 'addToBasket',
 						interactionElement: 'Lend25'
@@ -58,7 +60,9 @@
 				/>
 
 				<matching-text
+					v-if="!isMatchAtRisk"
 					:matching-text="loan.matchingText"
+					:match-ratio="loan.matchRatio"
 					:is-funded="isFunded"
 					:is-selected-by-another="isSelectedByAnother"
 				/>
@@ -73,14 +77,17 @@ import BorrowerInfo from '@/components/LoanCards/BorrowerInfo/BorrowerInfo';
 import FundraisingStatus from '@/components/LoanCards/FundraisingStatus/FundraisingStatus';
 import LoanCardImage from '@/components/LoanCards/LoanCardImage';
 import MatchingText from '@/components/LoanCards/MatchingText';
+import LoanTag from '@/components/LoanCards/LoanTags/LoanTag';
 
 export default {
+	name: 'GridLoanCard',
 	components: {
 		ActionButton,
 		BorrowerInfo,
 		FundraisingStatus,
 		LoanCardImage,
 		MatchingText,
+		LoanTag
 	},
 	inject: ['apollo'],
 	props: {
@@ -97,6 +104,10 @@ export default {
 			default: false
 		},
 		isFunded: {
+			type: Boolean,
+			default: false
+		},
+		isMatchAtRisk: {
 			type: Boolean,
 			default: false
 		},
@@ -133,6 +144,19 @@ export default {
 			type: String,
 			default: ''
 		},
+		showTags: {
+			type: Boolean,
+			default: false
+		},
+		enableFiveDollarsNotes: {
+			type: Boolean,
+			default: false
+		}
+	},
+	computed: {
+		lessThan25() {
+			return this.amountLeft < 25 && this.amountLeft !== 0;
+		}
 	},
 	methods: {
 		toggleFavorite() {
@@ -140,7 +164,16 @@ export default {
 		},
 		trackInteraction(args) {
 			this.$emit('track-interaction', args);
-		}
+			if (args?.interactionType === 'addToBasket') {
+				this.$kvTrackEvent(
+					'loan-card',
+					'add-to-basket',
+					null,
+					this.loan.id,
+					this.lessThan25 ? this.amountLeft : 25
+				);
+			}
+		},
 	},
 };
 </script>
@@ -149,8 +182,6 @@ export default {
 @import 'settings';
 
 .grid-loan-card {
-	background-color: $white;
-	border: 1px solid $kiva-stroke-gray;
 	display: flex;
 	flex-direction: column;
 	height: 100%;

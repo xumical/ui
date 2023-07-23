@@ -2,8 +2,8 @@
 
 > a.k.a. Uue Lewis and the Views
 
-[![Build Status](https://github.com/kiva/ui/workflows/Ui%20Tests/badge.svg?branch=master)](https://github.com/kiva/ui/actions)
-[![Coverage Status](https://coveralls.io/repos/github/kiva/ui/badge.svg?branch=master)](https://coveralls.io/github/kiva/ui?branch=master)
+[![Build Status](https://github.com/kiva/ui/workflows/Ui%20Tests/badge.svg?branch=main)](https://github.com/kiva/ui/actions)
+[![Coverage Status](https://coveralls.io/repos/github/kiva/ui/badge.svg?branch=main)](https://coveralls.io/github/kiva/ui?branch=main)
 [![Dependabot Status](https://api.dependabot.com/badges/status?host=github&repo=kiva/ui)](https://dependabot.com)
 [![Known Vulnerabilities](https://snyk.io/test/github/kiva/ui/badge.svg)](https://snyk.io/test/github/kiva/ui)
 
@@ -20,14 +20,14 @@ Kiva welcomes outside contributions to our UI repository. If you have any ideas 
 # install dependencies
 $ npm install
 
-# optionally install husky git hooks
+# install husky git hooks (powers pre-commit linting)
 $ npx husky install
 
 # serve with hot reload at localhost:8888
 $ npm run dev -- --config=local
 # visit localhost:8888 for the home page
 # visit localhost:8888/ui-site-map to explore our page index
-# /styleguide, /lend-by-category, + /lend/filter are of great to explore
+# /styleguide, /lend-by-category, + /lend/filter are great to explore
 
 # COMPILED/PROD MODE
 
@@ -70,6 +70,10 @@ $ npm run dev
 $ npm run dev -- --config=local (any context outside of kiva vm)
 # visit localhost:8888/ui-site-map to explore some pages (/styleguide or /lend-by-category may be of interest)
 
+# Alternate configs:
+# use `dev-local` to run localhost mode against development Environments
+# use `dev-vm-mac` to run ui on your mac against the kiva vm
+
 # COMPILED/PROD MODE
 
 # build for production with minification
@@ -90,4 +94,3 @@ $ npm test
 ```
 
 For some more details, checkout the [template this is based on](http://vuejs-templates.github.io/webpack/) and the [docs for vue-loader](http://vuejs.github.io/vue-loader).
-

@@ -1,24 +1,32 @@
-import { differenceInMilliseconds } from 'date-fns';
-import _get from 'lodash/get';
-import _over from 'lodash/over';
-import * as Sentry from '@sentry/browser';
+import sub from 'date-fns/sub';
+import * as Sentry from '@sentry/vue'; // could be async import
 import syncDate from './syncDate';
 import logFormatter from './logFormatter';
 
-const isServer = typeof window === 'undefined';
-// only require auth0-js if we are not in a server environment
-const auth0js = !isServer ? require('auth0-js') : null;
+export const KIVA_ID_KEY = 'https://www.kiva.org/kiva_id';
+export const LAST_LOGIN_KEY = 'https://www.kiva.org/last_login';
+export const USED_MFA_KEY = 'https://www.kiva.org/used_mfa';
+const FAKE_AUTH_NAME = 'kvfa';
+const ALLOWED_FAKE_AUTH_DOMAINS = [
+	'login.dev.kiva.org',
+	'login.stage.kiva.org',
+];
+const SYNC_NAME = 'kvls';
+const LOGOUT_VALUE = 'o';
+const COOKIE_OPTIONS = { path: '/', secure: true };
 
 // These symbols are unique, and therefore are private to this scope.
 // For more details, see https://medium.com/@davidrhyswhite/private-members-in-es6-db1ccd6128a5
+const initWebAuth = Symbol('initWebAuth');
+const initMfaWebAuth = Symbol('initMfaWebAuth');
 const errorCallbacks = Symbol('errorCallbacks');
 const handleUnknownError = Symbol('handleUnknownError');
-const loginPromise = Symbol('loginPromise');
 const mfaTokenPromise = Symbol('mfaTokenPromise');
-const popupAuthorize = Symbol('authorize');
-const popupWindow = Symbol('popupWindow');
 const sessionPromise = Symbol('sessionPromise');
 const setAuthData = Symbol('setAuthData');
+const noteLoggedIn = Symbol('noteLoggedIn');
+const noteLoggedOut = Symbol('noteLoggedOut');
+const clearNotedLoginState = Symbol('clearNotedLoginState');
 
 function getErrorString(err) {
 	return `${err.error || err.code || err.name}: ${err.error_description || err.description}`;
@@ -29,6 +37,7 @@ export default class KvAuth0 {
 	constructor({
 		accessToken = '',
 		audience,
+		checkFakeAuth = false,
 		clientID,
 		cookieStore,
 		domain,
@@ -41,28 +50,60 @@ export default class KvAuth0 {
 		this.enabled = true;
 		this.user = user;
 		this.accessToken = accessToken;
-		this.isServer = isServer;
+		this.isServer = typeof window === 'undefined';
+		this.checkFakeAuth = !!checkFakeAuth;
 		this.cookieStore = cookieStore;
-		if (!this.isServer) {
-			// Setup Auth0 WebAuth client for authentication
+
+		// properties for WebAuth clients
+		this.audience = audience;
+		this.mfaAudience = mfaAudience;
+		this.clientID = clientID;
+		this.domain = domain;
+		this.redirectUri = redirectUri;
+		this.scope = scope;
+
+		if (this.fakeAuthAllowed()) {
+			// Set user from fake auth cookie if available
+			const idTokenPayload = this.getFakeIdTokenPayload();
+			if (idTokenPayload) {
+				this[setAuthData]({ idTokenPayload });
+				this[noteLoggedIn]();
+			}
+		}
+	}
+
+	// Setup Auth0 WebAuth client for authentication
+	[initWebAuth]() {
+		if (this.webAuth || this.isServer) {
+			return Promise.resolve();
+		}
+		return import('auth0-js').then(({ default: auth0js }) => {
 			this.webAuth = new auth0js.WebAuth({
-				audience,
-				clientID,
-				domain,
-				redirectUri,
+				audience: this.audience,
+				clientID: this.clientID,
+				domain: this.domain,
+				redirectUri: this.redirectUri,
 				responseType: 'token id_token',
-				scope,
+				scope: this.scope,
 			});
-			// Setup Auth0 WebAuth client for MFA management
+		});
+	}
+
+	// Setup Auth0 WebAuth client for MFA management
+	[initMfaWebAuth]() {
+		if (this.mfaWebAuth || this.isServer) {
+			return Promise.resolve();
+		}
+		return import('auth0-js').then(({ default: auth0js }) => {
 			this.mfaWebAuth = new auth0js.WebAuth({
-				audience: mfaAudience,
-				clientID,
-				domain,
-				redirectUri,
+				audience: this.mfaAudience,
+				clientID: this.clientID,
+				domain: this.domain,
+				redirectUri: this.redirectUri,
 				responseType: 'token',
 				scope: 'enroll read:authenticators remove:authenticators',
 			});
-		}
+		});
 	}
 
 	[setAuthData]({ idTokenPayload, accessToken, expiresIn } = {}) {
@@ -77,66 +118,102 @@ export default class KvAuth0 {
 		}
 	}
 
-	// Private method to handle popup authorization which can be called
-	// recursively to deal with authorization errors
-	[popupAuthorize](options, resolve) {
-		const startTime = new Date();
-		this[popupWindow] = this.webAuth.popup.authorize({
-			popupOptions: {
-				width: 480,
-				height: 940,
-			},
-			...options
-		}, (err, result) => {
-			if (err) {
-				// Handle unauthorized error by reattempting authentication with prompted login
-				if (err.code === 'unauthorized') {
-					return this[popupAuthorize]({
-						...options,
-						prompt: 'login',
-					}, resolve);
-				}
-				// Otherwise log meaningful errors (ignores user closed popup error which does not have a code)
-				if (err.code || err.name) {
-					Sentry.withScope(scope => {
-						scope.setTag('auth_method', 'popup authorize');
-						Sentry.captureMessage(getErrorString(err));
-					});
-					this[handleUnknownError](err);
-				} else if (differenceInMilliseconds(new Date(), startTime) < 100) {
-					Sentry.captureMessage('Login window closed quickly. Popups may be blocked.');
-				}
-				// Popup login failed for some reason, so resolve without a result
-				resolve();
-			} else {
-				// Successful authentication
-				this[setAuthData](result);
-				this.cookieStore.set('kvls', this.getKivaId(), { path: '/', secure: true });
-				resolve(result);
-			}
-		});
-	}
+	/* eslint-disable no-underscore-dangle */
 
 	// Return the kiva id for the current user (or undefined)
 	getKivaId() {
-		const kivaIdKey = 'https://www.kiva.org/kiva_id';
-		return _get(this, `user["${kivaIdKey}"]`)
-			|| _get(this, `user._json["${kivaIdKey}"]`);
+		return this.user?.[KIVA_ID_KEY] || this.user?._json?.[KIVA_ID_KEY];
 	}
 
 	// Return the last login timestamp for the current user (or 0)
 	getLastLogin() {
-		const lastLoginKey = 'https://www.kiva.org/last_login';
-		return _get(this, `user["${lastLoginKey}"]`)
-			|| _get(this, `user._json["${lastLoginKey}"]`)
-			|| 0;
+		return this.user?.[LAST_LOGIN_KEY] || this.user?._json?.[LAST_LOGIN_KEY] || 0;
 	}
 
 	isMfaAuthenticated() {
-		const usedMfaKey = 'https://www.kiva.org/used_mfa';
-		return _get(this, `user["${usedMfaKey}"]`)
-			|| _get(this, `user._json["${usedMfaKey}"]`)
-			|| false;
+		return this.user?.[USED_MFA_KEY] || this.user?._json?.[USED_MFA_KEY] || false;
+	}
+
+	/* eslint-enable no-underscore-dangle */
+
+	// Return true iff fake auth should be checked and fake auth is allowed for the current domain
+	fakeAuthAllowed() {
+		return this.checkFakeAuth && ALLOWED_FAKE_AUTH_DOMAINS.includes(this.domain);
+	}
+
+	getFakeAuthCookieValue() {
+		if (!this.checkFakeAuth) return;
+
+		const cookieValue = this.cookieStore.get(FAKE_AUTH_NAME) ?? '';
+
+		const cookieParts = cookieValue.split(':');
+		const userId = parseInt(cookieParts[0], 10);
+
+		if (userId) {
+			const scopes = (cookieParts[1] ?? '').split('/').filter(x => x);
+
+			return { userId, scopes };
+		}
+	}
+
+	getFakeIdTokenPayload() {
+		const { userId, scopes } = this.getFakeAuthCookieValue() ?? {};
+
+		if (userId) {
+			try {
+				let lastLogin;
+				const now = new Date();
+				if (scopes.includes('recent')) {
+					// current time
+					lastLogin = now.getTime();
+				} else if (scopes.includes('active')) {
+					// current time - 5:01
+					lastLogin = sub(now, { minutes: 5, seconds: 1 }).getTime();
+				} else {
+					// current time - 1:00:01
+					lastLogin = sub(now, { hours: 1, seconds: 1 }).getTime();
+				}
+
+				return {
+					[KIVA_ID_KEY]: userId,
+					[LAST_LOGIN_KEY]: lastLogin,
+					[USED_MFA_KEY]: scopes.includes('mfa'),
+					scopes,
+				};
+			} catch (e) {
+				console.error(e);
+				Sentry.captureException(e);
+			}
+		}
+	}
+
+	getSyncCookieValue() {
+		return this.cookieStore.get(SYNC_NAME);
+	}
+
+	isNotedLoggedIn() {
+		const syncValue = this.getSyncCookieValue();
+		return syncValue && syncValue !== LOGOUT_VALUE;
+	}
+
+	isNotedLoggedOut() {
+		return this.getSyncCookieValue() === LOGOUT_VALUE;
+	}
+
+	isNotedUserSessionUser() {
+		return String(this.getKivaId()) === String(this.getSyncCookieValue());
+	}
+
+	[noteLoggedIn]() {
+		this.cookieStore.set(SYNC_NAME, this.getKivaId(), COOKIE_OPTIONS);
+	}
+
+	[noteLoggedOut]() {
+		this.cookieStore.set(SYNC_NAME, LOGOUT_VALUE, COOKIE_OPTIONS);
+	}
+
+	[clearNotedLoginState]() {
+		this.cookieStore.remove(SYNC_NAME, COOKIE_OPTIONS);
 	}
 
 	// Silently fetch an access token for the MFA api to manage MFA factors
@@ -161,7 +238,7 @@ export default class KvAuth0 {
 
 		this[mfaTokenPromise] = new Promise((resolve, reject) => {
 			// Ensure browser clock is correct before fetching the token
-			syncDate().then(() => {
+			syncDate().then(() => this[initMfaWebAuth]()).then(() => {
 				this.mfaWebAuth.checkSession({}, (err, result) => {
 					if (err) {
 						reject(err);
@@ -207,12 +284,13 @@ export default class KvAuth0 {
 		// Check for an existing session
 		this[sessionPromise] = new Promise(resolve => {
 			// Ensure browser clock is correct before checking session
-			syncDate().then(() => {
+			syncDate().then(() => this[initWebAuth]()).then(() => {
 				this.webAuth.checkSession({}, (err, result) => {
 					if (err) {
 						this[setAuthData]();
 						if (err.error === 'login_required' || err.error === 'unauthorized') {
 							// User is not logged in, so continue without authentication
+							this[noteLoggedOut]();
 							resolve();
 						} else if (err.error === 'consent_required' || err.error === 'interaction_required') {
 							// These errors require interaction beyond what can be provided by webauth,
@@ -229,12 +307,14 @@ export default class KvAuth0 {
 								scope.setTag('auth_method', 'check session');
 								Sentry.captureMessage(getErrorString(err));
 							});
+							this[clearNotedLoginState]();
 							this[handleUnknownError](err);
 							resolve();
 						}
 					} else {
 						// Successful authentication
 						this[setAuthData](result);
+						this[noteLoggedIn]();
 						resolve();
 					}
 				});
@@ -249,45 +329,6 @@ export default class KvAuth0 {
 		return this[sessionPromise];
 	}
 
-	// Open a popup window to the login page
-	popupLogin(authorizeOptions) {
-		// only try this if in the browser
-		if (this.isServer) {
-			return Promise.reject(new Error('popupLogin called in server mode'));
-		}
-
-		// re-focus on the popup if it's already open
-		if (this[popupWindow]) this[popupWindow].focus();
-
-		// Ensure we only ask to login once at a time
-		if (this[loginPromise]) return this[loginPromise];
-
-		// Open up popup window to login
-		this[loginPromise] = new Promise(resolve => {
-			this[popupAuthorize](authorizeOptions, resolve);
-		});
-
-		// Once the promise completes, stop tracking it
-		this[loginPromise].finally(() => {
-			this[loginPromise] = null;
-		});
-
-		return this[loginPromise];
-	}
-
-	// Handle the auth0 callback in the popup frame
-	popupCallback(options) {
-		// only try this if in the browser
-		if (this.isServer) {
-			return Promise.reject(new Error('popupCallback called in server mode'));
-		}
-		this[popupWindow] = null;
-		// Ensure browser clock is correct before verifying token
-		return syncDate().then(() => {
-			return this.webAuth.popup.callback(options);
-		});
-	}
-
 	// Receive a callback to be called in case of an unknown error
 	onError(callback) {
 		this[errorCallbacks].push(callback);
@@ -296,12 +337,12 @@ export default class KvAuth0 {
 	// Call error callbacks with error information
 	[handleUnknownError](error) {
 		logFormatter(error, 'error');
-		_over(this[errorCallbacks])({
+		this[errorCallbacks].map(callback => callback({
 			error,
 			errorString: getErrorString(error),
 			eventId: Sentry.lastEventId(),
 			user: this.user,
-		});
+		}));
 	}
 }
 
@@ -313,6 +354,13 @@ export const MockKvAuth0 = {
 	getKivaId: () => undefined,
 	getLastLogin: () => 0,
 	getMfaEnrollToken: () => Promise.resolve({}),
+	fakeAuthAllowed: () => false,
+	getFakeAuthCookieValue: () => undefined,
+	getFakeIdTokenPayload: () => undefined,
+	getSyncCookieValue: () => null,
+	isNotedLoggedIn: () => false,
+	isNotedLoggedOut: () => false,
+	isNotedUserSessionUser: () => true,
 	checkSession: () => Promise.resolve({}),
 	popupLogin: () => Promise.resolve({}),
 	popupCallback: () => Promise.resolve({}),

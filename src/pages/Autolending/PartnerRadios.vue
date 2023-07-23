@@ -1,7 +1,7 @@
 <template>
 	<div>
-		<h3 class="filter-title">
-			Field Partners
+		<h3 class="tw-mb-2">
+			Lending Partners
 		</h3>
 		<kv-radio
 			:id="`filter-all-partners`"
@@ -9,7 +9,7 @@
 			v-model="radio"
 			@click="saveAny"
 		>
-			Any Field Partners
+			Any Lending Partners
 		</kv-radio>
 		<kv-radio
 			:id="`filter-some-partners`"
@@ -17,16 +17,16 @@
 			v-model="radio"
 			@click="emitChangeEvent('some')"
 		>
-			Selected Field Partners only
+			Selected Lending Partners only
 			<button
 				v-if="currentFilterValues.length > 0"
-				class="edit-button"
+				class="tw-text-link"
 				@click="emitChangeEvent('some')"
 			>
-				Edit <kv-icon name="pencil" />
+				Edit <kv-icon name="pencil" class="tw-w-1.5 tw-h-1.5" />
 			</button>
 		</kv-radio>
-		<p class="partner-list">
+		<p class="tw-text-tertiary tw-p-1">
 			{{ selectedFiltersFormattedString(selectedPartners) }}
 		</p>
 	</div>
@@ -41,6 +41,7 @@ import KvRadio from '@/components/Kv/KvRadio';
 import anyOrSelectedAutolendingRadio from '@/plugins/any-or-selected-autolending-radio-mixin';
 
 export default {
+	name: 'PartnerRadios',
 	inject: ['apollo', 'cookieStore'],
 	components: {
 		KvIcon,
@@ -78,25 +79,3 @@ export default {
 	},
 };
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-$section-padding: 0.4rem 0.5rem;
-
-.edit-button {
-	color: $kiva-textlink;
-	font-weight: 300;
-	margin-left: 0.55em;
-
-	::v-deep .icon {
-		width: 0.75rem;
-		height: 0.75rem;
-	}
-}
-
-p.partner-list {
-	color: $kiva-text-light;
-	padding: $section-padding;
-}
-</style>

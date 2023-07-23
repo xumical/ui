@@ -1,40 +1,45 @@
 <template>
 	<www-page class="ui-error-page">
-		<div class="page-content row align-center">
-			<div class="columns shrink">
-				<template v-if="errorDescription === 'force_password_reset'">
-					<h1>{{ messages.headline }}</h1>
-					<p>{{ messages.reason }}</p>
-					<p class="message" v-if="loginRedirectUrl">
-						{{ messages.please }}
-						<a :href="`${loginRedirectUrl}`">{{ messages.login }}</a>
-						{{ messages.clickForgot }}
-					</p>
-				</template>
-				<template v-else>
-					<h1>Oh no, something went wrong!</h1>
-					<h2 v-if="description">
-						{{ description }}
-					</h2>
-					<p class="message" v-if="loginRedirectUrl">
-						Please <a :href="`${loginRedirectUrl}`">try again.</a>
-					</p>
-				</template>
-				<p>
-					{{ messages.contact }}
-					<a class="fs-exclude" :href="`mailto:${contactEmail}`">{{ contactEmail }}</a>
+		<kv-default-wrapper class="tw-text-center tw-prose">
+			<template v-if="errorDescription === 'force_password_reset'">
+				<h1>{{ messages.headline }}</h1>
+				<p>{{ messages.reason }}</p>
+				<p class="message" v-if="loginRedirectUrl">
+					{{ messages.please }}
+					<a :href="`${loginRedirectUrl}`">{{ messages.login }}</a>
+					{{ messages.clickForgot }}
 				</p>
-			</div>
-		</div>
+			</template>
+			<template v-else>
+				<h1>Oh no, something went wrong!</h1>
+				<h2 v-if="description">
+					{{ description }}
+				</h2>
+				<p class="message" v-if="loginRedirectUrl">
+					Please <a :href="`${loginRedirectUrl}`">try again.</a>
+				</p>
+			</template>
+			<p>
+				{{ messages.contact }}
+				<a class="data-hj-suppress" :href="`mailto:${contactEmail}`">{{ contactEmail }}</a>
+			</p>
+		</kv-default-wrapper>
 	</www-page>
 </template>
 
 <script>
+/* eslint-disable vue/multi-word-component-names */
 import WwwPage from '@/components/WwwFrame/WwwPage';
+import logFormatter from '@/util/logFormatter';
+import KvDefaultWrapper from '@/components/Kv/KvDefaultWrapper';
 
 export default {
+	name: 'Error',
 	inject: ['locale'],
-	components: { WwwPage },
+	components: {
+		WwwPage,
+		KvDefaultWrapper,
+	},
 	metaInfo: {
 		title: 'Error'
 	},
@@ -101,23 +106,11 @@ export default {
 		}
 	},
 	created() {
-		// eslint-disable-next-line no-console
-		console.warn('Auth0 error:', JSON.stringify(this.$route.query));
+		logFormatter(
+			`Auth0 authentication error: ${this.errorCode}: ${this.errorDescription}`,
+			'warn',
+			{ ...this.$route.query }
+		);
 	},
 };
 </script>
-
-<style lang="scss">
-@import 'settings';
-
-.ui-error-page {
-	.page-content {
-		text-align: center;
-		padding: 1.625rem 0;
-	}
-
-	h1 {
-		margin: 1.5rem 0;
-	}
-}
-</style>

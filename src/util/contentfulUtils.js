@@ -1,93 +1,128 @@
-import _get from 'lodash/get';
 import { camelCase } from 'change-case';
-
-function determineResponsiveSizeFromFileName(filename) {
-	// retina
-	let density = '';
-	let size = '';
-	if (filename.match(/retina/g)) {
-		density = ' retina';
-	}
-	// std
-	if (filename.match(/std/g)) {
-		density = '';
-	}
-	// sizes
-	if (filename.match(/sm/g)) {
-		size = 'small';
-	}
-	if (filename.match(/med/g)) {
-		size = 'medium';
-	}
-	if (filename.match(/lg/g)) {
-		size = 'large';
-	}
-	if (filename.match(/xl/g) || filename.match(/xga/g)) {
-		size = 'xga';
-	}
-	if (filename.match(/xxl/g) || filename.match(/wxga/g)) {
-		size = 'wxga';
-	}
-
-	return `${size}${density}`;
-}
+import kvTokensPrimitives from '@kiva/kv-tokens/primitives.json';
 
 /**
- * Takes raw contentful responsive image set object, and returns
- * an array with image urls mapped to their respective sizes
+ * Takes formatted responsiveImageSet and returns an array of image objects which
+ * can be inserted into KvContentfulImg component as source sets
  *
- * @param {object} contentful Responsive Image Set Object
+ * @param {object} ResponsiveImage contentful object - output of: formatResponsiveImageSet
  * @returns {array}
  */
-export function createArrayOfResponsiveImageSet(contentfulResponsiveImageSet) {
-	// param must be an object, which contains prop images
-	if (!contentfulResponsiveImageSet || !contentfulResponsiveImageSet.images) return [];
+export function responsiveImageSetSourceSets(contentfulResponsiveImageObject) {
+	const responsiveSizing = contentfulResponsiveImageObject.responsiveSizing || {};
+	let formattedArray = contentfulResponsiveImageObject.images.flatMap(entry => {
+		/**
+         * This filters out images that have 'std' for support of legacy ResponsiveImageSets
+         * that had both std and retina images. When all ResponsiveImageSets only have the
+         * retina version of images on contentful, this if can be removed
+         */
 
-	// copy responsive image set param
-	const contentfulResponsiveImageSetCopy = JSON.parse(JSON.stringify(contentfulResponsiveImageSet));
-	contentfulResponsiveImageSetCopy.images.forEach(imageObj => {
-		// eslint-disable-next-line no-param-reassign
-		imageObj.responsiveSize = determineResponsiveSizeFromFileName(imageObj.file.fileName);
+		if (entry.title.indexOf('std') !== -1) {
+			return [];
+		}
+
+		// kvTokensPrimitives.breakpoints:
+		// "breakpoints": {
+		// 	"md": 734,
+		// 	"lg": 1024,
+		// 	"xl": 1440
+		// },
+
+		let mediaSize;
+		let width;
+		let sortOrder;
+
+		const returnWidth = size => {
+			let maxWidthAtBreakpoint;
+			switch (size) {
+				case ('md'):
+					maxWidthAtBreakpoint = kvTokensPrimitives?.breakpoints?.lg || 1024;
+					break;
+				case ('lg'):
+					maxWidthAtBreakpoint = kvTokensPrimitives?.breakpoints?.xl || 1440;
+					break;
+				case ('xl'):
+					// max width at this breakpoint is as large as possible
+					// lets return image width
+					maxWidthAtBreakpoint = entry.file?.details?.image?.width;
+					break;
+				default:
+					// small  or default
+					maxWidthAtBreakpoint = kvTokensPrimitives?.breakpoints?.md || 734;
+					break;
+			}
+			// return size or default
+			return responsiveSizing?.[size]?.width || maxWidthAtBreakpoint;
+		};
+
+		switch (true) {
+			case (entry.title.indexOf('md') !== -1):
+				mediaSize = 'min-width: 734px';
+				width = returnWidth('md');
+				sortOrder = 3;
+				break;
+			case (entry.title.indexOf('lg') !== -1):
+				mediaSize = 'min-width: 1024px';
+				width = returnWidth('lg');
+				sortOrder = 2;
+				break;
+			case (entry.title.indexOf('xl') !== -1):
+				mediaSize = 'min-width: 1440px';
+				width = returnWidth('xl');
+				sortOrder = 1;
+				break;
+			default:
+				// small (entry.title.indexOf('sm') !== -1 ) or default
+				mediaSize = 'min-width: 0';
+				width = returnWidth('sm');
+				sortOrder = 4;
+				break;
+		}
+		const aspectRatio = (entry.file?.details?.image?.height ?? 0) / (entry.file?.details?.image?.width ?? 1);// eslint-disable-line max-len
+		const height = aspectRatio ? Math.round(width * aspectRatio) : null;
+
+		return [{
+			width,
+			height,
+			media: mediaSize,
+			url: entry.file?.url ?? '',
+			sortOrder,
+		}];
 	});
-	// convert to array and reduce
-	const responsiveImageArray = contentfulResponsiveImageSetCopy.images.reduce((newArray, curVal) => {
-		newArray.push([curVal.responsiveSize, curVal.file.url]);
-		return newArray;
+	// Remove duplicate by sortOrder property
+	formattedArray = formattedArray.reduce((unique, o) => {
+		if (!unique.some(obj => obj.sortOrder === o.sortOrder)) {
+			unique.push(o);
+		}
+		return unique;
 	}, []);
-	return responsiveImageArray;
+
+	// Sort by sortOrder property
+	formattedArray.sort((a, b) => {
+		return (a.sortOrder > b.sortOrder) ? 1 : -1;
+	});
+	return formattedArray;
 }
 
 /**
- * TODO remove this once content field is fully deprecated from contentful
- * Takes raw contentful content field, and returns an object with keys mapped to the content type.
- * For the special contentful content field responsiveImageSet returns an array of objects.
+ * Format Button (contentful type id: button)
+ * Takes raw contentful content object and returns an object with targeted keys/values
  *
  * @param {array} contentfulContent data
  * @returns {object}
  */
-export function processContent(contentfulContent) {
-	const contentfulContentObject = {};
-	contentfulContent.forEach(item => {
-		const itemKey = _get(item, 'sys.contentType.sys.id');
-		if (itemKey === 'responsiveImageSet') {
-			if (!contentfulContentObject.responsiveImageSet) {
-				contentfulContentObject.responsiveImageSet = [];
-			}
-			// Contentful Objects are non extensible so we have to perform a copy here of the fields object
-			contentfulContentObject.responsiveImageSet.push(JSON.parse(JSON.stringify(item.fields)));
-		} else {
-			contentfulContentObject[itemKey] = JSON.parse(JSON.stringify(item.fields));
-		}
-	});
-	if (contentfulContentObject.responsiveImageSet) {
-		contentfulContentObject.responsiveImageSet.forEach(imageSet => {
-			imageSet.images.forEach(imageObj => {
-				// eslint-disable-next-line no-param-reassign
-				imageObj.responsiveSize = determineResponsiveSizeFromFileName(imageObj.fields.file.fileName);
-			});
-		});
-	}
-	return contentfulContentObject;
+export function formatButton(contentfulContent) {
+	return {
+		description: contentfulContent.fields?.description,
+		label: contentfulContent.fields?.label,
+		style: contentfulContent.fields?.style,
+		subHeadline: contentfulContent.fields?.subHeadline,
+		webLink: contentfulContent.fields?.webLink,
+		deepLink: contentfulContent.fields?.deepLink,
+		analyticsClickEvent: contentfulContent.fields?.analyticsClickEvent,
+		webClickEventName: contentfulContent.fields?.webClickEventName,
+		filter: contentfulContent.fields?.filter,
+	};
 }
 
 /**
@@ -145,6 +180,63 @@ export function formatUiSetting(contentfulContent) {
 }
 
 /**
+ * Format Background (contentful type id: background)
+ * Takes raw contentful content object and returns an object with targeted keys/values
+ *
+ * @param {array} contentfulContent data
+ * @returns {object}
+ */
+export function formatBackground(contentfulContent) {
+	return {
+		key: contentfulContent.fields?.key,
+		name: contentfulContent.fields?.name,
+		backgroundColor: contentfulContent.fields?.backgroundColor,
+		backgroundMedia: contentfulContent.fields?.backgroundMedia?.fields,
+	};
+}
+
+/**
+ * Format Carousel (contentful type id: carousel)
+ * Takes raw contentful content object and returns an object with targeted keys/values
+ *
+ * @param {array} contentfulContent data
+ * @returns {object}
+ */
+export function formatCarousel(contentfulContent) {
+	return {
+		key: contentfulContent.fields?.key,
+		// eslint-disable-next-line no-use-before-define
+		slides: formatContentTypes(contentfulContent.fields?.slides),
+		slidesToShow: contentfulContent.fields?.slidesToShow,
+
+	};
+}
+
+/**
+ * Format StoryCard (contentful type id: storyCard)
+ * Takes raw contentful content object and returns an object with targeted keys/values
+ *
+ * Default alignment value is center. This is enforced in the contentful UI,
+ * but legacy story cards before the alignment field was added may have a null value
+ *
+ * @param {array} contentfulContent data
+ * @returns {object}
+ */
+export function formatStoryCard(contentfulContent) {
+	return {
+		backgroundMedia: contentfulContent.fields?.backgroundMedia?.fields,
+		cardTitle: contentfulContent.fields?.cardTitle,
+		cardContent: contentfulContent.fields?.cardContent,
+		footer: contentfulContent.fields?.footer,
+		key: contentfulContent.fields?.key,
+		theme: contentfulContent.fields?.theme,
+		alignment: contentfulContent.fields?.alignment ?? 'center',
+		link: contentfulContent.fields?.link,
+		analyticsClickEvent: contentfulContent.fields?.analyticsClickEvent
+	};
+}
+
+/**
  * Format Ui Setting (contentful type id: globalPromoBanner)
  * Takes raw contentful content object and returns an object with targeted keys/values
  *
@@ -197,7 +289,8 @@ export function formatResponsiveImageSet(contentfulContent) {
 	const imageSet = {
 		name: contentfulContent.fields?.name,
 		description: contentfulContent.fields?.description,
-		images: []
+		images: [],
+		responsiveSizing: contentfulContent.fields?.responsiveSizing
 	};
 	const rawImages = contentfulContent.fields?.images;
 	imageSet.images = formatMediaAssetArray(rawImages);
@@ -227,6 +320,7 @@ export function formatContentGroupsFlat(contentfulContent) {
 				key: entry.fields?.key,
 				name: entry.fields?.name,
 				type: entry.fields?.type ?? null,
+				title: entry.fields?.title ?? null,
 				// eslint-disable-next-line no-use-before-define
 				contents: formatContentTypes(entry.fields?.contents)
 			};
@@ -238,8 +332,8 @@ export function formatContentGroupsFlat(contentfulContent) {
 			const cgType = entry.fields?.type ? camelCase(entry.fields?.type) : null;
 			contentGroupsFlat[
 				cgType
-				|| camelCase(entry.fields?.key)
-				|| `cg${index}`
+                || camelCase(entry.fields?.key)
+                || `cg${index}`
 			] = contentGroupFields;
 		}
 	});
@@ -258,15 +352,50 @@ export function formatContentType(contentfulContent, contentType) {
 	// console.log(JSON.stringify(contentfulContent), contentType);
 	switch (contentType) {
 		case 'genericContentBlock':
-			return formatGenericContentBlock(contentfulContent);
+			return {
+				...formatGenericContentBlock(contentfulContent),
+				contentType
+			};
 		case 'uiSetting':
-			return formatUiSetting(contentfulContent);
+			return {
+				...formatUiSetting(contentfulContent),
+				contentType
+			};
 		case 'globalPromoBanner':
-			return formatGlobalPromoBanner(contentfulContent);
+			return {
+				...formatGlobalPromoBanner(contentfulContent),
+				contentType
+			};
 		case 'responsiveImageSet':
-			return formatResponsiveImageSet(contentfulContent);
+			return {
+				...formatResponsiveImageSet(contentfulContent),
+				contentType
+			};
 		case 'richTextContent':
-			return formatRichTextContent(contentfulContent);
+			return {
+				...formatRichTextContent(contentfulContent),
+				contentType
+			};
+		case 'background':
+			return {
+				...formatBackground(contentfulContent),
+				contentType
+			};
+		case 'button':
+			return {
+				...formatButton(contentfulContent),
+				contentType
+			};
+		case 'storyCard':
+			return {
+				...formatStoryCard(contentfulContent),
+				contentType
+			};
+		case 'carousel':
+			return {
+				...formatCarousel(contentfulContent),
+				contentType
+			};
 		default:
 			return { error: 'Unrecognized Content Type' };
 	}
@@ -308,11 +437,13 @@ export function processPageContent(entryItem) {
 		path: entryItem.fields?.path,
 		pageTitle: entryItem.fields?.pageTitle,
 		pageType: entryItem.fields?.pageType,
+		pageDescription: entryItem.fields?.pageDescription,
+		canonicalUrl: entryItem.fields?.canonicalUrl,
 		pageLayout: {
 			name: entryItem.fields?.pageLayout?.fields?.name,
 			pageTitle: entryItem.fields?.pageLayout?.fields?.pageTitle,
-			headerTheme: entryItem.fields?.pageLayout?.fields?.headerTheme,
-			footerTheme: entryItem.fields?.pageLayout?.fields?.footerTheme,
+			pageBackgroundColor: entryItem.fields?.pageLayout?.fields?.pageBackgroundColor,
+			pageDescription: entryItem.fields?.pageLayout?.fields?.pageDescription
 		},
 		settings: entryItem.fields?.settings
 			? formatContentTypes(entryItem.fields?.settings) : []
@@ -332,6 +463,7 @@ export function processPageContent(entryItem) {
 				key: item.fields?.key,
 				name: item.fields?.name,
 				type: item.fields?.type ?? null,
+				title: item.fields?.title ?? null,
 				contents: formatContentTypes(item.fields?.contents),
 				media: formatMediaAssetArray(item.fields?.media),
 			};
@@ -357,16 +489,18 @@ export function processPageContentFlat(entryItem) {
 	if (!isPage) return { error: 'Non-Page Type Contentful Response' };
 
 	// extract top level items in the Page, initialize pageLayout and settings
+
 	contentfulContentObject.page = {
 		key: entryItem.fields?.key,
 		path: entryItem.fields?.path,
 		pageTitle: entryItem.fields?.pageTitle,
 		pageType: entryItem.fields?.pageType,
+		pageDescription: entryItem.fields?.pageDescription,
+		canonicalUrl: entryItem.fields?.canonicalUrl,
 		pageLayout: {
 			name: entryItem.fields?.pageLayout?.fields?.name,
 			pageTitle: entryItem.fields?.pageLayout?.fields?.pageTitle,
-			headerTheme: entryItem.fields?.pageLayout?.fields?.headerTheme,
-			footerTheme: entryItem.fields?.pageLayout?.fields?.footerTheme,
+			pageDescription: entryItem.fields?.pageLayout?.fields?.pageDescription
 		},
 		settings: entryItem.fields?.settings
 			? formatContentTypes(entryItem.fields?.settings) : []
@@ -398,6 +532,11 @@ export function buildDynamicString(sourceString = '', splitKey = '', dynamicValu
 	if (typeof sourceString !== 'string') {
 		return '';
 	}
+	// if the split key is not found in the source string, return the source string
+	if (sourceString.indexOf(splitKey) === -1) {
+		return sourceString;
+	}
+
 	let finalString = '';
 	// split the source string where it finds the splitKey
 	const stringSplit = sourceString.split(splitKey);

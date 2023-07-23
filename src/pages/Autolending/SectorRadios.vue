@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<h3 class="filter-title">
+		<h3 class="tw-mb-2">
 			Sectors
 		</h3>
 		<kv-radio
@@ -20,13 +20,13 @@
 			Selected sectors only
 			<button
 				v-if="currentFilterValues.length > 0"
-				class="edit-button"
+				class="tw-text-link tw-ml-1"
 				@click="emitChangeEvent('some')"
 			>
-				Edit <kv-icon name="pencil" />
+				Edit <kv-icon name="pencil" class="tw-w-1.5 tw-h-1.5" />
 			</button>
 		</kv-radio>
-		<p class="sector-list">
+		<p class="tw-text-tertiary tw-p-1">
 			{{ selectedFiltersFormattedString(selectedSectors) }}
 		</p>
 	</div>
@@ -41,6 +41,7 @@ import KvRadio from '@/components/Kv/KvRadio';
 import anyOrSelectedAutolendingRadio from '@/plugins/any-or-selected-autolending-radio-mixin';
 
 export default {
+	name: 'SectorRadios',
 	inject: ['apollo', 'cookieStore'],
 	components: {
 		KvIcon,
@@ -76,25 +77,3 @@ export default {
 	},
 };
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-$section-padding: 0.4rem 0.5rem;
-
-.edit-button {
-	color: $kiva-textlink;
-	font-weight: 300;
-	margin-left: 0.55em;
-
-	::v-deep .icon {
-		width: 0.75rem;
-		height: 0.75rem;
-	}
-}
-
-p.sector-list {
-	color: $kiva-text-light;
-	padding: $section-padding;
-}
-</style>

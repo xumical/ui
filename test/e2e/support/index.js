@@ -12,7 +12,4 @@
 // You can read more here:
 // https://on.cypress.io/configuration
 // ***********************************************************
-import '@cypress/code-coverage/support';
 import './commands';
-
-beforeEach(() => cy.lunar('reset'));

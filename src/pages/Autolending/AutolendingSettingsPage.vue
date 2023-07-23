@@ -1,13 +1,16 @@
 <template>
 	<div class="autolending-settings-page">
-		<autolending-status />
+		<div class="row">
+			<div class="column large-8">
+				<autolending-status />
 
-		<!-- When your balance will be lent -->
-		<autolending-when />
+				<!-- When your balance will be lent -->
+				<autolending-when />
 
-		<!-- Who you'll support-->
-		<autolending-who />
-
+				<!-- Who you'll support-->
+				<autolending-who />
+			</div>
+		</div>
 		<div class="row column">
 			<save-button v-if="isChanged" />
 		</div>
@@ -16,8 +19,9 @@
 
 <script>
 import _get from 'lodash/get';
-import gql from 'graphql-tag';
+import { gql } from '@apollo/client';
 import initAutolending from '@/graphql/mutation/autolending/initAutolending.graphql';
+import logFormatter from '@/util/logFormatter';
 import SaveButton from './SaveButton';
 import AutolendingStatus from './AutolendingStatus';
 import AutolendingWhen from './AutolendingWhen';
@@ -25,6 +29,7 @@ import AutolendingWho from './AutolendingWho';
 
 const pageQuery = gql`query autolendProfileEnabled {
 	autolending @client {
+		id
 		profileChanged
 		currentProfile {
 			id
@@ -35,6 +40,7 @@ const pageQuery = gql`query autolendProfileEnabled {
 }`;
 
 export default {
+	name: 'AutolendingSettingsPage',
 	inject: ['apollo', 'cookieStore'],
 	components: {
 		AutolendingWho,
@@ -57,6 +63,7 @@ export default {
 				client.query({
 					query: gql`query userIsMonthlyGoodSubscriber {
 							my {
+								id
 								autoDeposit {
 									id
 									isSubscriber
@@ -81,7 +88,7 @@ export default {
 							});
 						} else {
 						// Log other errors
-							console.error(e);
+							logFormatter('AutoendingSettingsPage: Error during pre-fetch', 'error', { error: e });
 							resolve();
 						}
 					});
@@ -125,15 +132,6 @@ export default {
 			}
 		}
 	}
-}
-
-</style>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-.autolending-settings-page {
-	padding-bottom: 5rem;
 }
 
 </style>

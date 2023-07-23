@@ -1,35 +1,56 @@
 <template>
 	<kv-lightbox
-		:visible="nudgeLightboxVisible"
+		:visible="visible"
 		:no-padding-sides="true"
 		:no-padding-bottom="true"
 		:no-padding-top="true"
-		@lightbox-closed="closeNudgeLightbox"
+		@lightbox-closed="closeLightbox"
+		:title="title"
 	>
-		<div id="nudge-donation-container">
+		<template #header>
+			<h2 v-if="!zeroUpsellVisible" class="tw-text-h3 tw-flex-1">
+				{{ title }}
+			</h2>
+			<div v-if="zeroUpsellVisible" class="tw-pl-4 tw-flex tw-flex-col tw-items-center">
+				<heart-icon class="tw-w-10 tw-h-10 tw-mb-2" />
+				<h2 class="tw-text-h4 tw-text-brand">
+					Make this moment matter
+				</h2>
+			</div>
+		</template>
+		<div v-if="!zeroUpsellVisible" id="nudge-donation-container" data-testid="nudge-donation-container">
 			<div id="nudge-donation-top">
-				<donation-nudge-intro
-					:header="header"
-					:description="description"
-				/>
+				<p>
+					<!-- eslint-disable-next-line max-len -->
+					Reaching financially excluded people around the world requires things like performing due diligence in over 80 countries, training hundreds of volunteer translators, and maintaining the infrastructure to facilitate over $1B in loans.
+				</p>
 				<donation-nudge-boxes
 					ref="nudgeBoxes"
 					id="nudge-donation-top-boxes-wrapper"
+					class="tw-mb-3"
 					:percentage-rows="percentageRows"
-					:has-custom-donation="hasCustomDonation"
 					:loan-reservation-total="loanReservationTotal"
 					:set-donation-and-close="setDonationAndClose"
 					:current-donation-amount="currentDonationAmount"
 				/>
-				<div>
-					<a
+				<div class="tw-text-center tw-pb-4">
+					<button
+						class="tw-text-link"
 						id="no-donation-link"
 						@click="setDonationAndClose(0, 'No Donation Link')"
+						data-testid="nudge-donation-no-donoation-btn"
 						tabindex="12"
-					>No donation to Kiva</a>
+					>
+						No donation to Kiva
+					</button>
 				</div>
 			</div>
-			<div id="nudge-donation-bottom" :class="{ 'show-for-large': !experimentalFooter}">
+			<div
+				id="nudge-donation-bottom"
+				class="tw-px-12"
+				:class="{ 'show-for-large': !experimentalFooter}"
+			>
+				<!-- eslint-disable max-len -->
 				<div class="row">
 					<div class="large-10 large-offset-1 columns">
 						<kv-charity-navigator
@@ -38,131 +59,138 @@
 							:wide-icon="true"
 							subtitle="Your donation is eligible for a tax deduction if you live in the U.S."
 						/>
-						<div v-else class="charity-overhead text-center">
-							<h3><kv-icon name="info" class="info-icon" /> <span>Did you know?</span></h3>
-							<p>
-								Kiva donations are more efficient than the average charity,
-								which uses 37% on overhead. Kiva only asks for a 15% donation to help cover our costs.
+						<div v-else class="charity-overhead tw-text-center tw-my-1">
+							<h3>
+								<kv-material-icon name="info" icon="mdiInformation" class="info-icon" />
+								<span>Did you know?</span>
+							</h3>
+							<p class="tw-text-lg">
+								Kiva donations are more efficient than the average charity, which uses 37% on overhead. Kiva only asks for a 15% donation to help cover our costs.
 							</p>
 						</div>
 					</div>
 				</div>
+				<!-- eslint-enable max-len -->
 			</div>
+		</div>
+		<div
+			v-if="zeroUpsellVisible"
+			data-testid="zero-donation-upsell"
+			style="max-width: 454px;"
+			class="tw-flex tw-flex-col tw-items-center tw-mx-auto"
+		>
+			<!-- upsell body -->
+			<p class="tw-text-h2 tw-mb-3 tw-text-center">
+				<!-- eslint-disable-next-line max-len -->
+				Every bit counts. Can you spare <em class="tw-text-brand tw-not-italic">$1</em> to cover a portion of the cost of your loan?
+			</p>
+			<!-- CTAs -->
+			<kv-button @click="closeZeroUpsell(1)" class="tw-w-full tw-mb-2">
+				Yes, donate $1
+			</kv-button>
+			<kv-button @click="closeZeroUpsell(0)" variant="secondary" class="tw-w-full">
+				No, thank you
+			</kv-button>
 		</div>
 	</kv-lightbox>
 </template>
 
 <script>
-import KvLightbox from '@/components/Kv/KvLightbox';
-import KvIcon from '@/components/Kv/KvIcon';
 import DonationNudgeBoxes from '@/components/Checkout/DonationNudge/DonationNudgeBoxes';
-import DonationNudgeIntro from '@/components/Checkout/DonationNudge/DonationNudgeIntro';
 import KvCharityNavigator from '@/components/Kv/KvCharityNavigator';
-import donationNudgeLightboxMixin from '@/components/Checkout/DonationNudge/donationNudgeLightboxMixin';
+import { mdiInformation } from '@mdi/js';
+import HeartIcon from '@/assets/icons/inline/heart-icon.svg';
+import KvButton from '~/@kiva/kv-components/vue/KvButton';
+import KvLightbox from '~/@kiva/kv-components/vue/KvLightbox';
+import KvMaterialIcon from '~/@kiva/kv-components/vue/KvMaterialIcon';
 
 export default {
+	name: 'DonationNudgeLightbox',
+	data() {
+		return {
+			mdiInformation,
+			zeroUpsellVisible: false,
+			title: 'We rely on donations to reach the people who need it the most',
+		};
+	},
 	components: {
+		KvButton,
 		KvLightbox,
-		KvIcon,
+		KvMaterialIcon,
 		KvCharityNavigator,
 		DonationNudgeBoxes,
-		DonationNudgeIntro,
+		HeartIcon,
 	},
-	mixins: [
-		donationNudgeLightboxMixin,
-	],
 	props: {
 		experimentalFooter: {
 			type: Boolean,
 			default: false,
 		},
+		visible: {
+			type: Boolean,
+			required: true,
+		},
+		closeNudgeLightbox: {
+			type: Function,
+			required: true,
+		},
+		updateDonationTo: {
+			type: Function,
+			required: true,
+		},
+		loanCount: {
+			type: Number,
+			default: 0
+		},
+		loanReservationTotal: {
+			type: Number,
+			default: 0,
+		},
+		currentDonationAmount: {
+			type: String,
+			default: ''
+		},
+	},
+	computed: {
+		percentageRows() {
+			return [
+				{
+					percentage: 15,
+					appeal: `Cover the cost to facilitate ${this.loanCount > 1 ? 'these loans' : 'this loan'}`,
+					appealIsHorizontallyPadded: false,
+				},
+				{
+					percentage: 20,
+					appeal: 'Reach more people around the world!',
+					appealIsHorizontallyPadded: false,
+				},
+			];
+		},
+	},
+	methods: {
+		setDonationAndClose(amount, source) {
+			if (amount === 0 && !this.zeroUpsellVisible) {
+				this.zeroUpsellVisible = true;
+			} else {
+				const clickSource = source ? ` - ${source}` : '';
+				this.updateDonationTo(amount);
+				this.$kvTrackEvent('basket', 'Update Nudge Donation', `Update Success${clickSource}`, amount * 100);
+				this.closeNudgeLightbox();
+			}
+		},
+		expandNudgeLightbox() {
+			this.$refs.nudgeBoxes.afterLightboxOpens();
+		},
+		closeZeroUpsell(amount) {
+			this.setDonationAndClose(amount, 'Zero Donation Upsell');
+			this.zeroUpsellVisible = false;
+		},
+		closeLightbox() {
+			if (this.zeroUpsellVisible) {
+				return this.closeZeroUpsell(0);
+			}
+			return this.closeNudgeLightbox();
+		}
 	},
 };
 </script>
-
-<style lang="scss" scoped>
-@import 'settings';
-
-#nudge-donation-container {
-	.nudge-lightbox-row-padding {
-		padding-left: 2.5rem;
-		padding-right: 2.5rem;
-	}
-
-	text-align: center;
-
-	#nudge-donation-top {
-		padding-bottom: 1.6rem;
-		background: #F8F8F8;
-		border-radius: rem-calc(4) rem-calc(4) 0 0;
-		padding-top: 2.5rem;
-
-		@include breakpoint(medium) {
-			padding-top: 4rem;
-		}
-
-		@include breakpoint(large) {
-			padding-top: 4.75rem;
-		}
-
-		#nudge-donation-top-boxes-wrapper {
-			@extend .nudge-lightbox-row-padding;
-
-			margin-bottom: 1.6rem;
-		}
-
-		#no-donation-link {
-			color: #4F4F4F;
-			text-decoration: underline;
-		}
-	}
-
-	#nudge-donation-bottom {
-		padding: 1.5rem 3rem 1.5rem 3rem;
-		background: #F1F1F0;
-
-		#charity-navigator-text {
-			padding: 0 50px;
-		}
-
-		#charity-navigator-image-container {
-			max-width: 50%;
-			margin: 1rem auto;
-		}
-
-		#charity-navigator-tax-deduction {
-			font-size: 0.8rem;
-		}
-
-		.charity-overhead {
-			margin: 0.2rem 0;
-
-			h3 {
-				color: $kiva-text-medium;
-				margin-bottom: 0.2rem;
-				font-size: 1.375rem;
-
-				.info-icon {
-					fill: $kiva-text-medium;
-					margin: 0.1rem 0.325rem 0 0;
-					display: inline-block;
-					vertical-align: text-top;
-					width: 1.325rem;
-					height: 1.325rem;
-				}
-
-				span {
-					font-weight: 400;
-					line-height: 1.75rem;
-				}
-			}
-
-			p {
-				fill: $kiva-text-medium;
-				font-size: 1.125rem;
-				line-height: 1.625rem;
-			}
-		}
-	}
-}
-</style>
